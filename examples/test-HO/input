@@ -1,8 +1,8 @@
-nbasis 2
+nmax 2
 Q_eq 0
-k_basis 1 
+k_basis 1
 m_basis 2
-V_off -0.5 
+V_off 0.0 
 
 Using Vq of a harmonic oscillator with k=1, mass=2, and potential offset of -0.5
 below Vq(Q_eq)

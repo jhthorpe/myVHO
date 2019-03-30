@@ -50,13 +50,13 @@ SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   READ(100,*) word, m
   READ(100,*) word, V_off
   CLOSE(unit=100)
-  a = m*SQRT(k/m)
-  WRITE(*,*) "Number of basis functions : ", N
-  WRITE(*,*) "Equilibrium position : ", qeq
-  WRITE(*,*) "Basis function k :", k
-  WRITE(*,*) "Basis function m :", m
-  WRITE(*,*) "Basis function offset :", V_off
-
+  a = SQRT(m*SQRT(k/m))
+  WRITE(*,*) "Number of basis functions :", N
+  WRITE(*,*) "Equilibrium position      :", qeq
+  WRITE(*,*) "Basis function k          :", k
+  WRITE(*,*) "Basis function m          :", m
+  WRITE(*,*) "Basis function offset     :", V_off
+  WRITE(*,*) "Basis function alpha      :", a
   CALL getfline(npoints,fname,error)
 
   ALLOCATE(Vq(0:npoints-1)) 
@@ -82,9 +82,9 @@ SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
 
   q = q - qeq
 
-  DO i=0,npoints-1
-  WRITE(*,*) q(i), Vq(i)
-  END DO
+  !DO i=0,npoints-1
+  !WRITE(*,*) q(i), Vq(i)
+  !END DO
 
 END SUBROUTINE read_input 
 

@@ -12,7 +12,7 @@ PROGRAM ho_pot
   dr = (rmax - rmin)/nsteps
 
   r = rmin
-  DO i=0,nsteps-1
+  DO i=0,nsteps
     WRITE(*,*) i, r, 0.5*k*(r-req)**2.0D0 
     r = r + dr
   END DO 

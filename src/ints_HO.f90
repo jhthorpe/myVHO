@@ -44,7 +44,11 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
   !CALL HO1D_normalize()
 
   !TESTING TESTING TESTING
-  WRITE(*,*) "Testing potential energy"
+  WRITE(*,*) "Testing Integrals"
+  WRITE(*,*) "H00", Hij(0,0)
+  WRITE(*,*) "H01", Hij(0,1)
+  WRITE(*,*) "H10", Hij(1,0)
+  WRITE(*,*) "H11", Hij(1,1)
   !TESTING TESTING TESTING
 
 
@@ -79,15 +83,16 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
 
   error = .FALSE.
   WRITE(*,*) "Calculating potential energy numerical integrals"
+  WRITE(*,*) "Number of points :", npoints
  
   !ALLOCATE(Htemp(0:N-1,0:N-1))
   ALLOCATE(Htab(0:N-1))
   
-  DO u=0,npoints-1
+  DO u=0,npoints-2
    
     !Construct Hermitian table
     CALL build_Htab(N,a*q(u),Htab(0:N-1))
-    dq = q(u+1) - q(u)
+    dq = ABS(q(u+1) - q(u))
 
     DO j=0,N-1
       DO i=j,N-1
