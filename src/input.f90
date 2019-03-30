@@ -17,32 +17,44 @@ CONTAINS
 !		-reads input
 !---------------------------------------------------------------------
 ! Variables
-! nbasis	: int, number of harmonic oscillator basis functions
+! N		: int, number of harmonic oscillator basis functions
 ! Vq		: 1D real*8, 1D potential energy surface
 ! qmin		: real*8, minimum r
 ! qmax		: real*8, max r
-! qeq		: real*8, equilibriu q
+! qeq		: real*8, equilibrium q
+! k	: real*8, k value of basis functions
+! m	: real*8, m balue of basis functions
+! V_off		: real*8, basis potential offset below qeq
+! a	: real*8, alpha value of basis functions 
 ! error		: bool, true if error
 
-SUBROUTINE read_input(nbasis,Vq,q,qmin,qmax,qeq,npoints,error)
+SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
-  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq
-  INTEGER, INTENT(INOUT) :: nbasis, npoints
+  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,V_off,a
+  INTEGER, INTENT(INOUT) :: N, npoints
   LOGICAL, INTENT(INOUT)  :: error
   
-  CHARACTER(LEN=1024) :: fname 
+  CHARACTER(LEN=1024) :: fname,word 
   INTEGER :: dummy,i
   
   error = .FALSE.
   fname = "Vq"
-  CALL EXECUTE_COMMAND_LINE('cat input')
 
   OPEN(file='input',unit=100,status='old')
-  READ(100,*) nbasis
-  READ(100,*) qeq
+  READ(100,*) word, N
+  READ(100,*) word, qeq
+  READ(100,*) word, k
+  READ(100,*) word, m
+  READ(100,*) word, V_off
   CLOSE(unit=100)
+  a = m*SQRT(k/m)
+  WRITE(*,*) "Number of basis functions : ", N
+  WRITE(*,*) "Equilibrium position : ", qeq
+  WRITE(*,*) "Basis function k :", k
+  WRITE(*,*) "Basis function m :", m
+  WRITE(*,*) "Basis function offset :", V_off
 
   CALL getfline(npoints,fname,error)
 

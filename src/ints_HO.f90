@@ -23,11 +23,11 @@ CONTAINS
 ! qeq           : real*8, equilibriu q
 ! error         : bool, true if error
 
-SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,Hij,error)
+SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
-  REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq
+  REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,V_off,a
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N, npoints
 
@@ -40,8 +40,12 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,Hij,error)
   Hij = 0.0D0
 
   !CALL HO1D_kinetic()
-  CALL HO1D_potential(Hij,N,Vq,q,npoints,error)
+  CALL HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   !CALL HO1D_normalize()
+
+  !TESTING TESTING TESTING
+  WRITE(*,*) "Testing potential energy"
+  !TESTING TESTING TESTING
 
 
 END SUBROUTINE HO1D_integrals
@@ -50,6 +54,7 @@ END SUBROUTINE HO1D_integrals
 !	HO1D_potential
 !		-calculates 1D HO potential energy integrals
 !		-stored upper triangular
+!		-using x form of harmonic oscillator
 !---------------------------------------------------------------------
 ! Variables
 ! N 	       : int, number of harmonic oscillator basis functions
@@ -59,10 +64,11 @@ END SUBROUTINE HO1D_integrals
 ! npoints	: int, number of points in Vq and q
 ! error		: bool, true if error
 
-SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,error)
+SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
+  REAL(KIND=8), INTENT(IN) :: k,m,a,V_off
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N, npoints
 
@@ -80,12 +86,12 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,error)
   DO u=0,npoints-1
    
     !Construct Hermitian table
-    CALL build_Htab(N,q(u),Htab(0:N-1))
+    CALL build_Htab(N,a*q(u),Htab(0:N-1))
     dq = q(u+1) - q(u)
 
     DO j=0,N-1
       DO i=j,N-1
-        Hij(i,j) = Hij(i,j) + Htab(i)*Htab(j)*Vq(u)*dq
+        Hij(i,j) = Hij(i,j) + Htab(i)*Htab(j)*EXP(-a**2.0*q(u)**2.0)*Vq(u)*dq
       END DO
     END DO
 
@@ -124,11 +130,10 @@ SUBROUTINE build_Htab(N,q,Htab)
   ELSE 
     Htab(0) = 1.0D0
     Htab(1) = 2.0*q
+    DO i=1,N-2
+      Htab(i+1) = 2*q*Htab(i) - 2*(i)*Htab(i-1)
+    END DO
   END IF 
-
-  DO i=1,N-2
-    Htab(i+1) = 2*q*Htab(i) - 2*(i)*Htab(i-1)
-  END DO
 
 END SUBROUTINE build_Htab
 !---------------------------------------------------------------------
