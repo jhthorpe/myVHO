@@ -1,12 +1,18 @@
 #local
 export FC = gfortran
-export FFLAGS = -g -O0 -Wall -Wshadow -Wextra 
-export LINAL = -L/Users/jamesthorpe/LAPACK/lapack-3.7.0 -llapack -lblas
+export FFLAGS = -O3 
+
+#local
+#export LINAL = -L/Users/jamesthorpe/LAPACK/lapack-3.7.0 -llapack -lblas
+
+#HiPerGator
+export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lm
+export MKL = /apps/compilers/intel/2018/1.163/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin
 
 #both
 export bindir = ../bin
 
-objects = input.o vscf.o ints_HO.o plots.o
+objects = input.o vscf.o ints_HO.o plots.o linal.o
 
 all: $(objects)
 	if [ ! -d $(bindir) ]; then mkdir -p $(bindir); fi
@@ -21,8 +27,11 @@ ints_HO.o : ints_HO.f90
 plots.o : plots.f90
 	$(FC) $(FFLAGS) -c plots.f90
 
-vscf.o : vscf.f90 input.o ints_HO.o plots.o
-	$(FC) $(FFLAGS) -o vscf.o vscf.f90 input.o ints_HO.o plots.o
+linal.o : linal.f90
+	$(FC) $(FFLAGS) $(LINAL) -c linal.f90 
+
+vscf.o : vscf.f90 input.o ints_HO.o plots.o linal.o
+	$(FC) $(FFLAGS) -o vscf.o vscf.f90 input.o ints_HO.o plots.o $(LINAL)
 
 clean:
 	rm *.o *.mod
