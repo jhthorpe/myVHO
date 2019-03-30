@@ -21,13 +21,14 @@ CONTAINS
 ! Vq		: 1D real*8, 1D potential energy surface
 ! qmin		: real*8, minimum r
 ! qmax		: real*8, max r
+! qeq		: real*8, equilibriu q
 ! error		: bool, true if error
 
-SUBROUTINE read_input(nbasis,Vq,q,qmin,qmax,npoints,error)
+SUBROUTINE read_input(nbasis,Vq,q,qmin,qmax,qeq,npoints,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
-  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax
+  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq
   INTEGER, INTENT(INOUT) :: nbasis, npoints
   LOGICAL, INTENT(INOUT)  :: error
   
@@ -35,11 +36,12 @@ SUBROUTINE read_input(nbasis,Vq,q,qmin,qmax,npoints,error)
   INTEGER :: dummy,i
   
   error = .FALSE.
-  fname = 'Vq'
+  fname = "Vq"
   CALL EXECUTE_COMMAND_LINE('cat input')
 
   OPEN(file='input',unit=100,status='old')
   READ(100,*) nbasis
+  READ(100,*) qeq
   CLOSE(unit=100)
 
   CALL getfline(npoints,fname,error)
@@ -61,6 +63,8 @@ SUBROUTINE read_input(nbasis,Vq,q,qmin,qmax,npoints,error)
   qmax = q(npoints-1)
    
   CLOSE(unit=101)
+
+  q = q - qeq
 
   DO i=0,npoints-1
   WRITE(*,*) q(i), Vq(i)
@@ -95,7 +99,7 @@ SUBROUTINE getfline(fline,fname,flag)
   io = 0
   OPEN(unit=999,file=TRIM(fname),status='old',access='sequential')
   DO WHILE (io .EQ. 0)
-    READ(1,*,iostat=io)
+    READ(999,*,iostat=io)
     IF (io .EQ. 0) fline = fline + 1
   END DO
   CLOSE(unit=999)

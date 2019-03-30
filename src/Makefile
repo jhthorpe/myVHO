@@ -6,7 +6,7 @@ export LINAL = -L/Users/jamesthorpe/LAPACK/lapack-3.7.0 -llapack -lblas
 #both
 export bindir = ../bin
 
-objects = input.o vscf.o 
+objects = input.o vscf.o ints_HO.o
 
 all: $(objects)
 	if [ ! -d $(bindir) ]; then mkdir -p $(bindir); fi
@@ -15,8 +15,11 @@ all: $(objects)
 input.o : input.f90 
 	$(FC) $(FFLAGS) -c input.f90
 
-vscf.o : vscf.f90 input.o
-	$(FC) $(FFLAGS) -o vscf.o vscf.f90 input.o
+ints_HO.o : ints_HO.f90 
+	$(FC) $(FFLAGS) -c ints_HO.f90
+
+vscf.o : vscf.f90 input.o ints_HO.o
+	$(FC) $(FFLAGS) -o vscf.o vscf.f90 input.o ints_HO.o
 
 clean:
 	rm *.o *.mod
