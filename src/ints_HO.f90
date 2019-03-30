@@ -45,7 +45,7 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
 
   CALL HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   CALL HO1D_normalize(Hij,N,a,Ncon,error)
-  !CALL HO1D_kinetic()
+  CALL HO1D_kinetic(Hij,N,k,m,Ncon,error)
 
   !TESTING TESTING TESTING
   WRITE(*,*) "Testing Integrals"
@@ -193,5 +193,37 @@ SUBROUTINE  HO1D_normalize(Hij,N,a,Ncon,error)
 
 END SUBROUTINE HO1D_normalize
 
+!---------------------------------------------------------------------
+!       HO1D_kinetic
+!               -adds in (normalized) kinetic energy to Hij
+!               - this abuses the viral theorum, and the fact
+!               - that our basis functions are orthogonal HO
+!---------------------------------------------------------------------
+! Variables
+! Hij           : 2D real*8, matrix of integrals
+! N             : int, number of basis functions
+! k             : real*8, k of basis functions
+! m             : real*8, m of basis functions
+! Ncon          : 1D real*8, list of normalization constants
+! error         : bool, true on exit if problem
+
+SUBROUTINE HO1D_kinetic(Hij,N,k,m,Ncon,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Ncon
+  REAL(KIND=8), INTENT(IN) :: k,m
+  LOGICAL, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: N
+  REAL(KIND=8) :: w 
+  INTEGER :: i
+
+  WRITE(*,*) "Calculating Kinetic Integrals"
+  error = .FALSE.
+  w = SQRT(k/m)
+  DO i=0,N-1
+    Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5)/2.0
+  END DO
+
+END SUBROUTINE HO1D_kinetic
 !---------------------------------------------------------------------
 END MODULE ints_HO
