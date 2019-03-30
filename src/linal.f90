@@ -30,6 +30,8 @@ SUBROUTINE diag(N,Hij,Ei,Cij,error)
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N
 
+  INTEGER :: i,j
+
   REAL(KIND=8), ALLOCATABLE, DIMENSION(:) :: WORK
   CHARACTER(LEN=1) :: JOBZ, UPLO
   INTEGER :: LDA,LWORK,INFO
@@ -42,10 +44,25 @@ SUBROUTINE diag(N,Hij,Ei,Cij,error)
   LDA = N
   ALLOCATE(WORK(0:1))
   ALLOCATE(Ei(0:N-1))
+  ALLOCATE(Cij(0:N-1,0:N-1))
 
   CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:1),LWORK,INFO) 
-  WRITE(*,*) WORK(0) 
-  WRITE(*,*) WORK(1) 
+  LWORK = WORK(0)
+  DEALLOCATE(WORK)
+  ALLOCATE(WORK(0:LWORK-1))
+  CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:1),LWORK,INFO) 
+
+  WRITE(*,*) 
+  WRITE(*,*) "Eigenvalues"
+  DO j=0,N-1
+    WRITE(*,*) Ei(j)  
+  END DO 
+
+  WRITE(*,*) 
+  WRITE(*,*) "Eigenvectors"
+  DO i=0,N-1
+    WRITE(*,*) Hij(i,0:N-1)
+  END DO
 
   DEALLOCATE(WORK)
   

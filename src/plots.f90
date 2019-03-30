@@ -22,15 +22,16 @@ CONTAINS
 ! k	      	: real*8, k value of basis functions
 ! m    		: real*8, m balue of basis functions
 ! V_off         : real*8, basis potential offset below qeq
-! a		:real*8, alpha value of basis functions 
+! a		: real*8, alpha value of basis functions 
+! Ei		: 1D real*8, eigenvalues
 ! error         : bool, true if error
  
-SUBROUTINE make_gnuplot(Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
+SUBROUTINE make_gnuplot(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Ei,error)
   IMPLICIT NONE
 
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q,Ei
   REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,V_off,a
-  INTEGER, INTENT(IN) :: npoints
+  INTEGER, INTENT(IN) :: N,npoints
   LOGICAL, INTENT(INOUT) :: error
 
   INTEGER :: i 
@@ -54,7 +55,10 @@ SUBROUTINE make_gnuplot(Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   WRITE(100,*) "set xrange [", qmin, ":", qmax,"]"
   WRITE(100,*) "k = ", k
   WRITE(100,*) "plot 0.5 * k * x**2 t 'basis', \"
-  WRITE(100,*) "'plot.dat' u 1:2 t 'Vq'"
+  WRITE(100,*) "'plot.dat' u 1:2 t 'Vq',\"
+  DO i=0,N-1
+    WRITE(100,*) "plot y=", Ei(i), "t ",i
+  END DO
   CLOSE(unit=100) 
 
 END SUBROUTINE make_gnuplot
