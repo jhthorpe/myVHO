@@ -37,6 +37,7 @@ SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
+  REAL(KIND=8) :: temp
   INTEGER :: dummy,i
   
   error = .FALSE.
@@ -63,15 +64,18 @@ SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
 
   OPEN(file="Vq",unit=101,status='old')
   !read first line
-  READ(101,*) dummy, q(0), Vq(0)
+  READ(101,*) dummy, q(0), temp
+  Vq(0) = temp - V_off
   qmin = q(0) 
 
   DO i=1,npoints-2
-    READ(101,*) dummy, q(i), Vq(i) 
+    READ(101,*) dummy, q(i), temp
+    Vq(i) = temp - V_off 
   END DO
 
   !read last line
-  READ(101,*) dummy, q(npoints-1), Vq(npoints-1)
+  READ(101,*) dummy, q(npoints-1), temp
+  Vq(npoints-1) = temp - V_off
   qmax = q(npoints-1)
    
   CLOSE(unit=101)

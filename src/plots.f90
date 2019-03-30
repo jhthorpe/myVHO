@@ -28,17 +28,34 @@ CONTAINS
 SUBROUTINE make_gnuplot(Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   IMPLICIT NONE
 
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q
-  REAL(KIND=8) :: qmin,qmax,qeq,k,m,V_off,a
-  INTEGER :: N, npoints
-  LOGICAL :: error
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
+  REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,V_off,a
+  INTEGER, INTENT(IN) :: npoints
+  LOGICAL, INTENT(INOUT) :: error
 
-  WRITE(*,*) "Generating datafile and gnuplot runner" 
+  INTEGER :: i 
+
+  error = .FALSE.
+  WRITE(*,*)
+  WRITE(*,*) "Generating plot.dat and gnurun" 
+  WRITE(*,*) "Visualize with:"
+  WRITE(*,*) "        gnuplot < gnurun"
+  WRITE(*,*) "        display plot.png"
+
+  OPEN(unit=101,file='plot.dat',status='replace')
+    DO i=0,npoints-1
+      WRITE(101,*) q(i),Vq(i)
+    END DO 
+  CLOSE(unit=101) 
  
   OPEN(unit=100,file="gnurun",status='replace')
-
+  WRITE(100,*) "set terminal png"
+  WRITE(100,*) "set output 'plot.png'"
+  WRITE(100,*) "set xrange [", qmin, ":", qmax,"]"
+  WRITE(100,*) "k = ", k
+  WRITE(100,*) "plot 0.5 * k * x**2 t 'basis', \"
+  WRITE(100,*) "'plot.dat' u 1:2 t 'Vq'"
   CLOSE(unit=100) 
-
 
 END SUBROUTINE make_gnuplot
 
