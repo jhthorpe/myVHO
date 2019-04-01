@@ -61,10 +61,10 @@ SUBROUTINE make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Ei,error)
   !WRITE(100,*) "plot 0.5 * k * (x - xeq)**2 t 'basis', \"
   !WRITE(100,*) "'Vq' u 2:3 t 'Vq' ,\"
   WRITE(100,*) "'plot.dat' u 1:2 t 'Vq',\"
-  DO i=0,vmax-2
+  DO i=0,MIN(vmax,N)-2
     WRITE(100,*) Ei(i),"t ","'v=",i,"'",",\"
   END DO
-  WRITE(100,*) Ei(vmax-1), "t ","'v=", vmax-1,"'"
+  WRITE(100,*) Ei(MIN(vmax,N)-1), "t ","'v=", MIN(vmax,N)-1,"'"
   CLOSE(unit=100) 
 
 END SUBROUTINE make_gnuplot

@@ -5,7 +5,7 @@ PROGRAM generator
   INTEGER :: i,nsteps
 
   req = 0.5
-  rmin = 0.1
+  rmin = 0.05
   rmax = 3
   nsteps = 50000
   De = 10.0

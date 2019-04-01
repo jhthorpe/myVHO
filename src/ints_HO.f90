@@ -250,7 +250,6 @@ SUBROUTINE HO1D_harmonic(Hij,N,k,m,error)
   REAL(KIND=8) :: w
   INTEGER :: i
 
-  WRITE(*,*) "Calculating Kinetic Integrals"
   error = .FALSE.
   !pi = 3.1415926535897932
   w = SQRT(k/m)

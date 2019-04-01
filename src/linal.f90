@@ -63,15 +63,15 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,Voff,error)
 
   WRITE(*,*) 
   WRITE(*,*) "Vibrational Eigenvalues"
-  DO j=0,vmax-1
+  DO j=0,MIN(vmax,N)-1
     WRITE(*,*) Ei(j)
   END DO 
 
-  !WRITE(*,*) 
-  !WRITE(*,*) "Eigenvectors"
-  !DO i=0,N-1
-  !  WRITE(*,*) Hij(i,0:vmax-1)
-  !END DO
+  WRITE(*,*) 
+  WRITE(*,*) "Eigenvectors"
+  DO i=0,N-1
+    WRITE(*,*) Hij(i,0:MIN(vmax,N)-1)
+  END DO
 
   DEALLOCATE(WORK)
   

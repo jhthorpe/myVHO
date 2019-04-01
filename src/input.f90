@@ -25,21 +25,21 @@ CONTAINS
 ! qeq		: real*8, equilibrium q
 ! k	: real*8, k value of basis functions
 ! m	: real*8, m balue of basis functions
-! V_off		: real*8, basis potential offset below qeq
+! Voff		: real*8, basis potential offset below qeq
 ! a	: real*8, alpha value of basis functions 
 ! error		: bool, true if error
 
-SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
+SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
-  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,V_off,a
+  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,Voff,a
   INTEGER, INTENT(INOUT) :: N, npoints,vmax
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
   REAL(KIND=8) :: temp
-  INTEGER :: dummy,i
+  INTEGER :: dummy,i,ueq
   
   error = .FALSE.
   fname = "Vq"
@@ -48,45 +48,55 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   READ(100,*) word, N
   READ(100,*) word, vmax
   READ(100,*) word, qeq
-  READ(100,*) word, k
   READ(100,*) word, m
-  READ(100,*) word, V_off
   CLOSE(unit=100)
-  a = SQRT(m*SQRT(k/m))
-  WRITE(*,*) "Number of basis functions :", N
-  WRITE(*,*) "Equilibrium position      :", qeq
-  WRITE(*,*) "Basis function k          :", k
-  WRITE(*,*) "Basis function m          :", m
-  WRITE(*,*) "Basis function offset     :", V_off
-  WRITE(*,*) "Basis function alpha      :", a
   CALL getfline(npoints,fname,error)
+  
 
   ALLOCATE(Vq(0:npoints-1)) 
   ALLOCATE(q(0:npoints-1))
 
   OPEN(file="Vq",unit=101,status='old')
   !read first line
-  READ(101,*) dummy, q(0), temp
-  Vq(0) = temp - V_off
-  qmin = q(0) 
-
-  DO i=1,npoints-2
-    READ(101,*) dummy, q(i), temp
-    Vq(i) = temp - V_off 
+  DO i=0,npoints-1
+    READ(101,*) dummy, q(i), Vq(i)
   END DO
-
-  !read last line
-  READ(101,*) dummy, q(npoints-1), temp
-  Vq(npoints-1) = temp - V_off
+  qmin = q(0)
   qmax = q(npoints-1)
-   
   CLOSE(unit=101)
+   
+  Voff = -1.0*MINVAL(Vq)
+  Vq = Vq + Voff
+
+  DO i=0,npoints-1
+    IF (q(i) .GT. qeq) THEN
+      ueq = i-1
+      EXIT
+    END IF
+  END DO 
+  k = (Vq(ueq+1) - 2*Vq(ueq) + Vq(ueq - 1))/(q(ueq+1)-q(ueq))**2.0
+  IF (ABS(q(ueq+1)-q(ueq) - (q(ueq)-q(ueq-1))) .GT. 1.0D-15) THEN
+    WRITE(*,*) "WARNING : potentially bad k value"
+    WRITE(*,*) "forwards and backwards differences not equal"
+    WRITE(*,*) q(ueq+1)-q(ueq), q(ueq)-q(ueq-1)
+    WRITE(*,*) 
+  END IF
+  
 
   q = q - qeq
+
+  a = SQRT(m*SQRT(k/m))
+  WRITE(*,*) "Number of basis functions :", N
+  WRITE(*,*) "Equilibrium position      :", qeq
+  WRITE(*,*) "Basis function k          :", k
+  WRITE(*,*) "Basis function m          :", m
+  WRITE(*,*) "Basis function offset     :", Voff
+  WRITE(*,*) "Basis function alpha      :", a
 
   !DO i=0,npoints-1
   !WRITE(*,*) q(i), Vq(i)
   !END DO
+
 
 END SUBROUTINE read_input 
 
