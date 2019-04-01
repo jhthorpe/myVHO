@@ -5,11 +5,11 @@ PROGRAM generator
   INTEGER :: i,nsteps
 
   req = 0.5
-  rmin = 0.05
+  rmin = 0.1
   rmax = 3
   nsteps = 50000
-  De = 10.0
-  ke = 50.0
+  De = 100.0
+  ke = 1200.0
 
   a = SQRT(ke/(2*De))
   dr = (rmax - rmin)/nsteps

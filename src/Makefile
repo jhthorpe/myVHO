@@ -1,6 +1,7 @@
 #local
 export FC = gfortran
 export FFLAGS = -O3 
+#export FFLAGS = -g -fcheck=bounds -Wall -Wextra -Wshadow
 
 #local
 #export LINAL = -L/Users/jamesthorpe/LAPACK/lapack-3.7.0 -llapack -lblas

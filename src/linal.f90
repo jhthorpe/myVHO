@@ -23,13 +23,12 @@ CONTAINS
 ! Voff          : real*8, potential energy offset
 ! error         : bool, true if error
 
-SUBROUTINE diag(N,vmax,Hij,Ei,Cij,Voff,error)
+SUBROUTINE diag(N,vmax,Hij,Ei,Cij,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Cij
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Ei
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
-  REAL(KIND=8) , INTENT(IN) :: Voff 
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N,vmax
 
@@ -53,13 +52,22 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,Voff,error)
   ALLOCATE(Ei(0:N-1))
   ALLOCATE(Cij(0:N-1,0:N-1))
 
+  !WRITE(*,*) "The Hamiltonian"
+  !DO i=0,N-1
+  !  WRITE(*,*) Hij(i,0:N-1)
+  !END DO
+  !WRITE(*,*) 
+
+  WRITE(*,*) 
+  WRITE(*,*) "Diagonalizing the Hamiltonian"
   CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:1),LWORK,INFO) 
   !CALL DSYEVX(JOBZ,RNGE,UPLO,N,Hij(0:N-1,0:N-1),LDA,dummy,dummy, &
   !            IL,UL,Ei(0:N-1), WORK(0:1),LWORK,INFO) 
-  LWORK = WORK(0)
+  LWORK = CEILING(WORK(0))
   DEALLOCATE(WORK)
   ALLOCATE(WORK(0:LWORK-1))
-  CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:1),LWORK,INFO) 
+  CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:LWORK-1),LWORK,INFO) 
+  WRITE(*,*) "Info is:", INFO 
 
   WRITE(*,*) 
   WRITE(*,*) "Vibrational Eigenvalues"

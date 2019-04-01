@@ -18,7 +18,7 @@ PROGRAM vscf
 
   CALL read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   CALL HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
-  CALL diag(N,vmax,Hij,Ei,Cij,V_off,error)
+  CALL diag(N,vmax,Hij,Ei,Cij,error)
   CALL make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Ei,error)
 
   DEALLOCATE(Hij)

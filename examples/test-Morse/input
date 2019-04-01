@@ -1,5 +1,5 @@
-nbasis 10
-vmax 3
+nbasis 30
+vmax 4
 Q_eq 0.5
 mass 2
 
