@@ -53,9 +53,13 @@ SUBROUTINE make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Ei,error)
   OPEN(unit=100,file="gnurun",status='replace')
   WRITE(100,*) "set terminal png"
   WRITE(100,*) "set output 'plot.png'"
-  WRITE(100,*) "set xrange [", qmin, ":", qmax,"]"
+  WRITE(100,*) "set xrange [", qmin-qeq, ":", qmax-qeq,"]"
+  WRITE(100,*) "set yrange [", MINVAL(Vq),":",MAXVAL(Vq),"]"
   WRITE(100,*) "k = ", k
-  WRITE(100,*) "plot 0.5 * k * x**2 t 'basis', \"
+  WRITE(100,*) "xeq = ", qeq
+  WRITE(100,*) "plot 0.5 * k * (x)**2 t 'basis', \"
+  !WRITE(100,*) "plot 0.5 * k * (x - xeq)**2 t 'basis', \"
+  !WRITE(100,*) "'Vq' u 2:3 t 'Vq' ,\"
   WRITE(100,*) "'plot.dat' u 1:2 t 'Vq',\"
   DO i=0,vmax-2
     WRITE(100,*) Ei(i),"t ","'v=",i,"'",",\"

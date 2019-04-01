@@ -64,7 +64,7 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,Voff,error)
   WRITE(*,*) 
   WRITE(*,*) "Vibrational Eigenvalues"
   DO j=0,vmax-1
-    WRITE(*,*) Ei(j) + Voff
+    WRITE(*,*) Ei(j)
   END DO 
 
   !WRITE(*,*) 
