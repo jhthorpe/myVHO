@@ -63,23 +63,46 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,error)
   CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:1),LWORK,INFO) 
   !CALL DSYEVX(JOBZ,RNGE,UPLO,N,Hij(0:N-1,0:N-1),LDA,dummy,dummy, &
   !            IL,UL,Ei(0:N-1), WORK(0:1),LWORK,INFO) 
+
   LWORK = CEILING(WORK(0))
   DEALLOCATE(WORK)
   ALLOCATE(WORK(0:LWORK-1))
+
   CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:LWORK-1),LWORK,INFO) 
   WRITE(*,*) "Info is:", INFO 
+  IF (INFO .NE. 0) THEN
+    error = .TRUE.
+    DEALLOCATE(WORK)
+    DEALLOCATE(Ei)
+    DEALLOCATE(Cij)
+    RETURN
+  END IF
 
   WRITE(*,*) 
   WRITE(*,*) "Vibrational Eigenvalues"
+  WRITE(*,*) "Eigenvalues written to eigs.dat"
+  OPEN(unit=103,file='eigs.dat',status='replace')
   DO j=0,MIN(vmax,N)-1
-    WRITE(*,*) Ei(j)
+    WRITE(*,*) j, Ei(j)
+    WRITE(103,*) j, Ei(j)
   END DO 
+  DO j=MIN(vmax,N)+1,N-1
+    WRITE(103,*) j, Ei(j)
+  END DO
+  CLOSE(unit=103)
+
 
   WRITE(*,*) 
-  WRITE(*,*) "Eigenvectors"
+  WRITE(*,*) "Eigenvectors written to evec.dat"
+  OPEN(unit=102,file='evec.dat',status='replace')
   DO i=0,N-1
-    WRITE(*,*) Hij(i,0:MIN(vmax,N)-1)
+    WRITE(102,*) "Vibrational Eigenstate, eigenvalue : ", i, Ei(i)
+    DO j=0,N-1
+      WRITE(102,'(2x,I4,4x,F11.8)') j, Hij(i,j)
+    END DO
+    WRITE(102,*) "--------------------------"
   END DO
+  CLOSE(unit=102)
 
   DEALLOCATE(WORK)
   

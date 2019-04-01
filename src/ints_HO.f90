@@ -45,6 +45,12 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
   Ncon = 0.0D0
 
   CALL HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
+  IF (error) THEN 
+    DEALLOCATE(Ncon)
+    DEALLOCATE(Hij)
+    RETURN
+  END IF
+
   CALL HO1D_harmonic(Hij,N,k,m,error)
 
 END SUBROUTINE HO1D_integrals
@@ -74,6 +80,7 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Sij
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Htab 
   REAL(KIND=8) :: dq,dx,xlim,x,tol
+  REAL(KIND=8) :: infty
   INTEGER :: i,j,u,xpoints
 
   error = .FALSE.
@@ -82,7 +89,7 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
  
   ALLOCATE(Sij(0:N-1,0:N-1))
   ALLOCATE(Htab(0:N-1))
-
+  infty = HUGE(tol)
 
   !DO u=1,npoints-2
   DO u=0,npoints-2
@@ -102,8 +109,8 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   END DO 
 
   Sij = 0
-  xlim = 3
-  xpoints = 500000
+  xlim = 20
+  xpoints = 1000000
   dx = (2*xlim)/xpoints
 
   WRITE(*,*) 
@@ -133,8 +140,17 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
     x = x + dx
   END DO
 
+  WRITE(*,*)
+  WRITE(*,*) "Normalizing Wavefunction"
   DO j=0,N-1
     DO i=j,N-1
+      IF (Hij(i,j) .GT. infty) THEN
+        WRITE(*,'(2x,A1,2x,I4,A1,I4,2x,A12)') "H",i,",",j," is infinite"
+        error  = .TRUE.
+      ELSE IF (Hij(i,j) .NE. Hij(i,j)) THEN 
+        WRITE(*,'(2x,A1,2x,I4,A1,I4,2x,A7)') "H",i,",",j," is NaN"
+        error = .TRUE.
+      END IF
       Hij(i,j) = Hij(i,j) / SQRT((Sij(i,i)*Sij(j,j)))
     END DO
   END DO

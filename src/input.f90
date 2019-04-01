@@ -38,11 +38,13 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
-  REAL(KIND=8) :: temp
-  INTEGER :: dummy,i,ueq
+  REAL(KIND=8) :: temp,infty
+  INTEGER :: dummy,i,ueq,exitval
+  LOGICAL :: exists
   
   error = .FALSE.
   fname = "Vq"
+  infty = HUGE(qmin)
 
   OPEN(file='input',unit=100,status='old')
   READ(100,*) word, N
@@ -68,21 +70,42 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   Voff = -1.0*MINVAL(Vq)
   Vq = Vq + Voff
 
-  DO i=0,npoints-1
-    IF (q(i) .GT. qeq) THEN
-      ueq = i-1
-      EXIT
-    END IF
-  END DO 
-  k = (Vq(ueq+1) - 2*Vq(ueq) + Vq(ueq - 1))/(q(ueq+1)-q(ueq))**2.0
-  IF (ABS(q(ueq+1)-q(ueq) - (q(ueq)-q(ueq-1))) .GT. 1.0D-15) THEN
-    WRITE(*,*) "WARNING : potentially bad k value"
-    WRITE(*,*) "forwards and backwards differences not equal"
-    WRITE(*,*) q(ueq+1)-q(ueq), q(ueq)-q(ueq-1)
-    WRITE(*,*) 
-  END IF
-  
 
+  !Get k
+  INQUIRE(FILE='k',EXIST=exists)
+  IF (exists) THEN
+    OPEN(file='k',unit=105,status='old')
+    READ(105,*) k
+    CLOSE(unit=105)
+  ELSE 
+    !if k file not present, calculate from potential at qeq
+    DO i=0,npoints-1
+      IF (q(i) .GT. qeq) THEN
+        ueq = i-1
+        EXIT
+      END IF
+    END DO 
+    k = (Vq(ueq+1) - 2*Vq(ueq) + Vq(ueq - 1))/(q(ueq+1)-q(ueq))**2.0
+    IF (ABS(q(ueq+1)-q(ueq) - (q(ueq)-q(ueq-1))) .GT. 1.0D-15) THEN
+      WRITE(*,*) "WARNING : potentially bad k value"
+      WRITE(*,*) "forwards and backwards differences not equal"
+      WRITE(*,*) q(ueq+1)-q(ueq), q(ueq)-q(ueq-1)
+      WRITE(*,*) 
+    ELSE IF (k .GT. infty) THEN
+      WRITE(*,*) "k is infinite"
+      error  = .TRUE.
+      RETURN
+    ELSE IF (k .NE. k) THEN
+      WRITE(*,*) "k is NaN"
+      error = .TRUE.
+      RETURN
+    END IF
+ 
+
+  END IF
+
+
+  !center around qeq
   q = q - qeq
 
   a = SQRT(m*SQRT(k/m))
