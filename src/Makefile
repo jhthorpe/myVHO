@@ -3,11 +3,11 @@ export FC = gfortran
 export FFLAGS = -O3 
 
 #local
-export LINAL = -L/Users/jamesthorpe/LAPACK/lapack-3.7.0 -llapack -lblas
+#export LINAL = -L/Users/jamesthorpe/LAPACK/lapack-3.7.0 -llapack -lblas
 
 #HiPerGator
-#export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lm
-#export MKL = /apps/compilers/intel/2018/1.163/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin
+export MKL = /apps/compilers/intel/2018/1.163/compilers_and_libraries_2018.1.163/linux/mkl/lib/intel64_lin
+export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lm
 
 #both
 export bindir = ../bin

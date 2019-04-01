@@ -45,16 +45,7 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
 
   CALL HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   CALL HO1D_normalize(Hij,N,a,Ncon,error)
-  CALL HO1D_kinetic(Hij,N,k,m,Ncon,error)
-
-  !TESTING TESTING TESTING
-  WRITE(*,*) "Testing Integrals"
-  WRITE(*,*) "H00", Hij(0,0)
-  WRITE(*,*) "H01", Hij(0,1)
-  WRITE(*,*) "H10", Hij(1,0)
-  WRITE(*,*) "H11", Hij(1,1)
-  !TESTING TESTING TESTING
-
+  CALL HO1D_harmonic(Hij,N,k,m,error)
 
 END SUBROUTINE HO1D_integrals
 
@@ -80,7 +71,6 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N, npoints
 
-  !REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Htemp
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Htab 
   REAL(KIND=8) :: dq
   INTEGER :: i,j,u
@@ -89,10 +79,10 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   WRITE(*,*) "Calculating potential energy numerical integrals"
   WRITE(*,*) "Number of points :", npoints
  
-  !ALLOCATE(Htemp(0:N-1,0:N-1))
   ALLOCATE(Htab(0:N-1))
-  
+
   DO u=0,npoints-2
+  !DO u=0,npoints-1
    
     !Construct Hermitian table
     CALL build_Htab(N,a*q(u),Htab(0:N-1))
@@ -100,14 +90,14 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
 
     DO j=0,N-1
       DO i=j,N-1
-        Hij(i,j) = Hij(i,j) + Htab(i)*Htab(j)*EXP(-a**2.0*q(u)**2.0)*Vq(u)*dq
+        Hij(i,j) = Hij(i,j) + dq*Htab(i)*Htab(j)*EXP(-a**2.0*q(u)**2.0)* (&
+                  Vq(u) - 0.5*k*q(u)**2.0D0)
       END DO
     END DO
 
   END DO 
- 
+
   DEALLOCATE(Htab)
-  !DEALLOCATE(Htemp) 
 
 END SUBROUTINE HO1D_potential
 !---------------------------------------------------------------------
@@ -204,26 +194,74 @@ END SUBROUTINE HO1D_normalize
 ! N             : int, number of basis functions
 ! k             : real*8, k of basis functions
 ! m             : real*8, m of basis functions
+! a             : real*8, alpha of basis functions
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true on exit if problem
 
-SUBROUTINE HO1D_kinetic(Hij,N,k,m,Ncon,error)
+SUBROUTINE HO1D_kinetic(Hij,N,k,m,a,Ncon,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Ncon
-  REAL(KIND=8), INTENT(IN) :: k,m
+  REAL(KIND=8), INTENT(IN) :: k,m,a
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N
-  REAL(KIND=8) :: w 
+  REAL(KIND=8) :: w ,pi,C
   INTEGER :: i
 
   WRITE(*,*) "Calculating Kinetic Integrals"
   error = .FALSE.
+  pi = 3.1415926535897932
   w = SQRT(k/m)
+  C = SQRT(1/(2*w*m))
+
   DO i=0,N-1
-    Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5)/2.0
+    Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5)/2.0 !using viral theorum
+    IF (i+2 .LE. N-1) THEN
+      Hij(i+2,i) = Hij(i+2,i) + (C**2.0*a**4.0*SQRT(n+2.)*SQRT(n+1.)&
+                   - Ncon(i+2)*2*a**3.0*(i+2.)*C/Ncon(i+1))/(2.*m)
+    END IF
+
+    !+2 off diagonal terms... 
+    ! I have been lazy and do not have analytical derivatives...
+    !H(i+2,i) = H(i+2,j) + nint_fdif_2drv_HO(i,i+2,a,m,qmin,qmax,qeq)
   END DO
 
 END SUBROUTINE HO1D_kinetic
+
 !---------------------------------------------------------------------
+!       HO1D_harmonic
+!               -adds in harmonic energy terms to diagaonals 
+!---------------------------------------------------------------------
+! Variables
+! Hij           : 2D real*8, matrix of integrals
+! N             : int, number of basis functions
+! k             : real*8, k of basis functions
+! m             : real*8, m of basis functions
+! a             : real*8, alpha of basis functions
+! Ncon          : 1D real*8, list of normalization constants
+! error         : bool, true on exit if problem
+
+SUBROUTINE HO1D_harmonic(Hij,N,k,m,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  REAL(KIND=8), INTENT(IN) :: k,m
+  LOGICAL, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: N
+  REAL(KIND=8) :: w
+  INTEGER :: i
+
+  WRITE(*,*) "Calculating Kinetic Integrals"
+  error = .FALSE.
+  !pi = 3.1415926535897932
+  w = SQRT(k/m)
+  !C = SQRT(1/(2*w*m))
+
+  DO i=0,N-1
+    Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5) !using viral theorum
+  END DO
+
+END SUBROUTINE HO1D_harmonic
+
+!---------------------------------------------------------------------
+
 END MODULE ints_HO

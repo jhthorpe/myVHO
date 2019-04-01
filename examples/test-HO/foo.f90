@@ -8,7 +8,7 @@ PROGRAM ho_pot
   req = 0.0
   rmin = -3
   rmax = 3
-  nsteps = 1000
+  nsteps = 50000
   dr = (rmax - rmin)/nsteps
 
   r = rmin

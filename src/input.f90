@@ -18,6 +18,7 @@ CONTAINS
 !---------------------------------------------------------------------
 ! Variables
 ! N		: int, number of harmonic oscillator basis functions
+! vmax          : int, maximum vibrational quantum number
 ! Vq		: 1D real*8, 1D potential energy surface
 ! qmin		: real*8, minimum r
 ! qmax		: real*8, max r
@@ -28,12 +29,12 @@ CONTAINS
 ! a	: real*8, alpha value of basis functions 
 ! error		: bool, true if error
 
-SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
+SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
   REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,V_off,a
-  INTEGER, INTENT(INOUT) :: N, npoints
+  INTEGER, INTENT(INOUT) :: N, npoints,vmax
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
@@ -45,6 +46,7 @@ SUBROUTINE read_input(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,error)
 
   OPEN(file='input',unit=100,status='old')
   READ(100,*) word, N
+  READ(100,*) word, vmax
   READ(100,*) word, qeq
   READ(100,*) word, k
   READ(100,*) word, m
