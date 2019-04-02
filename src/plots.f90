@@ -50,25 +50,25 @@ SUBROUTINE make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints, &
 
   OPEN(unit=101,file='plot.dat',status='replace')
     DO i=0,npoints-1
-      WRITE(101,*) q(i),Vq(i)
+      WRITE(101,*) q(i)+qeq,Vq(i)
     END DO 
   CLOSE(unit=101) 
  
   OPEN(unit=100,file="gnurun",status='replace')
   WRITE(100,*) "set terminal png"
   WRITE(100,*) "set output 'plot.png'"
-  WRITE(100,*) "set xrange [", qmin-qeq, ":", qmax-qeq,"]"
+  WRITE(100,*) "set xrange [", qmin, ":", qmax,"]"
   WRITE(100,*) "set yrange [", MINVAL(Vq),":",MAXVAL(Vq),"]"
   WRITE(100,*) "k = ", k
   WRITE(100,*) "xeq = ", qeq
-  WRITE(100,*) "plot 0.5 * k * (x)**2 t 'basis', \"
+  WRITE(100,*) "plot 0.5 * k * (x - xeq)**2 t 'basis', \"
   !WRITE(100,*) "plot 0.5 * k * (x - xeq)**2 t 'basis', \"
   !WRITE(100,*) "'Vq' u 2:3 t 'Vq' ,\"
   WRITE(100,*) "'plot.dat' u 1:2 t 'Vq',\"
-  DO i=0,MIN(vmax,N)-2
+  DO i=0,MIN(vmax+1,N)-2
     WRITE(100,*) Ei(i),"t ","'v=",i,"'",",\"
   END DO
-  WRITE(100,*) Ei(MIN(vmax,N)-1), "t ","'v=", MIN(vmax,N)-1,"'"
+  WRITE(100,*) Ei(MIN(vmax+1,N)-1), "t ","'v=", MIN(vmax+1,N)-1,"'"
   CLOSE(unit=100) 
 
   CALL plot_wave(N,vmax,qmin,qmax,qeq,a,Cij,Ni,error)
@@ -89,6 +89,7 @@ SUBROUTINE plot_wave(N,vmax,qmin,qmax,qeq,a,Cij,Ni,error)
 ! a		: real*8, alpha value of basis functions 
 ! Cij           : 2D real*8, coefficients of basis functions
 ! Ni            : 1D real*8, normalization constants 
+! FC            : 2D real*8, integrals for Frank-Condon specta
 ! error         : bool, true if error
   IMPLICIT NONE
 
@@ -98,6 +99,7 @@ SUBROUTINE plot_wave(N,vmax,qmin,qmax,qeq,a,Cij,Ni,error)
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N,vmax
   
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: FC
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Htab
   REAL(KIND=8) :: q,dq,temp
   INTEGER :: nsteps,u,foff
@@ -106,30 +108,47 @@ SUBROUTINE plot_wave(N,vmax,qmin,qmax,qeq,a,Cij,Ni,error)
   error = .FALSE.
   WRITE(*,*)
   WRITE(*,*) "Wavefunction plots saved as 'wave_X.dat'"
+  WRITE(*,*) "Frank-Condon data saved as 'FC_ints.dat'"
+  WRITE(*,*) "Frank-Condon parameters save as 'FC_param.dat'"
   CALL EXECUTE_COMMAND_LINE('rm wave_[0-9]*.dat')
   
   nsteps = 1000
   dq = (qmax - qmin)/nsteps  
   q = qmin - qeq
   ALLOCATE(Htab(0:N-1))
+  ALLOCATE(FC(0:nsteps-1,0:vmax))
+  FC = 0
 
   foff = 200
   CALL open_wave(vmax,foff,error)
   DO u=0,nsteps-1
     CALL build_Htab(N,a*q,Htab(0:N-1)) 
-    DO i=0,vmax-1
+    DO i=0,vmax
       temp = 0.0
       DO j=0,N-1
         temp = temp + 1.0/Ni(j)*Cij(i,j)*Htab(j)*EXP(-a**2.0*q**2.0/2) 
       END DO
-      WRITE(foff+i,*) q,temp
+      WRITE(foff+i,*) q+qeq,temp
+      FC(u,i) = temp
     END DO    
 
     q = q + dq  
   END DO
   CALL close_wave(vmax,foff,error)
+
+  OPEN(file='FC_ints.dat',unit=106,form='unformatted',status='replace')
+  WRITE(106) FC(0:nsteps-1,0:vmax)
+  CLOSE(unit=106)
+
+  OPEN(file='FC_param.dat',unit=107,status='replace')
+  WRITE(107,*) nsteps
+  WRITE(107,*) vmax
+  WRITE(107,*) dq
+  CLOSE(unit=107)
+ 
   
   DEALLOCATE(Htab) 
+  DEALLOCATE(FC)
 
 END SUBROUTINE plot_wave
 

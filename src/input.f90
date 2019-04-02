@@ -46,7 +46,16 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   fname = "Vq"
   infty = HUGE(qmin)
 
-  OPEN(file='input',unit=100,status='old')
+  !check input file exists
+  INQUIRE(file='vho.dat',EXIST=exists)
+  IF (.NOT. exists) THEN
+    WRITE(*,*) "You need to create the input file, 'vho.dat'"
+    error = .TRUE.
+    RETURN
+  END IF
+
+  !read in basic data
+  OPEN(file='vho.dat',unit=100,status='old')
   READ(100,*) word, N
   READ(100,*) word, vmax
   READ(100,*) word, qeq
@@ -58,8 +67,8 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   ALLOCATE(Vq(0:npoints-1)) 
   ALLOCATE(q(0:npoints-1))
 
+  !read in q and Vq
   OPEN(file="Vq",unit=101,status='old')
-  !read first line
   DO i=0,npoints-1
     READ(101,*) dummy, q(i), Vq(i)
   END DO
@@ -85,10 +94,14 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
         EXIT
       END IF
     END DO 
+
+    !from central differences, 2nd derivative
     k = (Vq(ueq+1) - 2*Vq(ueq) + Vq(ueq - 1))/(q(ueq+1)-q(ueq))**2.0
+
+    !check k values
     IF (ABS(q(ueq+1)-q(ueq) - (q(ueq)-q(ueq-1))) .GT. 1.0D-15) THEN
       WRITE(*,*) "WARNING : potentially bad k value"
-      WRITE(*,*) "forwards and backwards differences not equal"
+      WRITE(*,*) "forwards and backwards differences not equal:"
       WRITE(*,*) q(ueq+1)-q(ueq), q(ueq)-q(ueq-1)
       WRITE(*,*) 
     ELSE IF (k .GT. infty) THEN
@@ -101,13 +114,12 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
       RETURN
     END IF
  
-
   END IF
-
 
   !center around qeq
   q = q - qeq
 
+  !print output
   a = SQRT(m*SQRT(k/m))
   WRITE(*,*) "Number of basis functions :", N
   WRITE(*,*) "Equilibrium position      :", qeq
@@ -115,11 +127,6 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   WRITE(*,*) "Basis function m          :", m
   WRITE(*,*) "Basis function offset     :", Voff
   WRITE(*,*) "Basis function alpha      :", a
-
-  !DO i=0,npoints-1
-  !WRITE(*,*) q(i), Vq(i)
-  !END DO
-
 
 END SUBROUTINE read_input 
 
