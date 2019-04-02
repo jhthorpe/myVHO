@@ -1,7 +1,7 @@
 !//////////////////////////////////////////////////////////////////
 !///
 !///		Module Containing subroutines for reading
-!///		input for myVSCF
+!///		input for myVHO
 !///
 !///		James H. Thorpe
 !///

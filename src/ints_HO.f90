@@ -17,6 +17,7 @@ CONTAINS
 ! Variables
 ! N             : int, number of harmonic oscillator basis functions
 ! Hij		: 2D real*8, Hamiltonian Matrix
+! Ni		: 1D real*8, Normalization constants
 ! Vq            : 1D real*8, 1D potential energy surface
 ! qmin          : real*8, minimum r
 ! qmax          : real*8, max r
@@ -24,15 +25,16 @@ CONTAINS
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true if error
 
-SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
+SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,&
+                          k,m,V_off,a,Hij,Ni,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Ni
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
   REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,V_off,a
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N, npoints
 
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Ncon
   INTEGER :: i
   error = .FALSE.
 
@@ -40,13 +42,13 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,error)
   WRITE(*,*) "Calculating HO integrals"
 
   ALLOCATE(Hij(0:N-1,0:N-1))
-  ALLOCATE(Ncon(0:N-1))
+  ALLOCATE(Ni(0:N-1))
   Hij = 0.0D0
-  Ncon = 0.0D0
+  Ni = 0.0D0
 
-  CALL HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
+  CALL HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
   IF (error) THEN 
-    DEALLOCATE(Ncon)
+    DEALLOCATE(Ni)
     DEALLOCATE(Hij)
     RETURN
   END IF
@@ -64,21 +66,22 @@ END SUBROUTINE HO1D_integrals
 ! Variables
 ! N 	       : int, number of harmonic oscillator basis functions
 ! Hij		: 2D real*8, Hamiltonian Matrix
+! Ni            : 1D real*8, list of normalization consts
 ! Vq            : 1D real*8, 1D potential energy surface
 ! q		: 1D real*8, list of q values
 ! npoints	: int, number of points in Vq and q
 ! error		: bool, true if error
 
-SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
+SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  REAL(KIND=8), DIMENSION(0:),INTENT(INOUT) :: Ni
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
   REAL(KIND=8), INTENT(IN) :: k,m,a,V_off
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N, npoints
 
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Sij
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Htab 
+  REAL(KIND=8), ALLOCATABLE, DIMENSION(:) :: Htab
   REAL(KIND=8) :: dq,dx,xlim,x,tol
   REAL(KIND=8) :: infty
   INTEGER :: i,j,u,xpoints
@@ -87,7 +90,6 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
   WRITE(*,*) "Calculating potential energy numerical integrals"
   WRITE(*,*) "Number of points :", npoints
  
-  ALLOCATE(Sij(0:N-1,0:N-1))
   ALLOCATE(Htab(0:N-1))
   infty = HUGE(tol)
 
@@ -108,7 +110,7 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
 
   END DO 
 
-  Sij = 0
+  Ni = 0
   xlim = 20
   xpoints = 1000000
   dx = (2*xlim)/xpoints
@@ -125,15 +127,15 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
 
     CALL build_Htab(N,a*x,Htab(0:N-1))
     DO j=0,N-1
-        Sij(j,j) = Sij(j,j) + Htab(j)*Htab(j)*EXP(-a**2.0*x**2.0)*dx
+        Ni(j) = Ni(j) + Htab(j)*Htab(j)*EXP(-a**2.0*x**2.0)*dx
     END DO
 
   !  IF (u .EQ. xpoints/2) THEN
   !    WRITE(*,*) "at halfway point"
   !    WRITE(*,*) "x = ", x
-  !    WRITE(*,*) "S00", Sij(0,0)
-  !    WRITE(*,*) "S10", Sij(1,0)
-  !    WRITE(*,*) "S11", Sij(1,1)
+  !    WRITE(*,*) "S00", Ni(0,0)
+  !    WRITE(*,*) "S10", Ni(1,0)
+  !    WRITE(*,*) "S11", Ni(1,1)
   !    WRITE(*,*) 
   !  END IF
 
@@ -151,17 +153,16 @@ SUBROUTINE HO1D_potential(Hij,N,Vq,q,npoints,k,m,V_off,a,error)
         WRITE(*,'(2x,A1,2x,I4,A1,I4,2x,A7)') "H",i,",",j," is NaN"
         error = .TRUE.
       END IF
-      Hij(i,j) = Hij(i,j) / SQRT((Sij(i,i)*Sij(j,j)))
+      Hij(i,j) = Hij(i,j) / SQRT((Ni(i)*Ni(j)))
     END DO
   END DO
 
-  !WRITE(*,*) "S00", Sij(0,0)
-  !WRITE(*,*) "S10", Sij(1,0)
-  !WRITE(*,*) "S11", Sij(1,1)
+  !WRITE(*,*) "S00", Ni(0,0)
+  !WRITE(*,*) "S10", Ni(1,0)
+  !WRITE(*,*) "S11", Ni(1,1)
   !WRITE(*,*) 
 
   DEALLOCATE(Htab)
-  DEALLOCATE(Sij)
 
 END SUBROUTINE HO1D_potential
 !---------------------------------------------------------------------

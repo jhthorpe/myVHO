@@ -17,16 +17,14 @@ CONTAINS
 ! Variables
 ! N             : int, number of harmonic oscillator basis functions
 ! vmax          : int, max vibrational quantum number
-! Hij           : 2D real*8, Hamiltonian Matrix
+! Hij           : 2D real*8, Hamiltonian Matrix, on exit, coeffs
 ! Ei		: 1D real*8, vibrational energy levels
-! Cij		: 2D real*8, eigenvectors (coefficients)
 ! Voff          : real*8, potential energy offset
 ! error         : bool, true if error
 
-SUBROUTINE diag(N,vmax,Hij,Ei,Cij,error)
+SUBROUTINE diag(N,vmax,Hij,Ei,error)
   IMPLICIT NONE
 
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Cij
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Ei
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   LOGICAL, INTENT(INOUT) :: error
@@ -50,7 +48,6 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,error)
   UL = vmax
   ALLOCATE(WORK(0:1))
   ALLOCATE(Ei(0:N-1))
-  ALLOCATE(Cij(0:N-1,0:N-1))
 
   !WRITE(*,*) "The Hamiltonian"
   !DO i=0,N-1
@@ -74,7 +71,6 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,error)
     error = .TRUE.
     DEALLOCATE(WORK)
     DEALLOCATE(Ei)
-    DEALLOCATE(Cij)
     RETURN
   END IF
 
@@ -82,11 +78,11 @@ SUBROUTINE diag(N,vmax,Hij,Ei,Cij,error)
   WRITE(*,*) "Vibrational Eigenvalues"
   WRITE(*,*) "Eigenvalues written to eigs.dat"
   OPEN(unit=103,file='eigs.dat',status='replace')
-  DO j=0,MIN(vmax,N)-1
+  DO j=0,MIN(vmax+1,N)-1
     WRITE(*,*) j, Ei(j)
     WRITE(103,*) j, Ei(j)
   END DO 
-  DO j=MIN(vmax,N)+1,N-1
+  DO j=MIN(vmax+1,N)+1,N-1
     WRITE(103,*) j, Ei(j)
   END DO
   CLOSE(unit=103)

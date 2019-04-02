@@ -3,7 +3,3 @@ vmax 30
 Q_eq 0.0
 mass 2
 
-%k 0.16326530821730856
-
-Using Vq of a harmonic oscillator with k=1, mass=2, and potential offset of -0.5
-below Vq(Q_eq)
