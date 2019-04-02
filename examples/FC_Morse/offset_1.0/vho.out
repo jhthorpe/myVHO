@@ -1,0 +1,50 @@
+
+ Starting VSCF calcuation
+ James H. Thorpe
+
+ Number of basis functions :          50
+ Equilibrium position      :   1.0000000000000000     
+ Basis function k          :   1200.3174946484246     
+ Basis function m          :   2.0000000000000000     
+ Basis function offset     :   99.999999222380922     
+ Basis function alpha      :   6.9997339420452240     
+
+ Calculating HO integrals
+ Calculating potential energy numerical integrals
+ Number of points :       50001
+
+ Calculating Normalization Constants
+ Number of points :     1000000
+ between          :  -20.000000000000000      ,   20.000000000000000     
+ with dx          :   4.0000000000000003E-005
+
+ Normalizing Wavefunction
+
+ Diagonalizing the Hamiltonian
+ Info is:           0
+
+ Vibrational Eigenvalues
+ Eigenvalues written to eigs.dat
+           0   11.872447936296743     
+           1   33.367345364134493     
+           2   51.862242809138657     
+           3   67.357156578893310     
+           4   79.856414721342190     
+
+ Eigenvectors written to evec.dat
+
+ Generating plot.dat and gnurun
+ Visualize with:
+         gnuplot < gnurun
+         display plot.png
+
+ Wavefunction plots saved as 'wave_X.dat'
+
+ Calculating Frank-Condon integrals
+ Number of points :      100000
+ between          :  -20.000000000000000      ,   20.000000000000000     
+ with dx          :   4.0000000000000002E-004
+
+ Frank-Condon data saved as 'FC_ints.dat'
+ Frank-Condon parameters save as 'FC_param.dat'
+

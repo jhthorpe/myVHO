@@ -3,5 +3,3 @@ vmax 3
 Q_eq 0.5
 mass 2
 
-Using Vq of a harmonic oscillator with k=1, mass=2, and potential offset of -0.5
-below Vq(Q_eq)
