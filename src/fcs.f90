@@ -19,9 +19,9 @@ PROGRAM fcs
   IMPLICIT NONE
 
   REAL(KIND=8), ALLOCATABLE, DIMENSION(:,:) :: FC_A, FC_B
-  REAL(KIND=8) :: dq,temp
+  REAL(KIND=8) :: dq,temp,q,qmin,qeq
   INTEGER :: vmax_A,vmax_B, nsteps
-  INTEGER :: i,j,vA,vB
+  INTEGER :: i,j,u,vA,vB
   LOGICAL :: error
 
   WRITE(*,*) 
@@ -37,11 +37,12 @@ PROGRAM fcs
   READ(100,*) nsteps
   READ(100,*) vmax_A
   READ(100,*) dq
+  READ(100,*) qmin
+  READ(100,*) qeq
   CLOSE(unit=100)
   OPEN(file='B_param.dat',unit=101,status='old')
   READ(101,*) 
   READ(101,*) vmax_B
-  READ(101,*) 
   CLOSE(unit=101)
 
   ALLOCATE(FC_A(0:nsteps-1,0:vmax_A))

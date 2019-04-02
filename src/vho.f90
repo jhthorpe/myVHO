@@ -2,7 +2,7 @@ PROGRAM vho
   USE input
   USE ints_HO 
   USE linal
-  USE plots
+  USE proc
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij
