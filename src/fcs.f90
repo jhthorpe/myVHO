@@ -64,6 +64,7 @@ PROGRAM fcs
       END DO
       WRITE(*,'(2x,I4,4x,I4,4x,F11.8)') vA, vB, temp**2.0
     END DO 
+    WRITE(*,*) "------------------------------"
   END DO
 
   DEALLOCATE(FC_A)

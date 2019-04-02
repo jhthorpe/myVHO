@@ -101,48 +101,75 @@ SUBROUTINE plot_wave(N,vmax,qmin,qmax,qeq,a,Cij,Ni,error)
   
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: FC
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Htab
-  REAL(KIND=8) :: q,dq,temp
+  REAL(KIND=8) :: q,dq,temp,fcmax,fcmin
   INTEGER :: nsteps,u,foff
   INTEGER :: i,j
 
   error = .FALSE.
   WRITE(*,*)
   WRITE(*,*) "Wavefunction plots saved as 'wave_X.dat'"
-  WRITE(*,*) "Frank-Condon data saved as 'FC_ints.dat'"
-  WRITE(*,*) "Frank-Condon parameters save as 'FC_param.dat'"
   CALL EXECUTE_COMMAND_LINE('rm wave_[0-9]*.dat')
   
   nsteps = 1000
   dq = (qmax - qmin)/nsteps  
   q = qmin - qeq
   ALLOCATE(Htab(0:N-1))
+
+  !plot wavefunctions, only need 1000 steps
+  foff = 200
+  CALL open_wave(MIN(vmax,N-1),foff,error)
+  DO u=0,nsteps-1
+    CALL build_Htab(N,a*q,Htab(0:N-1)) 
+    DO i=0,MIN(vmax,N-1)
+      temp = 0.0
+      DO j=0,N-1
+        temp = temp + Ni(j)*Cij(i,j)*Htab(j)*EXP(-a**2.0*q**2.0/2) 
+      END DO
+      WRITE(foff+i,*) q+qeq,temp
+    END DO    
+    q = q + dq  
+  END DO
+  CALL close_wave(MIN(vmax,N-1),foff,error)
+
+  !FC integrals
+  WRITE(*,*)
+  WRITE(*,*) "Calculating Frank-Condon integrals"
+  nsteps = 100000
+  fcmin = -20.0
+  fcmax = 20.0
+  dq = (fcmax - fcmin)/nsteps  
+  q = fcmin - qeq
+  WRITE(*,*) "Number of points :", nsteps 
+  WRITE(*,*) "between          :", fcmin,",", fcmax
+  WRITE(*,*) "with dx          :", dq
+
   ALLOCATE(FC(0:nsteps-1,0:vmax))
   FC = 0
 
-  foff = 200
-  CALL open_wave(vmax,foff,error)
+  !FC integrals
   DO u=0,nsteps-1
     CALL build_Htab(N,a*q,Htab(0:N-1)) 
-    DO i=0,vmax
+    DO i=0,MIN(vmax,N-1)
       temp = 0.0
       DO j=0,N-1
-        temp = temp + 1.0/Ni(j)*Cij(i,j)*Htab(j)*EXP(-a**2.0*q**2.0/2) 
+        temp = temp + Ni(j)*Cij(i,j)*Htab(j)*EXP(-a**2.0*q**2.0/2) 
       END DO
-      WRITE(foff+i,*) q+qeq,temp
       FC(u,i) = temp
     END DO    
-
     q = q + dq  
   END DO
-  CALL close_wave(vmax,foff,error)
+
+  WRITE(*,*)
+  WRITE(*,*) "Frank-Condon data saved as 'FC_ints.dat'"
+  WRITE(*,*) "Frank-Condon parameters save as 'FC_param.dat'"
 
   OPEN(file='FC_ints.dat',unit=106,form='unformatted',status='replace')
-  WRITE(106) FC(0:nsteps-1,0:vmax)
+  WRITE(106) FC(0:nsteps-1,0:MIN(vmax,N-1))
   CLOSE(unit=106)
 
   OPEN(file='FC_param.dat',unit=107,status='replace')
   WRITE(107,*) nsteps
-  WRITE(107,*) vmax
+  WRITE(107,*) MIN(vmax,N-1)
   WRITE(107,*) dq
   CLOSE(unit=107)
  

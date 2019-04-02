@@ -13,7 +13,7 @@
  Calculating potential energy numerical integrals
  Number of points :       50001
 
- Calculating overlap integrals
+ Calculating Normalization Constants
  Number of points :     1000000
  between          :  -20.000000000000000      ,   20.000000000000000     
  with dx          :   4.0000000000000003E-005
@@ -26,9 +26,9 @@
  Vibrational Eigenvalues
  Eigenvalues written to eigs.dat
            0  0.35355338979328432     
-           1   1.0606601709800267     
+           1   1.0606601709800270     
            2   1.7677669521681976     
-           3   2.4748737333626956     
+           3   2.4748737333626951     
 
  Eigenvectors written to evec.dat
 
@@ -38,6 +38,12 @@
          display plot.png
 
  Wavefunction plots saved as 'wave_X.dat'
+
+ Calculating Frank-Condon integrals
+ Number of points :      100000
+ between          :  -20.000000000000000      ,   20.000000000000000     
+ with dx          :   4.0000000000000002E-004
+
  Frank-Condon data saved as 'FC_ints.dat'
  Frank-Condon parameters save as 'FC_param.dat'
 

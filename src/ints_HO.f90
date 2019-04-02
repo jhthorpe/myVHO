@@ -116,7 +116,7 @@ SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
   dx = (2*xlim)/xpoints
 
   WRITE(*,*) 
-  WRITE(*,*) "Calculating overlap integrals"
+  WRITE(*,*) "Calculating Normalization Constants" 
   WRITE(*,*) "Number of points :", xpoints 
   WRITE(*,*) "between          :", -xlim,",", xlim 
   WRITE(*,*) "with dx          :", dx
@@ -130,18 +130,12 @@ SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
         Ni(j) = Ni(j) + Htab(j)*Htab(j)*EXP(-a**2.0*x**2.0)*dx
     END DO
 
-  !  IF (u .EQ. xpoints/2) THEN
-  !    WRITE(*,*) "at halfway point"
-  !    WRITE(*,*) "x = ", x
-  !    WRITE(*,*) "S00", Ni(0,0)
-  !    WRITE(*,*) "S10", Ni(1,0)
-  !    WRITE(*,*) "S11", Ni(1,1)
-  !    WRITE(*,*) 
-  !  END IF
-
     x = x + dx
   END DO
 
+  !put into correct form
+  Ni = 1./SQRT(Ni)
+  
   WRITE(*,*)
   WRITE(*,*) "Normalizing Wavefunction"
   DO j=0,N-1
@@ -153,14 +147,9 @@ SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
         WRITE(*,'(2x,A1,2x,I4,A1,I4,2x,A7)') "H",i,",",j," is NaN"
         error = .TRUE.
       END IF
-      Hij(i,j) = Hij(i,j) / SQRT((Ni(i)*Ni(j)))
+      Hij(i,j) = Hij(i,j)*Ni(i)*Ni(j)
     END DO
   END DO
-
-  !WRITE(*,*) "S00", Ni(0,0)
-  !WRITE(*,*) "S10", Ni(1,0)
-  !WRITE(*,*) "S11", Ni(1,1)
-  !WRITE(*,*) 
 
   DEALLOCATE(Htab)
 
