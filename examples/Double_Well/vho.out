@@ -1,0 +1,76 @@
+
+ Starting VSCF calcuation
+ James H. Thorpe
+
+ Number of basis functions :         135
+ Equilibrium position      :   0.0000000000000000     
+ Basis function k          :  0.16326530821730856     
+ Basis function m          :   2.0000000000000000     
+ Basis function offset     :  -1.4175480820195452     
+ Basis function alpha      :  0.75592894844328828     
+
+ Calculating HO integrals
+ Calculating potential energy numerical integrals
+ Number of points :       50001
+
+ Calculating Normalization Constants
+ Number of points :     1000000
+ between          :  -20.000000000000000      ,   20.000000000000000     
+ with dx          :   4.0000000000000003E-005
+
+ Normalizing Wavefunction
+
+ Diagonalizing the Hamiltonian
+ Info is:           0
+
+ Vibrational Eigenvalues
+ Eigenvalues written to eigs.dat
+           0  0.37974850345045552     
+           1  0.37984630264355773     
+           2   1.0290759904977043     
+           3   1.0295384763112410     
+           4   1.6342827419311483     
+           5   1.6358831241837273     
+           6   2.2157365134730571     
+           7   2.2204133087409379     
+           8   2.7787339570596785     
+           9   2.7909128108764047     
+          10   3.3227501314751291     
+          11   3.3515892646420427     
+          12   3.8439720741053951     
+          13   3.9055466783765347     
+          14   4.3419782144723671     
+          15   4.4555048960766452     
+          16   4.8315237257010777     
+          17   5.0038383441783525     
+          18   5.3341250983924242     
+          19   5.5523873592449577     
+          20   5.8562239113448262     
+          21   6.1023977064323764     
+          22   6.3931046612857569     
+          23   6.6549202252299891     
+          24   6.9403207159052096     
+          25   7.2120846219690700     
+          26   7.4977985148154636     
+          27   7.7787812864707133     
+          28   8.0698690127476169     
+          29   8.3612353325768556     
+          30   8.6599884325821481     
+
+ Eigenvectors written to evec.dat
+
+ Generating plot.dat and gnurun
+ Visualize with:
+         gnuplot < gnurun
+         display plot.png
+
+ Wavefunction plots saved as 'wave_X.dat'
+
+ Calculating Frank-Condon integrals
+ Number of points :      100000
+ between          :  -20.000000000000000      ,   20.000000000000000     
+ with dx          :   4.0000000000000002E-004
+
+ Frank-Condon data saved as 'FC_ints.dat'
+ Frank-Condon parameters save as 'FC_param.dat'
+

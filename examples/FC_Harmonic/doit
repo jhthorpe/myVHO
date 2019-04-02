@@ -1,5 +1,0 @@
-cp oscillator_A/FC_ints.dat A_ints.dat
-cp oscillator_A/FC_ints.dat B_ints.dat
-cp oscillator_A/FC_param.dat A_param.dat
-cp oscillator_A/FC_param.dat B_param.dat
-fcs

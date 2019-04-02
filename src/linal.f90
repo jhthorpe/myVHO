@@ -74,6 +74,12 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
     RETURN
   END IF
 
+  !Standardize the eigenvectors
+  DO j=0,N-1
+    i = MAXLOC(ABS(Hij(0:N-1,j)),1)-1
+    IF (Hij(i,j) .LT. 0) Hij(0:N-1,j) = -1.0D0*Hij(0:N-1,j)
+  END DO
+
   WRITE(*,*) 
   WRITE(*,*) "Vibrational Eigenvalues"
   WRITE(*,*) "Eigenvalues written to eigs.dat"
