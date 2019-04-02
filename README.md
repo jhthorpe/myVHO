@@ -1,2 +1,2 @@
 # myVSCF
-A crummy implementation of variational SCF vibrational calculations.
+A crummy implementation of variational solutions of the Schrodinger equation in the basis of harmonic oscillator wavefunctions.
