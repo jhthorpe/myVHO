@@ -38,14 +38,16 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
-  REAL(KIND=8) :: temp,infty
-  INTEGER :: dummy,i,ueq,exitval
+  REAL(KIND=8) :: temp,infty,A2B,me2mp
+  INTEGER :: dummy,i,ueq,exitval,units
   LOGICAL :: exists
   
   error = .FALSE.
   fname = "Vq"
   infty = HUGE(qmin)
-
+  A2B = 3.7794519772
+  me2mp = 1836 
+  
   !check input file exists
   INQUIRE(file='vho.dat',EXIST=exists)
   IF (.NOT. exists) THEN
@@ -60,10 +62,10 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   READ(100,*) word, vmax
   READ(100,*) word, qeq
   READ(100,*) word, m
+  READ(100,*) word, units
   CLOSE(unit=100)
   CALL getfline(npoints,fname,error)
   
-
   ALLOCATE(Vq(0:npoints-1)) 
   ALLOCATE(q(0:npoints-1))
 
@@ -72,9 +74,30 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   DO i=0,npoints-1
     READ(101,*) dummy, q(i), Vq(i)
   END DO
+
+  !Convert units
+  IF (units .EQ. 1) THEN
+    WRITE(*,*) "Converting Å -> Bohrs"
+    WRITE(*,*) "Converting μ(gfm) -> μ(me)" 
+    q = q*A2B
+    qeq = qeq*A2B
+    m = m*me2mp
+  ELSE IF (units .EQ. 0) THEN
+    WRITE(*,*) "No units will be converted... be very careful"
+  ELSE
+    WRITE(*,*) "That unit conversion not supported!"
+    WRITE(*,*) "Possible unit options are:"
+    WRITE(*,*) " 0  :  no conversions at all"
+    WRITE(*,*) " 1  :  Å -> Bohr, gfm -> me"
+    error = .TRUE.
+    RETURN
+  END IF
+  WRITE(*,*) 
+
   qmin = q(0)
   qmax = q(npoints-1)
   CLOSE(unit=101)
+
    
   Voff = -1.0*MINVAL(Vq)
   Vq = Vq + Voff

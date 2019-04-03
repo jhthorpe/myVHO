@@ -13,13 +13,14 @@ export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_
 #both
 export bindir = ../bin
 
-objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o
+objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o conv.o
 
 all: $(objects)
 	if [ ! -d $(bindir) ]; then mkdir -p $(bindir); fi
 	cp vho.o $(bindir)/vho
 	cp fcs.o $(bindir)/fcs
-	cp tdp.o $(bindir)/tdp
+	cp tdp.o $(bindir)/tdp	
+	cp conv.o $(bindir)/conv
 
 input.o : input.f90 
 	$(FC) $(FFLAGS) -c input.f90
@@ -41,6 +42,9 @@ fcs.o : fcs.f90
 
 tdp.o : tdp.f90
 	$(FC) $(FFLAGS) -o tdp.o tdp.f90
+
+conv.o : conv.f90
+	$(FC) $(FFLAGS) -o conv.o conv.f90
 
 clean:
 	rm *.o *.mod

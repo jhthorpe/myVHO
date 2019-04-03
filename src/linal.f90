@@ -34,10 +34,12 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
 
   REAL(KIND=8), ALLOCATABLE, DIMENSION(:) :: WORK
   REAL(KIND=8) , DIMENSION(0:1) :: dummy
+  REAL(KIND=8) :: au2cm
   CHARACTER(LEN=1) :: JOBZ, UPLO,RNGE
   INTEGER :: LDA,LWORK,INFO,IL,UL
 
   error = .FALSE.
+  au2cm = 2.1947E5
   
   JOBZ = 'V'
   RNGE='I'
@@ -81,15 +83,15 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
   END DO
 
   WRITE(*,*) 
-  WRITE(*,*) "Vibrational Eigenvalues"
+  WRITE(*,*) "Vibrational Eigenvalues (a.u, cm-1)"
   WRITE(*,*) "Eigenvalues written to eigs.dat"
   OPEN(unit=103,file='eigs.dat',status='replace')
   DO j=0,MIN(vmax+1,N)-1
-    WRITE(*,*) j, Ei(j)
-    WRITE(103,*) j, Ei(j)
+    WRITE(*,*) j, Ei(j), Ei(j)*au2cm
+    WRITE(103,*) j, Ei(j),Ei(j)*au2cm
   END DO 
   DO j=MIN(vmax+1,N)+1,N-1
-    WRITE(103,*) j, Ei(j)
+    WRITE(103,*) j, Ei(j), Ei(j)*au2cm
   END DO
   CLOSE(unit=103)
 
