@@ -23,7 +23,7 @@ PROGRAM vho
     WRITE(*,*) "There was an error reading input"
     IF (ALLOCATED(Vq)) DEALLOCATE(Vq)
     IF (ALLOCATED(q)) DEALLOCATE(q)
-    RETURN
+    STOP 1 
   END IF
 
   CALL HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,Ni,error)
@@ -35,7 +35,7 @@ PROGRAM vho
     IF (ALLOCATED(q)) DEALLOCATE(q)
     IF(ALLOCATED(Hij)) DEALLOCATE(Hij)
     IF(ALLOCATED(Ni)) DEALLOCATE(Ni)
-    RETURN
+    STOP 2 
   END IF
 
   CALL diag(N,vmax,Hij,Ei,error)
@@ -48,7 +48,7 @@ PROGRAM vho
     IF (ALLOCATED(Vq)) DEALLOCATE(Vq)
     IF (ALLOCATED(q)) DEALLOCATE(q)
     IF (ALLOCATED(Ei)) DEALLOCATE(Ei)
-    RETURN
+    STOP 3 
   END IF
 
   CALL make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints,&
@@ -58,6 +58,7 @@ PROGRAM vho
   IF (ALLOCATED(Vq)) DEALLOCATE(Vq)
   IF (ALLOCATED(q)) DEALLOCATE(q)
   IF (ALLOCATED(Ei)) DEALLOCATE(Ei)
+  IF (error) STOP 4
 
   WRITE(*,*) 
 

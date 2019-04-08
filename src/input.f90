@@ -45,7 +45,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   error = .FALSE.
   fname = "Vq"
   infty = HUGE(qmin)
-  A2B = 3.7794519772
+  A2B = 1.88973
   me2mp = 1836 
   
   !check input file exists
