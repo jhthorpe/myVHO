@@ -3,6 +3,7 @@ PROGRAM vho
   USE ints_HO 
   USE linal
   USE proc
+  USE nints
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij

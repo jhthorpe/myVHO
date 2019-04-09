@@ -13,7 +13,7 @@ export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_
 #both
 export bindir = ../bin
 
-objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o conv.o scat.o
+objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o conv.o scat.o nints.o
 
 all: $(objects)
 	if [ ! -d $(bindir) ]; then mkdir -p $(bindir); fi
@@ -26,8 +26,8 @@ all: $(objects)
 input.o : input.f90 
 	$(FC) $(FFLAGS) -c input.f90
 
-ints_HO.o : ints_HO.f90 
-	$(FC) $(FFLAGS) -c ints_HO.f90
+ints_HO.o : ints_HO.f90 nints.o
+	$(FC) $(FFLAGS) -c ints_HO.f90 nints.o
 
 proc.o : proc.f90
 	$(FC) $(FFLAGS) -c proc.f90
@@ -35,8 +35,11 @@ proc.o : proc.f90
 linal.o : linal.f90
 	$(FC) $(FFLAGS) $(LINAL) -c linal.f90 
 
-vho.o : vho.f90 input.o ints_HO.o proc.o linal.o
-	$(FC) $(FFLAGS) -o vho.o vho.f90 input.o ints_HO.o proc.o linal.o $(LINAL)
+nints.o : nints.f90
+	$(FC) $(FFLAGS) -c nints.f90
+
+vho.o : vho.f90 input.o ints_HO.o proc.o linal.o nints.o
+	$(FC) $(FFLAGS) -o vho.o vho.f90 input.o ints_HO.o nints.o proc.o linal.o $(LINAL)
 
 fcs.o : fcs.f90
 	$(FC) $(FFLAGS) -o fcs.o fcs.f90
