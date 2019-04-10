@@ -10,9 +10,11 @@ SUBROUTINE checkval(val,error)
   infty = HUGE(s)
   error = .FALSE.
   IF (val .GT. infty) THEN
+    WRITE(*,*) 
     WRITE(*,*) "val:checkval -- val is infinty" 
     error = .TRUE.
   ELSE IF (val .NE. val) THEN
+    WRITE(*,*)
     WRITE(*,*) "val:checkval -- val is NaN" 
     error = .TRUE.
   END IF
