@@ -13,7 +13,7 @@ export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_
 #both
 export bindir = ../bin
 
-objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o conv.o scat.o nints.o
+objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o conv.o scat.o nints.o poly.o val.o
 
 all: $(objects)
 	if [ ! -d $(bindir) ]; then mkdir -p $(bindir); fi
@@ -38,8 +38,14 @@ linal.o : linal.f90
 nints.o : nints.f90
 	$(FC) $(FFLAGS) -c nints.f90
 
-vho.o : vho.f90 input.o ints_HO.o proc.o linal.o nints.o
-	$(FC) $(FFLAGS) -o vho.o vho.f90 input.o ints_HO.o nints.o proc.o linal.o $(LINAL)
+poly.o : poly.f90 linal.o val.o
+	$(FC) $(FFLAGS) $(LINAL) -c poly.f90 linal.o val.o
+
+val.o : val.f90
+	$(FC) $(FFLAGS) -c val.f90
+
+vho.o : vho.f90 input.o ints_HO.o proc.o linal.o nints.o val.o poly.o
+	$(FC) $(FFLAGS) -o vho.o vho.f90 input.o ints_HO.o nints.o proc.o poly.o val.o linal.o $(LINAL)
 
 fcs.o : fcs.f90
 	$(FC) $(FFLAGS) -o fcs.o fcs.f90

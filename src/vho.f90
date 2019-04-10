@@ -4,12 +4,14 @@ PROGRAM vho
   USE linal
   USE proc
   USE nints
+  USE poly
+  USE val
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni,coef
   REAL(KIND=8) :: qmin,qmax,qeq,k,m,V_off,a
-  INTEGER :: N, npoints,vmax
+  INTEGER :: N, npoints,vmax,ord
   LOGICAL :: error
 
   WRITE(*,*) 
@@ -25,6 +27,15 @@ PROGRAM vho
     IF (ALLOCATED(Vq)) DEALLOCATE(Vq)
     IF (ALLOCATED(q)) DEALLOCATE(q)
     STOP 1 
+  END IF
+
+  CALL poly_fit(Vq,q,npoints,1.0D-6,ord,coef,error)
+  IF (error) THEN
+    WRITE(*,*) "ERROR ERROR ERROR"
+    WRITE(*,*) "There was an error fitting the surface"
+    IF (ALLOCATED(Vq)) DEALLOCATE(Vq)
+    IF (ALLOCATED(q)) DEALLOCATE(q)
+    IF (ALLOCATED(coef)) DEALLOCATE(coef)
   END IF
 
   CALL HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,Ni,error)
