@@ -251,11 +251,15 @@ SUBROUTINE poly_rms(Fx,x,N,dof,coef,nc,ord,fit,rms,error)
   error = .FALSE.
 
   rms = 0.0D0
+  OPEN(file='rms.dat',unit=107,status='replace')
   DO i=0,N-1
     CALL poly_eval(fit,ord,coef(0:nc-1,0:dof-1),x(i),val,error) 
     IF (error) RETURN
+     WRITE(107,*) x(i), (Fx(i) - val)**2.0
     rms = rms + (Fx(i) - val)**2.0
   END DO
+  rms = rms/N
+  CLOSE(unit=107)
 
 END SUBROUTINE poly_rms
 
