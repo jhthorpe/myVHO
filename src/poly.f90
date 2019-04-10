@@ -157,7 +157,7 @@ SUBROUTINE poly_fit(Fx,x,N,tol,fit,ord,coef,error)
       END IF
     END IF
 
-    WRITE(*,*) "At iteration ", ord," rms is", rms
+!    WRITE(*,*) "At iteration ", ord," rms is", rms
     IF (rms .LT. tol) EXIT
     IF (rms .GT. rms_old .AND. i .GT. 1) EXIT
     rms_old = rms
@@ -211,7 +211,7 @@ SUBROUTINE poly_plot(Fx,x,N,ord,coef,error)
   INTEGER :: i
 
   error = .FALSE.
-  WRITE(*,*) "Saving fit runfile to fitpot"
+  WRITE(*,*) "Saving fit runfile to fitplot"
 
   OPEN(unit=101,file='plot.dat',status='replace')
   DO i=0,N-1
