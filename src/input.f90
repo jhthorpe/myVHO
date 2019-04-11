@@ -27,16 +27,16 @@ CONTAINS
 ! m     	: real*8, m balue of basis functions
 ! Voff		: real*8, basis potential offset below qeq
 ! a     	: real*8, alpha value of basis functions 
-! fit           : int, type of fitting function
-! conv          : real*8, convergence for fit
+! func           : int, type of functing function
+! conv          : real*8, convergence for func
 ! error		: bool, true if error
 
-SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,fit,conv,error)
+SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,func,conv,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
   REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,Voff,a,conv
-  INTEGER, INTENT(INOUT) :: N, npoints,vmax,fit
+  INTEGER, INTENT(INOUT) :: N, npoints,vmax,func
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
@@ -65,8 +65,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,fit,conv,erro
   READ(100,*) word, qeq
   READ(100,*) word, m
   READ(100,*) word, units
-  READ(100,*) word, fit
-  fit = 1
+  READ(100,*) word, func
   READ(100,*) word, conv
   CLOSE(unit=100)
   CALL getfline(npoints,fname,error)
@@ -79,6 +78,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,fit,conv,erro
   DO i=0,npoints-1
     READ(101,*) dummy, q(i), Vq(i)
   END DO
+  CLOSE(unit=101)
 
   !Convert units
   IF (units .EQ. 1) THEN
@@ -101,7 +101,6 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,fit,conv,erro
 
   qmin = q(0)
   qmax = q(npoints-1)
-  CLOSE(unit=101)
    
   Voff = -1.0*MINVAL(Vq)
   Vq = Vq + Voff
@@ -153,7 +152,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,fit,conv,erro
   WRITE(*,*) "Basis function m          :", m
   WRITE(*,*) "Basis function offset     :", Voff
   WRITE(*,*) "Basis function alpha      :", a
-  WRITE(*,*) "Fit function type         :", fit
+  WRITE(*,*) "Fit function type         :", func
   WRITE(*,*) "Fit RMS convergence       :", conv
 
 END SUBROUTINE read_input 

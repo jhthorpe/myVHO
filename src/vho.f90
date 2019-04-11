@@ -4,14 +4,14 @@ PROGRAM vho
   USE linal
   USE proc
   USE nints
-  USE poly
+  USE fit
   USE val
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij,coef
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni,W
   REAL(KIND=8) :: qmin,qmax,qeq,k,m,V_off,a,conv
-  INTEGER :: N, npoints,vmax,ord,fit
+  INTEGER :: N, npoints,vmax,ord,func
   LOGICAL :: error
 
   WRITE(*,*) 
@@ -19,7 +19,8 @@ PROGRAM vho
   WRITE(*,*) "James H. Thorpe"
   WRITE(*,*)
 
-  CALL read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,fit,conv,error)
+  CALL read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,&
+                 func,conv,error)
   IF (error) THEN
     WRITE(*,*) 
     WRITE(*,*) "ERROR ERROR ERROR"
@@ -29,7 +30,7 @@ PROGRAM vho
     STOP 1 
   END IF
 
-  CALL poly_fit(Vq,q,npoints,conv,fit,ord,coef,error)
+  CALL fit_surf(func,Vq,q,npoints,conv,ord,coef,a,m,N,qeq,error)
   IF (error) THEN
     WRITE(*,*) "ERROR ERROR ERROR"
     WRITE(*,*) "There was an error fitting the surface"
@@ -39,9 +40,8 @@ PROGRAM vho
     STOP 2
   END IF
 
-  STOP
-
-  CALL HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,Hij,Ni,error)
+  CALL HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,&
+                      npoints,k,m,V_off,a,Hij,Ni,error)
   IF (error) THEN 
     WRITE(*,*) 
     WRITE(*,*) "ERROR ERROR ERROR"
@@ -52,6 +52,16 @@ PROGRAM vho
     IF(ALLOCATED(Ni)) DEALLOCATE(Ni)
     IF (ALLOCATED(coef)) DEALLOCATE(coef)
     STOP 3 
+  END IF
+
+  IF (func .EQ. -1) THEN
+    IF(ALLOCATED(Hij)) DEALLOCATE(Hij)
+    IF (ALLOCATED(Cij)) DEALLOCATE(Cij)
+    IF (ALLOCATED(Vq)) DEALLOCATE(Vq)
+    IF (ALLOCATED(q)) DEALLOCATE(q)
+    IF (ALLOCATED(Ei)) DEALLOCATE(Ei)
+    IF (ALLOCATED(coef)) DEALLOCATE(coef)
+    STOP 0
   END IF
 
   CALL diag(N,vmax,Hij,Ei,error)

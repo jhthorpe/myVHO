@@ -1,0 +1,7 @@
+nbasis 2
+vmax 15
+Q_eq 0.741536071974818 
+mass 0.5
+units 1
+fit 3
+conv 1.0D-5

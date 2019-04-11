@@ -77,7 +77,7 @@ SUBROUTINE gauher(x,w,n,error)
       if(abs(z-z1).le.EPS) EXIT
       IF (its .EQ. MAXIT) THEN
         WRITE(*,*) "ERROR"
-        WRITE(*,*) "Too many iterations in nint:gauher"
+        WRITE(*,*) "nint:gauher -- too many iterations"
         error = .TRUE.
         RETURN
       END IF

@@ -16,17 +16,18 @@ CONTAINS
 !               -calculates 1D harmonic oscillator integrals 
 !---------------------------------------------------------------------
 ! Variables
+! func          : int, type of fitting for surface
 ! N             : int, number of harmonic oscillator basis functions
 ! Hij		: 2D real*8, Hamiltonian Matrix
 ! Ni		: 1D real*8, Normalization constants
 ! Vq            : 1D real*8, 1D potential energy surface
 ! qmin          : real*8, minimum r
 ! qmax          : real*8, max r
-! qeq           : real*8, equilibriu q
+! qeq           : real*8, equilibrium q
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true if error
 
-SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,&
+SUBROUTINE HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,npoints,&
                           k,m,V_off,a,Hij,Ni,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
@@ -34,11 +35,11 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,&
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
   REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,V_off,a
   LOGICAL, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: N, npoints
+  INTEGER, INTENT(IN) :: N, npoints, func
 
   INTEGER :: i
   error = .FALSE.
-
+  
   WRITE(*,*) 
   WRITE(*,*) "Calculating HO integrals"
 
@@ -47,14 +48,17 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,&
   Hij = 0.0D0
   Ni = 0.0D0
 
-  CALL HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
-  IF (error) THEN 
-    DEALLOCATE(Ni)
-    DEALLOCATE(Hij)
-    RETURN
+  IF (func .EQ. 4) THEN
+    CALL HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
+    IF (error) RETURN 
+    CALL HO1D_harmonic(Hij,N,k,m,error)
+  ELSE IF (func .EQ. -1) THEN
+    !CALL HO1D_abscissa(a,m,N,qeq,error)
+  ELSE
+    error = .TRUE.
+    WRITE(*,*) "HO1D_integrals -- this option not implemented"
   END IF
 
-  CALL HO1D_harmonic(Hij,N,k,m,error)
 
 END SUBROUTINE HO1D_integrals
 
@@ -65,7 +69,7 @@ END SUBROUTINE HO1D_integrals
 !		-using x form of harmonic oscillator
 !---------------------------------------------------------------------
 ! Variables
-! N 	       : int, number of harmonic oscillator basis functions
+! N 	        : int, number of harmonic oscillator basis functions
 ! Hij		: 2D real*8, Hamiltonian Matrix
 ! Ni            : 1D real*8, list of normalization consts
 ! Vq            : 1D real*8, 1D potential energy surface
