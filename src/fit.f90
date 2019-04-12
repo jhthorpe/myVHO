@@ -214,7 +214,7 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
   DO i=0,na-1
     IF (ab(i)/a .LT. qmin .OR. ab(i)/a .GT. qmax) THEN
       Vab(i) = 0.0D0 
-      WRITE(*,*) "WARNING, outside of qmin or qmax", ab(i),ab(i)/a
+      !WRITE(*,*) "WARNING, outside of qmin or qmax", ab(i),ab(i)/a
     ELSE
       CALL splint(x(1:np-2),Fx(1:np-2),y2(1:np-2),np,ab(i)/a,Vab(i),error)
     END IF

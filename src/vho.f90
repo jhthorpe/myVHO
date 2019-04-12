@@ -9,7 +9,7 @@ PROGRAM vho
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij,coef
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni,W
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni
   REAL(KIND=8) :: qmin,qmax,qeq,k,m,V_off,a,conv
   INTEGER :: N, npoints,vmax,ord,func
   LOGICAL :: error
