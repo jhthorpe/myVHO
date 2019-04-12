@@ -6,7 +6,9 @@
 !//////////////////////////////////////////////////////////////////
 
 MODULE ints_HO
+  USE fit
   USE nints
+  USE val
   IMPLICIT NONE
 
 CONTAINS
@@ -16,28 +18,32 @@ CONTAINS
 !               -calculates 1D harmonic oscillator integrals 
 !---------------------------------------------------------------------
 ! Variables
+! func          : int, type of fitting for surface
 ! N             : int, number of harmonic oscillator basis functions
 ! Hij		: 2D real*8, Hamiltonian Matrix
 ! Ni		: 1D real*8, Normalization constants
 ! Vq            : 1D real*8, 1D potential energy surface
 ! qmin          : real*8, minimum r
 ! qmax          : real*8, max r
-! qeq           : real*8, equilibriu q
+! qeq           : real*8, equilibrium q
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true if error
 
-SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,&
-                          k,m,V_off,a,Hij,Ni,error)
+SUBROUTINE HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,np,&
+                          k,m,Voff,a,Hij,Ni,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Ni
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
-  REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,V_off,a
+  REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,Voff,a
   LOGICAL, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: N, npoints
+  INTEGER, INTENT(IN) :: N, np, func
 
   INTEGER :: i
   error = .FALSE.
+  
+  WRITE(*,*) &
+"---------------------------------------------------------------------"
 
   WRITE(*,*) 
   WRITE(*,*) "Calculating HO integrals"
@@ -47,40 +53,228 @@ SUBROUTINE HO1D_integrals(N,Vq,q,qmin,qmax,qeq,npoints,&
   Hij = 0.0D0
   Ni = 0.0D0
 
-  CALL HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
-  IF (error) THEN 
-    DEALLOCATE(Ni)
-    DEALLOCATE(Hij)
+  IF (func .EQ. -1) THEN
+    WRITE(*,*) "Why am I here??" 
+    error = .TRUE.
+    RETURN 
+  ELSE IF (func .EQ. 0) THEN
+    WRITE(*,*) "Sorry, that integral type not supported"
+    error = .TRUE.
+    RETURN 
+  ELSE IF (func .EQ. 1) THEN
+    WRITE(*,*) "Sorry, that integral type not supported"
+    error = .TRUE.  
     RETURN
+  ELSE IF (func .EQ. 2) THEN
+    WRITE(*,*) "Sorry, that integral type not supported"
+    error = .TRUE.  
+    RETURN
+  ELSE IF (func .EQ. 3) THEN
+    CALL gauss_potential(Hij,Ni,N,np,q(1),q(np-2),Vq(np-1),a,k,error) 
+    IF (error) RETURN
+  ELSE IF (func .EQ. 4) THEN
+    CALL RHS_potential(Hij,Ni,N,Vq,q,np,k,m,Voff,a,error)
+    IF (error) RETURN 
+  ELSE
+    error = .TRUE.
+    WRITE(*,*) "HO1D_integrals -- this option not implemented"
   END IF
 
-  CALL HO1D_harmonic(Hij,N,k,m,error)
-
+  CALL HO_harmonic(Hij,N,k,m,error) !this is the same no matter what
+ 
 END SUBROUTINE HO1D_integrals
 
 !---------------------------------------------------------------------
-!	HO1D_potential
+!	gauss_potential
 !		-calculates 1D HO potential energy integrals
 !		-stored upper triangular
 !		-using x form of harmonic oscillator
 !---------------------------------------------------------------------
 ! Variables
-! N 	       : int, number of harmonic oscillator basis functions
+! Hij		: 2D real*8, Hamiltonian Matrix
+! Ni            : 1D real*8, list of normalization consts
+! nb 	        : int, number of harmonic oscillator basis functions
+! np    	: int, number of points in Vq and q
+! qmin		: real*8, minimum trusted position value
+! qmax          : real*8, maximum trusted position 
+! Vnp           : real*8, value of Vq at the last position
+! a             : real*8, alpha
+! k             : real*8, k constant
+! error		: bool, true if error
+
+SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
+  IMPLICIT NONE
+
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: Ni
+  REAL(KIND=8), INTENT(IN) :: qmin,qmax,Vnp,a,k
+  LOGICAL, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: nb,np
+
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Vq,q,Wq,Ht
+  INTEGER :: u,na,i,j
+  
+  error = .FALSE.
+
+  WRITE(*,*) 
+  WRITE(*,*) "Starting Gaussian Quadrature for potential energy integrals"
+
+  ALLOCATE(Ht(0:nb-1)) !this is the hermite polynomial table
+  
+  CALL read_gauss(Vq,q,Wq,na,error)!read in abscissa, weights, and potentials 
+  !q was generated as y = a*x
+  !we are going to very carefully work in the x, not y integrals
+  !where I am implicitly assume that the locations of the abscissa
+  !are just scaled
+
+  !WRITE(*,*) "q in y=a*x, x"
+  !DO i=0,na-1
+  !  WRITE(*,*) q(i), q(i)/a   
+  !END DO
+  !WRITE(*,*) "qmin is", qmin
+  !WRITE(*,*) "qmax is", qmax
+
+  DO u=0,na-1
+    CALL build_Htab(nb,q(u),Ht(0:nb-1))    
+
+    !the cases below should probably have been handled in the fitting
+    !subroutine...
+   
+    !we are below qmin
+    IF (q(u)/a .LE. qmin) THEN
+      DO j=0,nb-1
+        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
+      END DO 
+
+    !we are above qmax 
+    ELSE IF (q(u)/a .GE. qmax) THEN
+      DO j=0,nb-1
+        DO i=j,nb-1
+          Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*&
+                   (Vnp - 0.5*k*(q(u)/a)**2.0D0) 
+                   !(Vnp - 0.5*k*q(u)**2.0D0/a) 
+        END DO
+        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
+      END DO
+
+    !we are at a trusted value 
+    ELSE
+      DO j=0,nb-1
+        DO i=j,nb-1
+          Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*&
+                   (Vq(u) - 0.5*k*(q(u)/a)**2.0D0) 
+                   !(Vq(u) - 0.5*k*q(u)**2.0D0/a) 
+        END DO
+        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
+      END DO
+    END IF
+  END DO 
+
+  ! account for the change of variables in the integral
+  Hij = Hij/a
+  Ni = Ni/a
+  Ni = 1.0/SQRT(Ni) 
+
+  !check values and normalize
+  DO j=0,nb-1
+    IF (error) THEN
+      WRITE(*,*) "gauss_potential -- bad integral at N",j
+      DEALLOCATE(Vq)
+      DEALLOCATE(q)
+      DEALLOCATE(Wq)
+      DEALLOCATE(Ht)
+      RETURN
+    END IF
+    
+    DO i=j,nb-1
+      CALL checkval(Hij(i,j),error)
+      IF (error) THEN
+        WRITE(*,*) "gauss_potential -- bad integral at H", i,j
+        DEALLOCATE(Vq)
+        DEALLOCATE(q)
+        DEALLOCATE(Wq)
+        DEALLOCATE(Ht)
+        RETURN
+      END IF
+      Hij(i,j) = Hij(i,j)*Ni(i)*Ni(j) 
+    END DO
+    CALL checkval(Ni(j),error)
+  END DO
+
+  
+  !WRITE(*,*) "Hamiltonian is..."
+  !DO i=0,nb-1
+  !  WRITE(*,*) Hij(i,0:i)
+  !END DO
+
+END SUBROUTINE gauss_potential
+
+!---------------------------------------------------------------------
+! read_gauss
+!       - reads in information about abscissa, their weights, and the 
+!         potential energies at these points
+!---------------------------------------------------------------------
+! Variables
+! Vq            : 1D real*8, list of potential energies at abscissa
+! q             : 1D real*8, list of abscissa
+! Wq            : 1D real*8, list of weights at abscissa
+! na            : int, number of abscissa
+! error         : bool, true on exit if error
+
+SUBROUTINE read_gauss(Vq,q,Wq,na,error)
+  IMPLICIT NONE
+  
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Vq,q,Wq
+  INTEGER, INTENT(INOUT) :: na
+  LOGICAL, INTENT(INOUT) :: error
+
+  LOGICAL :: exists
+  INTEGER :: i
+
+  error = .FALSE.
+
+  INQUIRE(file='gauss.dat',EXIST=exists)
+  IF (.NOT. exists) THEN
+    WRITE(*,*) "HO1D_ints:read_gauss -- you need the file 'gauss.dat'"
+    error = .TRUE. 
+    RETURN
+  END IF
+
+  OPEN(file='gauss.dat',unit=108,status='old')
+  READ(108,*) na
+  ALLOCATE(Vq(0:na-1))
+  ALLOCATE(q(0:na-1))
+  ALLOCATE(Wq(0:na-1))
+  DO i=0,na-1
+    READ(108,*) q(i), Wq(i), Vq(i)
+  END DO
+  CLOSE(unit=108)
+
+END SUBROUTINE read_gauss
+
+!---------------------------------------------------------------------
+!	RHS_potential
+!		-calculates 1D HO potential energy integrals
+!		-stored upper triangular
+!		-using x form of harmonic oscillator
+!---------------------------------------------------------------------
+! Variables
+! N 	        : int, number of harmonic oscillator basis functions
 ! Hij		: 2D real*8, Hamiltonian Matrix
 ! Ni            : 1D real*8, list of normalization consts
 ! Vq            : 1D real*8, 1D potential energy surface
 ! q		: 1D real*8, list of q values
-! npoints	: int, number of points in Vq and q
+! np    	: int, number of points in Vq and q
 ! error		: bool, true if error
 
-SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
+SUBROUTINE RHS_potential(Hij,Ni,N,Vq,q,np,k,m,Voff,a,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:),INTENT(INOUT) :: Ni
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
-  REAL(KIND=8), INTENT(IN) :: k,m,a,V_off
+  REAL(KIND=8), INTENT(IN) :: k,m,a,Voff
   LOGICAL, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: N, npoints
+  INTEGER, INTENT(IN) :: N, np
 
   REAL(KIND=8), ALLOCATABLE, DIMENSION(:) :: Htab
   REAL(KIND=8) :: dq,dx,xlim,x,tol
@@ -89,14 +283,14 @@ SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
 
   error = .FALSE.
   WRITE(*,*) "Calculating potential energy numerical integrals"
-  WRITE(*,*) "Number of points :", npoints
+  WRITE(*,*) "Number of points :", np
  
   ALLOCATE(Htab(0:N-1))
   infty = HUGE(tol)
 
-  !DO u=1,npoints-2
-  DO u=0,npoints-2
-  !DO u=0,npoints-1
+  !DO u=1,np-2
+  DO u=0,np-2
+  !DO u=0,np-1
    
     !Construct Hermitian table
     CALL build_Htab(N,a*q(u),Htab(0:N-1))
@@ -154,7 +348,7 @@ SUBROUTINE HO1D_potential(Hij,Ni,N,Vq,q,npoints,k,m,V_off,a,error)
 
   DEALLOCATE(Htab)
 
-END SUBROUTINE HO1D_potential
+END SUBROUTINE RHS_potential
 !---------------------------------------------------------------------
 !	build_Htab
 !		-constructs list of Hermite polynomials at
@@ -192,7 +386,7 @@ SUBROUTINE build_Htab(N,q,Htab)
 END SUBROUTINE build_Htab
 
 !---------------------------------------------------------------------
-!       HO1D_normalize
+!       RHS_normalize
 !               -normalizes the matrix elements in Hij
 !               -creates list of normalization constants
 !---------------------------------------------------------------------
@@ -203,7 +397,7 @@ END SUBROUTINE build_Htab
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true on exit if problem
 
-SUBROUTINE  HO1D_normalize(Hij,N,a,Ncon,error)
+SUBROUTINE  RHS_normalize(Hij,N,a,Ncon,error)
   IMPLICIT NONE
  
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
@@ -240,10 +434,10 @@ SUBROUTINE  HO1D_normalize(Hij,N,a,Ncon,error)
   WRITE(*,*) "N10", Ncon(1)*Ncon(0)
   WRITE(*,*) "N11", Ncon(1)*Ncon(1)
 
-END SUBROUTINE HO1D_normalize
+END SUBROUTINE RHS_normalize
 
 !---------------------------------------------------------------------
-!       HO1D_kinetic
+!       RHS_kinetic
 !               -adds in (normalized) kinetic energy to Hij
 !               - this abuses the viral theorum, and the fact
 !               - that our basis functions are orthogonal HO
@@ -257,7 +451,7 @@ END SUBROUTINE HO1D_normalize
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true on exit if problem
 
-SUBROUTINE HO1D_kinetic(Hij,N,k,m,a,Ncon,error)
+SUBROUTINE RHS_kinetic(Hij,N,k,m,a,Ncon,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Ncon
@@ -285,10 +479,10 @@ SUBROUTINE HO1D_kinetic(Hij,N,k,m,a,Ncon,error)
     !H(i+2,i) = H(i+2,j) + nint_fdif_2drv_HO(i,i+2,a,m,qmin,qmax,qeq)
   END DO
 
-END SUBROUTINE HO1D_kinetic
+END SUBROUTINE RHS_kinetic
 
 !---------------------------------------------------------------------
-!       HO1D_harmonic
+!       HO_harmonic
 !               -adds in harmonic energy terms to diagaonals 
 !---------------------------------------------------------------------
 ! Variables
@@ -300,7 +494,7 @@ END SUBROUTINE HO1D_kinetic
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true on exit if problem
 
-SUBROUTINE HO1D_harmonic(Hij,N,k,m,error)
+SUBROUTINE HO_harmonic(Hij,N,k,m,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), INTENT(IN) :: k,m
@@ -313,10 +507,10 @@ SUBROUTINE HO1D_harmonic(Hij,N,k,m,error)
   w = SQRT(k/m)
 
   DO i=0,N-1
-    Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5) !using viral theorum
+    Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5) !using Viral theorum 
   END DO
 
-END SUBROUTINE HO1D_harmonic
+END SUBROUTINE HO_harmonic
 
 !---------------------------------------------------------------------
 

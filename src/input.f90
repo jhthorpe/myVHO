@@ -23,18 +23,20 @@ CONTAINS
 ! qmin		: real*8, minimum r
 ! qmax		: real*8, max r
 ! qeq		: real*8, equilibrium q
-! k	: real*8, k value of basis functions
-! m	: real*8, m balue of basis functions
+! k     	: real*8, k value of basis functions
+! m     	: real*8, m balue of basis functions
 ! Voff		: real*8, basis potential offset below qeq
-! a	: real*8, alpha value of basis functions 
+! a     	: real*8, alpha value of basis functions 
+! func           : int, type of functing function
+! conv          : real*8, convergence for func
 ! error		: bool, true if error
 
-SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
+SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,func,conv,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
-  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,Voff,a
-  INTEGER, INTENT(INOUT) :: N, npoints,vmax
+  REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,Voff,a,conv
+  INTEGER, INTENT(INOUT) :: N, npoints,vmax,func
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
@@ -63,6 +65,8 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   READ(100,*) word, qeq
   READ(100,*) word, m
   READ(100,*) word, units
+  READ(100,*) word, func
+  READ(100,*) word, conv
   CLOSE(unit=100)
   CALL getfline(npoints,fname,error)
   
@@ -74,6 +78,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   DO i=0,npoints-1
     READ(101,*) dummy, q(i), Vq(i)
   END DO
+  CLOSE(unit=101)
 
   !Convert units
   IF (units .EQ. 1) THEN
@@ -96,12 +101,9 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
 
   qmin = q(0)
   qmax = q(npoints-1)
-  CLOSE(unit=101)
-
    
   Voff = -1.0*MINVAL(Vq)
   Vq = Vq + Voff
-
 
   !Get k
   INQUIRE(FILE='k',EXIST=exists)
@@ -150,6 +152,8 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,error)
   WRITE(*,*) "Basis function m          :", m
   WRITE(*,*) "Basis function offset     :", Voff
   WRITE(*,*) "Basis function alpha      :", a
+  WRITE(*,*) "Fit function type         :", func
+  WRITE(*,*) "Fit RMS convergence       :", conv
 
 END SUBROUTINE read_input 
 

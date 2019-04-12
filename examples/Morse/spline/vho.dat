@@ -1,0 +1,8 @@
+nbasis 30
+vmax 7
+Q_eq 0.5
+mass 2
+units 0
+fit 3
+conv 1.0D-4
+

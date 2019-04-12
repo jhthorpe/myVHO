@@ -15,7 +15,7 @@ CONTAINS
 !		-diagonalizes the vibrational hamiltonian
 !---------------------------------------------------------------------
 ! Variables
-! N             : int, number of harmonic oscillator basis functions
+! N             : int, number of harmonic oscillator basis funbtions
 ! vmax          : int, max vibrational quantum number
 ! Hij           : 2D real*8, Hamiltonian Matrix, on exit, coeffs
 ! Ei		: 1D real*8, vibrational energy levels
@@ -33,7 +33,6 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
   INTEGER :: i,j
 
   REAL(KIND=8), ALLOCATABLE, DIMENSION(:) :: WORK
-  REAL(KIND=8) , DIMENSION(0:1) :: dummy
   REAL(KIND=8) :: au2cm
   CHARACTER(LEN=1) :: JOBZ, UPLO,RNGE
   INTEGER :: LDA,LWORK,INFO,IL,UL
@@ -53,15 +52,13 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
 
   !WRITE(*,*) "The Hamiltonian"
   !DO i=0,N-1
-  !  WRITE(*,*) Hij(i,0:N-1)
+  !  WRITE(*,*) Hij(i,0:i)
   !END DO
   !WRITE(*,*) 
 
   WRITE(*,*) 
   WRITE(*,*) "Diagonalizing the Hamiltonian"
   CALL DSYEV(JOBZ,UPLO,N,Hij(0:N-1,0:N-1),LDA,Ei(0:N-1),WORK(0:1),LWORK,INFO) 
-  !CALL DSYEVX(JOBZ,RNGE,UPLO,N,Hij(0:N-1,0:N-1),LDA,dummy,dummy, &
-  !            IL,UL,Ei(0:N-1), WORK(0:1),LWORK,INFO) 
 
   LWORK = CEILING(WORK(0))
   DEALLOCATE(WORK)
@@ -111,5 +108,116 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
   DEALLOCATE(WORK)
   
 END SUBROUTINE diag
+
 !---------------------------------------------------------------------
+! lsqr
+!       - calculates least squares coefficients via LAPACK
+!       - note, N > M
+!---------------------------------------------------------------------
+! Variables
+! A             : 2d real*8, M basis funbtions evaluated at N abscissa
+! b             : 1d real*8, funbtion to fit evaluated at N abscissa
+! np            : int, number of abscissa (rows of A)
+! nb            : int, number (order) of basis functions (cols of A)
+! nd            : int, number of seperate things to fit 
+! coef          : 1d real*8, list of M coefficients
+! error         : bool, true on exit if problem
+
+SUBROUTINE lsqr(A,b,np,nb,nd,coef,error)
+  IMPLICIT NONE
+
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: coef
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: A
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: b
+  LOGICAL, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: np,nb,nd
+
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Ax,bv
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: S,WORK
+  INTEGER, DIMENSION(:), ALLOCATABLE :: IWORK
+  REAL(KIND=8) :: RCOND
+  INTEGER :: NRHS,LDA,LDB,RANK,LWORK,LIWORK,INFO,N,M,i
+
+  error = .FALSE.
+
+  IF (np .LT. nb) THEN
+    error = .TRUE.
+    WRITE(*,*) "ERROR"
+    WRITE(*,*) "linal:lsqr -- tried to solve least squares with cols > rows"
+    RETURN
+  END IF
+
+  M = np
+  N = nb
+  NRHS = nd
+  LDA = M
+  LDB = MAX(N,M)
+  RCOND = -1
+  LWORK = -1
+  LIWORK = 2
+  INFO = 0
+
+  ALLOCATE(Ax(0:LDA-1,0:N-1))
+  ALLOCATE(bv(0:LDB-1,0:NRHS-1))
+  ALLOCATE(S(0:MIN(M,N)-1))
+  ALLOCATE(WORK(0:1))
+  ALLOCATE(IWORK(0:LIWORK-1))
+
+  Ax = A
+  DO i=0,nd-1
+    bv(0:M-1,i) = b(0:np-1)
+  END DO
+
+  !call stuff
+  CALL DGELSD(M,N,NRHS,Ax(0:LDA-1,0:N-1),LDA,bv(0:LDB-1,0:NRHS-1),LDB,S,&
+              RCOND,RANK,WORK(0:1),LWORK,IWORK(0:LIWORK-1),INFO)
+
+  IF (INFO .NE. 0) THEN
+    error = .TRUE.
+    WRITE(*,*) "ERROR"
+    WRITE(*,*) "linal:lsqr -- dgelsd exited with value ", INFO
+    DEALLOCATE(Ax)
+    DEALLOCATE(bv)
+    DEALLOCATE(S)
+    DEALLOCATE(WORK)
+    DEALLOCATE(IWORK)
+    RETURN
+  END IF
+
+  LWORK = CEILING(WORK(0))
+  LIWORK = IWORK(0)
+  DEALLOCATE(WORK)
+  DEALLOCATE(IWORK)
+  ALLOCATE(WORK(0:LWORK-1))
+  ALLOCATE(IWORK(0:LIWORK-1))
+
+  !call stuff again
+  CALL DGELSD(M,N,NRHS,Ax(0:LDA-1,0:N-1),LDA,bv(0:LDB-1,0:NRHS-1),LDB,S,&
+              RCOND,RANK,WORK(0:LWORK-1),LWORK,IWORK(0:LIWORK-1),INFO)
+
+  IF (INFO .NE. 0) THEN
+    error = .TRUE.
+    WRITE(*,*) "ERROR"
+    WRITE(*,*) "linal:lsqr -- dgelsd exited with value ", INFO
+    DEALLOCATE(Ax)
+    DEALLOCATE(bv)
+    DEALLOCATE(S)
+    DEALLOCATE(WORK)
+    DEALLOCATE(IWORK)
+    RETURN
+  END IF
+
+  !process coefficients
+  coef(0:nb-1,0:nd-1) = bv(0:N-1,0:NRHS-1) 
+
+  DEALLOCATE(Ax)
+  DEALLOCATE(bv)
+  DEALLOCATE(S)
+  DEALLOCATE(WORK)
+  DEALLOCATE(IWORK)
+
+END SUBROUTINE lsqr
+
+!---------------------------------------------------------------------
+
 END MODULE linal

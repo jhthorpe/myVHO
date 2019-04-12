@@ -1,0 +1,10 @@
+nbasis 2
+vmax 10
+Q_eq 0
+m_basis 2
+units 0
+fit 4
+conv 10
+
+Using Vq of a harmonic oscillator with k=1, mass=2, and potential offset of -0.5
+below Vq(Q_eq)
