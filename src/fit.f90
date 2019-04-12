@@ -122,7 +122,9 @@ SUBROUTINE absc_calc(absc,W,a,m,nb,qeq,error)
   error = .FALSE.
   A2B = 1.88973
 
-  na = 2*nb+10 !this is, I think, probably overkill?"
+  na = nb+10 !this is, I think, probably overkill?"
+  !na = 2
+  !na = 1 
 
   WRITE(*,*)
   WRITE(*,*) "Calculating abscissa and weights needed",&
@@ -141,11 +143,13 @@ SUBROUTINE absc_calc(absc,W,a,m,nb,qeq,error)
 
   WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
   WRITE(*,*) "These values are shifted from a qeq of", qeq/A2B
+  WRITE(*,*)
 
   OPEN(file='abscissa.dat',unit=101,status='replace')
   WRITE(101,*) "point     x(Å)      W"
   DO i=0,na-1
     WRITE(101,'(2x,I4,2x,F20.16,2x,ES24.15)') i,(absc(i)+qeq)/A2B,W(i)
+    WRITE(*,'(2x,I4,2x,F20.16,2x,ES24.15)') i,(absc(i)+qeq)/A2B,W(i)
   END DO
   CLOSE(unit=101)
 
@@ -183,7 +187,10 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
 
   WRITE(*,*) 
 
-  na = 2*nb+10 !probably an overestimation?
+  na = nb+10 !probably an overestimation?
+  !na = 50 !probably an overestimation?
+  !na = 10
+  !na = 2
   ALLOCATE(Vab(0:na-1))
   ALLOCATE(ab(0:na-1))
   ALLOCATE(W(0:na-1))
@@ -207,6 +214,7 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
   DO i=0,na-1
     IF (ab(i)/a .LT. qmin .OR. ab(i)/a .GT. qmax) THEN
       Vab(i) = 0.0D0 
+      WRITE(*,*) "WARNING, outside of qmin or qmax", ab(i),ab(i)/a
     ELSE
       CALL splint(x(1:np-2),Fx(1:np-2),y2(1:np-2),np,ab(i)/a,Vab(i),error)
     END IF
@@ -226,7 +234,6 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
   WRITE(110,*) na
   DO i=0,na-1
     WRITE(110,*) ab(i), W(i), Vab(i)
-   ! WRITE(*,*) (ab(i) + 1.4013029439811107)/1.88973, Vab(i)-1.1742214194603271
   END DO  
   CLOSE(unit=110)
 

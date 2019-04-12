@@ -81,8 +81,7 @@ SUBROUTINE HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,np,&
   END IF
 
   CALL HO_harmonic(Hij,N,k,m,error) !this is the same no matter what
-
-
+ 
 END SUBROUTINE HO1D_integrals
 
 !---------------------------------------------------------------------
@@ -144,36 +143,37 @@ SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
     !we are below qmin
     IF (q(u)/a .LE. qmin) THEN
       DO j=0,nb-1
-        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)*EXP(-q(u)**2.0) 
+        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
       END DO 
 
     !we are above qmax 
     ELSE IF (q(u)/a .GE. qmax) THEN
       DO j=0,nb-1
         DO i=j,nb-1
-          Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*EXP(-q(u)**2.0)*&
+          Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*&
                    (Vnp - 0.5*k*(q(u)/a)**2.0D0) 
                    !(Vnp - 0.5*k*q(u)**2.0D0/a) 
         END DO
-        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)*EXP(-q(u)**2.0) 
+        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
       END DO
 
     !we are at a trusted value 
     ELSE
       DO j=0,nb-1
         DO i=j,nb-1
-          Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*EXP(-q(u)**2.0)*&
+          Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*&
                    (Vq(u) - 0.5*k*(q(u)/a)**2.0D0) 
                    !(Vq(u) - 0.5*k*q(u)**2.0D0/a) 
         END DO
-        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)*EXP(-q(u)**2.0) 
+        Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
       END DO
     END IF
   END DO 
 
   ! account for the change of variables in the integral
-  !Hij = Hij/SQRT(a)
-  Ni = 1/SQRT(Ni) 
+  Hij = Hij/a
+  Ni = Ni/a
+  Ni = 1.0/SQRT(Ni) 
 
   !check values and normalize
   DO j=0,nb-1
@@ -202,10 +202,10 @@ SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
   END DO
 
   
- !WRITE(*,*) "Hamiltonian is..."
- ! DO i=0,nb-1
- !   WRITE(*,*) Hij(i,0:i)
- ! END DO
+  !WRITE(*,*) "Hamiltonian is..."
+  !DO i=0,nb-1
+  !  WRITE(*,*) Hij(i,0:i)
+  !END DO
 
 END SUBROUTINE gauss_potential
 

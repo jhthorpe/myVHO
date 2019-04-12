@@ -52,7 +52,7 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
 
   !WRITE(*,*) "The Hamiltonian"
   !DO i=0,N-1
-  !  WRITE(*,*) Hij(i,0:i-1)
+  !  WRITE(*,*) Hij(i,0:i)
   !END DO
   !WRITE(*,*) 
 
