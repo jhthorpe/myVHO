@@ -1,0 +1,62 @@
+
+ Starting VHO calcuation
+ James H. Thorpe
+
+ No units will be converted... be very careful
+
+ Number of basis functions :           2
+ Equilibrium position      :   0.0000000000000000     
+ Basis function k          :   1.0000000000000000     
+ Basis function m          :   2.0000000000000000     
+ Basis function offset     :  -1.3400873230782613E-024
+ Basis function alpha      :   1.1892071150027210     
+ Fit function type         :           3
+ Fit RMS convergence       :   0.0000000000000000     
+ ---------------------------------------------------------------------
+ Fitting the surface
+
+ Fitting options are:
+  -1             : Display abscissa needed
+   0             : Precalculated abscissa
+   1             : a*exp(-b*r)
+   2             : a*x^i
+   3             : cubic spline
+   4             : no fitting
+
+ Option (3) selected
+
+ Determining location of abscissa
+ Performing cubic spline interpolation of surface
+ Cublic spline interpolation stored in gauss.dat
+ ---------------------------------------------------------------------
+
+ Calculating HO integrals
+
+ Starting Gaussian Quadrature for potential energy integrals
+ q in y=a*x, x
+   4.3044485704736317        3.6195953725552532     
+   3.4626569336022706        2.9117358027195688     
+   2.7484707249854026        2.3111791800700030     
+   2.0951832585077166        1.7618320913787358     
+   1.4766827311411408        1.2417372150836501     
+  0.87871378732939931       0.73890727379930676     
+  0.29174551067256205       0.24532775409092175     
+ -0.29174551067256205      -0.24532775409092175     
+ -0.87871378732939931      -0.73890727379930676     
+  -1.4766827311411408       -1.2417372150836501     
+  -2.0951832585077166       -1.7618320913787358     
+  -2.7484707249854026       -2.3111791800700030     
+  -3.4626569336022706       -2.9117358027195688     
+  -4.3044485704736317       -3.6195953725552532     
+ qmin is  -2.9998800000000001     
+ qmax is   2.9998799999967258     
+
+ Diagonalizing the Hamiltonian
+ Info is:           0
+
+ Vibrational Eigenvalues (a.u, cm-1)
+ Eigenvalues written to eigs.dat
+           0  0.35355339059327368        77594.362633505778     
+           1   1.0606601717798121        232783.08790051535     
+
+ Eigenvectors written to evec.dat

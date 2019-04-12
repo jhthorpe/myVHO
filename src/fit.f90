@@ -41,6 +41,9 @@ SUBROUTINE fit_surf(func,Fx,x,np,tol,ord,coef,a,m,nb,qeq,error)
   INTEGER, INTENT(INOUT) :: ord
   INTEGER, INTENT(IN) :: np,func,nb
 
+  WRITE(*,*) &
+"---------------------------------------------------------------------"
+  WRITE(*,*) "Fitting the surface"
   WRITE(*,*) 
   WRITE(*,*) "Fitting options are:"
   WRITE(*,*) " -1             : Display abscissa needed"
@@ -134,7 +137,7 @@ SUBROUTINE absc_calc(absc,W,a,m,nb,qeq,error)
     RETURN
   END IF
 
-  absc = absc / SQRT(a)
+  absc = absc/a
 
   WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
   WRITE(*,*) "These values are shifted from a qeq of", qeq/A2B
@@ -152,6 +155,8 @@ END SUBROUTINE absc_calc
 ! spline_fit
 !       - uses cubic spline interpolation to obtain the needed values
 !         of Vx and x for Gaussian Quadrature
+!       - note that we are working in y = a*x space, hence the weird
+!         factors of a
 !---------------------------------------------------------------------
 ! Variables
 ! Fx            : 1D real*8, function to fit
@@ -183,11 +188,11 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
   ALLOCATE(ab(0:na-1))
   ALLOCATE(W(0:na-1))
   ALLOCATE(y2(0:np-1))
-  qmin = x(0)
-  qmax = x(np-1)
+  qmin = x(1)
+  qmax = x(np-2)
  
   WRITE(*,*) "Determining location of abscissa"
-  CALL gauher(ab(0:na-1),W(0:na-1),na,error)
+  CALL gauher(ab(0:na-1),W(0:na-1),na,error) !this is in y=a*x space
   IF (error) THEN
     WRITE(*,*) "fit:spline_fit -- error out of gauher"
     RETURN
@@ -195,15 +200,15 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
 
   WRITE(*,*) "Performing cubic spline interpolation of surface"
   !derivatives for spline
-  yp1 = (Fx(2) - Fx(0))/(x(2)-x(0)) 
+  yp1 = (Fx(2) - Fx(0))/(x(2)-x(0))
   ypn = (Fx(np-1) - Fx(np-3))/(x(np-1)-x(np-3)) 
   
-  CALL spline(x(1:np-2),Fx(1:np-2),np,yp1,ypn,y2(1:np-2),np)
+  CALL spline(x(1:np-2),Fx(1:np-2),np-2,yp1,ypn,y2(1:np-2),np-2)
   DO i=0,na-1
-    IF (ab(i) .LT. qmin .OR. ab(i) .GT. qmax) THEN
+    IF (ab(i)/a .LT. qmin .OR. ab(i)/a .GT. qmax) THEN
       Vab(i) = 0.0D0 
     ELSE
-      CALL splint(x(1:np-2),Fx(1:np-2),y2(1:np-2),np,ab(i),Vab(i),error)
+      CALL splint(x(1:np-2),Fx(1:np-2),y2(1:np-2),np,ab(i)/a,Vab(i),error)
     END IF
     IF (error) THEN
       WRITE(*,*) "fit:spline_fit -- error out of splint" 
@@ -215,18 +220,15 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
     END IF
   END DO 
 
-  WRITE(*,*) "error is",error
-
   !write out abscissa and values to intermediate file
-  WRITE(*,*) "Cublic spline interpolation stored in absc.dat"
-  OPEN(file='absc.dat',unit=110,status='replace')
+  WRITE(*,*) "Cublic spline interpolation stored in gauss.dat"
+  OPEN(file='gauss.dat',unit=110,status='replace')
   WRITE(110,*) na
   DO i=0,na-1
     WRITE(110,*) ab(i), W(i), Vab(i)
-    WRITE(*,*) (ab(i) + 1.4013029439811107)/1.88973, Vab(i)-1.1742214194603271
+   ! WRITE(*,*) (ab(i) + 1.4013029439811107)/1.88973, Vab(i)-1.1742214194603271
   END DO  
   CLOSE(unit=110)
-  WRITE(*,*) "error is",error
 
   DEALLOCATE(Vab)
   DEALLOCATE(ab)
@@ -234,6 +236,7 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
   DEALLOCATE(y2)
 
 END SUBROUTINE spline_fit
+
 !---------------------------------------------------------------------
 ! splint
 !       -splilnt subroutine from NRF77
@@ -282,6 +285,11 @@ SUBROUTINE splint(xa,ya,y2a,n,x,y,error)
       EXIT
     end if
   end do
+ 
+  IF (khi .EQ. 1) THEN
+    WRITE(*,*) "The search for ",x
+    WRITE(*,*) "ended with khi = 1"
+  END IF
 
   h=xa(khi)-xa(klo)
   if (h.eq.0.) then

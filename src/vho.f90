@@ -39,6 +39,8 @@ PROGRAM vho
     IF (ALLOCATED(coef)) DEALLOCATE(coef)
     STOP 2
   END IF
+   
+  IF (func .EQ. -1) STOP
 
   CALL HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,&
                       npoints,k,m,V_off,a,Hij,Ni,error)
@@ -53,6 +55,7 @@ PROGRAM vho
     IF (ALLOCATED(coef)) DEALLOCATE(coef)
     STOP 3 
   END IF
+
 
   IF (func .EQ. -1) THEN
     IF(ALLOCATED(Hij)) DEALLOCATE(Hij)
@@ -77,6 +80,8 @@ PROGRAM vho
     IF (ALLOCATED(coef)) DEALLOCATE(coef)
     STOP 4 
   END IF
+
+  STOP "stopping here for now"
 
   CALL make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints,&
                     k,m,V_off,a,Ei,Hij,Ni,error)

@@ -1,0 +1,48 @@
+
+ Starting VHO calcuation
+ James H. Thorpe
+
+ No units will be converted... be very careful
+
+ Number of basis functions :           2
+ Equilibrium position      :   0.0000000000000000     
+ Basis function k          :   1.0000000000000000     
+ Basis function m          :   2.0000000000000000     
+ Basis function offset     :  -1.3400873230782613E-024
+ Basis function alpha      :   1.1892071150027210     
+ Fit function type         :           4
+ Fit RMS convergence       :   10.000000000000000     
+ ---------------------------------------------------------------------
+ Fitting the surface
+
+ Fitting options are:
+  -1             : Display abscissa needed
+   0             : Precalculated abscissa
+   1             : a*exp(-b*r)
+   2             : a*x^i
+   3             : cubic spline
+   4             : no fitting
+
+ Option (4) selected
+ ---------------------------------------------------------------------
+
+ Calculating HO integrals
+ Calculating potential energy numerical integrals
+ Number of points :       50001
+
+ Calculating Normalization Constants
+ Number of points :     1000000
+ between          :  -20.000000000000000      ,   20.000000000000000     
+ with dx          :   4.0000000000000003E-005
+
+ Normalizing Wavefunction
+
+ Diagonalizing the Hamiltonian
+ Info is:           0
+
+ Vibrational Eigenvalues (a.u, cm-1)
+ Eigenvalues written to eigs.dat
+           0  0.35355339059327379        77594.362633505792     
+           1   1.0606601717798214        232783.08790051739     
+
+ Eigenvectors written to evec.dat

@@ -1,0 +1,51 @@
+
+ Starting VHO calcuation
+ James H. Thorpe
+
+ No units will be converted... be very careful
+
+ Number of basis functions :          30
+ Equilibrium position      :  0.50000000000000000     
+ Basis function k          :   1200.2822265400907     
+ Basis function m          :   2.0000000000000000     
+ Basis function offset     :   99.999999594385756     
+ Basis function alpha      :   6.9996825243794394     
+ Fit function type         :           3
+ Fit RMS convergence       :   1.0000000000000000E-004
+ ---------------------------------------------------------------------
+ Fitting the surface
+
+ Fitting options are:
+  -1             : Display abscissa needed
+   0             : Precalculated abscissa
+   1             : a*exp(-b*r)
+   2             : a*x^i
+   3             : cubic spline
+   4             : no fitting
+
+ Option (3) selected
+
+ Determining location of abscissa
+ Performing cubic spline interpolation of surface
+ Cublic spline interpolation stored in gauss.dat
+ ---------------------------------------------------------------------
+
+ Calculating HO integrals
+
+ Starting Gaussian Quadrature for potential energy integrals
+
+ Diagonalizing the Hamiltonian
+ Info is:           0
+
+ Vibrational Eigenvalues (a.u, cm-1)
+ Eigenvalues written to eigs.dat
+           0   12.299861472855730        2699450.5974476468     
+           1   37.280544045890800        8181961.0017516539     
+           2   62.436045689430010        13702838.947459204     
+           3   86.548991046984256        18994907.065081634     
+           4   110.97557903898843        24355810.331686791     
+           5   135.43642656694112        29724232.538646568     
+           6   159.91505754867180        35096557.680206999     
+           7   184.42966375421116        40476778.304136723     
+
+ Eigenvectors written to evec.dat

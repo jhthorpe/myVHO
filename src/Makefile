@@ -26,8 +26,8 @@ all: $(objects)
 input.o : input.f90 
 	$(FC) $(FFLAGS) -c input.f90
 
-ints_HO.o : ints_HO.f90 nints.o
-	$(FC) $(FFLAGS) -c ints_HO.f90 nints.o
+ints_HO.o : ints_HO.f90 nints.o fit.o val.o
+	$(FC) $(FFLAGS) -c ints_HO.f90 nints.o fit.o val.o
 
 proc.o : proc.f90
 	$(FC) $(FFLAGS) -c proc.f90
