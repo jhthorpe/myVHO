@@ -1,5 +1,5 @@
 
- Starting VSCF calcuation
+ Starting VHO calcuation
  James H. Thorpe
 
  Converting Å -> Bohrs
@@ -7,14 +7,29 @@
 
  Number of basis functions :          70
  Equilibrium position      :   1.4013029439811107     
- Basis function k          :  0.36179056670239101     
- Basis function m          :   918.00000000000000     
- Basis function offset     :   1.1742214194603271     
- Basis function alpha      :   4.2689884522831649     
+ Basis function k          :  0.36425804863723926     
+ Basis function m          :   925.18335000000002     
+ Basis function offset     :   1.1737005316868521     
+ Basis function alpha      :   4.2845897182535948     
+ Fit function type         :           4
+ Fit RMS convergence       :   1.0000000000000001E-005
+ ---------------------------------------------------------------------
+ Fitting the surface
+
+ Fitting options are:
+  -1             : Display abscissa needed
+   0             : Precalculated abscissa
+   1             : a*exp(-b*r)
+   2             : a*x^i
+   3             : cubic spline
+   4             : no fitting
+
+ Option (4) selected
+ ---------------------------------------------------------------------
 
  Calculating HO integrals
  Calculating potential energy numerical integrals
- Number of points :         750
+ Number of points :        1500
 
  Calculating Normalization Constants
  Number of points :     1000000
@@ -28,37 +43,21 @@
 
  Vibrational Eigenvalues (a.u, cm-1)
  Eigenvalues written to eigs.dat
-           0   9.9337992914643874E-003   2180.1709304976889     
-           1   2.8905918528867456E-002   6343.9819395305403     
-           2   4.6805648905938892E-002   10272.435765386408     
-           3   6.3654877705127025E-002   13970.336009944229     
-           4   7.9467158482987063E-002   17440.657272261171     
-           5   9.4246746711262749E-002   20684.333500720837     
-           6  0.10798729301510819        23699.971198025796     
-           7  0.12067005711183548        26483.457434334534     
-           8  0.13226138710428895        29027.406627778295     
-           9  0.14271230918733274        31321.070497343917     
-          10  0.15202449185496558        33364.815227409294     
-          11  0.16069797777542688        35268.385182372935     
-          12  0.16994215599458165        37297.204976130837     
-          13  0.18042534471875815        39597.950405425850     
-          14  0.19213118277614039        42167.030683879530     
-          15  0.20494475023850836        44979.224334845429     
+           0   9.8931808542107452E-003   2171.2564020736322     
+           1   2.8789443740400746E-002   6318.4192177057512     
+           2   4.6622602303663843E-002   10232.262527585104     
+           3   6.3414383453585826E-002   13917.554736558481     
+           4   7.9178330179871428E-002   17377.268124576382     
+           5   9.3918853260041721E-002   20612.370724981356     
+           6  0.10762994823465567        23621.544739059882     
+           7  0.12029344582574113        26400.802555375405     
+           8  0.13187654762509707        28942.945907280053     
+           9  0.14233153047836497        31237.500994086760     
+          10  0.15166142257352302        33285.132412211096     
+          11  0.16036159082752283        35194.558338916431     
+          12  0.16962903887938013        37228.485162857556     
+          13  0.18013111124323966        39533.374984553811     
+          14  0.19185445412217919        42106.297046194668     
+          15  0.20468514020142967        44922.247720007770     
 
  Eigenvectors written to evec.dat
-
- Generating plot.dat and gnurun
- Visualize with:
-         gnuplot < gnurun
-         display plot.png
-
- Wavefunction plots saved as 'wave_X.dat'
-
- Calculating Frank-Condon integrals
- Number of points :      100000
- between          :  -20.000000000000000      ,   20.000000000000000     
- with dx          :   4.0000000000000002E-004
-
- Frank-Condon data saved as 'FC_ints.dat'
- Frank-Condon parameters save as 'FC_param.dat'
-

@@ -8,6 +8,8 @@
 !//////////////////////////////////////////////////////////////////
 
 MODULE input
+  USE fit
+  USE val
   IMPLICIT NONE
 
 CONTAINS
@@ -31,12 +33,12 @@ CONTAINS
 ! conv          : real*8, convergence for func
 ! error		: bool, true if error
 
-SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,func,conv,error)
+SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
   REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,Voff,a,conv
-  INTEGER, INTENT(INOUT) :: N, npoints,vmax,func
+  INTEGER, INTENT(INOUT) :: N, np,vmax,func
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
@@ -68,14 +70,14 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,func,conv,err
   READ(100,*) word, func
   READ(100,*) word, conv
   CLOSE(unit=100)
-  CALL getfline(npoints,fname,error)
+  CALL getfline(np,fname,error)
   
-  ALLOCATE(Vq(0:npoints-1)) 
-  ALLOCATE(q(0:npoints-1))
+  ALLOCATE(Vq(0:np-1)) 
+  ALLOCATE(q(0:np-1))
 
   !read in q and Vq
   OPEN(file="Vq",unit=101,status='old')
-  DO i=0,npoints-1
+  DO i=0,np-1
     READ(101,*) dummy, q(i), Vq(i)
   END DO
   CLOSE(unit=101)
@@ -100,48 +102,13 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,func,conv,err
   WRITE(*,*) 
 
   qmin = q(0)
-  qmax = q(npoints-1)
+  qmax = q(np-1)
    
   Voff = -1.0*MINVAL(Vq)
   Vq = Vq + Voff
 
   !Get k
-  INQUIRE(FILE='k',EXIST=exists)
-  IF (exists) THEN
-    OPEN(file='k',unit=105,status='old')
-    READ(105,*) k
-    CLOSE(unit=105)
-  ELSE 
-    !if k file not present, calculate from potential at qeq
-    DO i=0,npoints-1
-      IF (q(i) .GT. qeq) THEN
-        ueq = i-1
-        EXIT
-      END IF
-    END DO 
-
-    !from central differences, 2nd derivative
-    k = (Vq(ueq+1) - 2*Vq(ueq) + Vq(ueq - 1))/(q(ueq+1)-q(ueq))**2.0
-
-    !check k values
-    IF (ABS(q(ueq+1)-q(ueq) - (q(ueq)-q(ueq-1))) .GT. 1.0D-15) THEN
-      WRITE(*,*) "WARNING : potentially bad k value"
-      WRITE(*,*) "forwards and backwards differences not equal:"
-      WRITE(*,*) q(ueq+1)-q(ueq), q(ueq)-q(ueq-1)
-      WRITE(*,*) 
-    ELSE IF (k .GT. infty) THEN
-      WRITE(*,*) "k is infinite"
-      error  = .TRUE.
-      RETURN
-    ELSE IF (k .NE. k) THEN
-      WRITE(*,*) "k is NaN"
-      error = .TRUE.
-      RETURN
-    END IF
- 
-  END IF
-
-  !center around qeq
+  CALL get_k(Vq(0:np-1),q(0:np-1),qeq,np,k,error)
   q = q - qeq
 
   !print output
@@ -157,6 +124,72 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,Voff,a,func,conv,err
 
 END SUBROUTINE read_input 
 
+!---------------------------------------------------------------------
+! get_k
+!       - calculates k via cubic spline interpolation, or reads from
+!         file if provided
+!---------------------------------------------------------------------
+! Variables
+! Vq            : 1D real*8, points on surface
+! q             : 1D real*8, distances on surface
+! qeq           : real*8, value of equilibrium position
+! np            : int, number of points
+! k             : real*8, value of k 
+! error         : bool, true on exit if error
+
+SUBROUTINE get_k(Vq,q,qeq,np,k,error)
+  IMPLICIT NONE
+
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
+  REAL(KIND=8), INTENT(INOUT) :: k
+  REAL(KIND=8), INTENT(IN) :: qeq
+  LOGICAL, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: np
+
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: y2
+  REAL(KIND=8) :: yp1,ypn,yf,yb,ym,h
+  LOGICAL :: exists
+
+  INQUIRE(FILE='k',EXIST=exists)
+  IF (exists) THEN
+    OPEN(file='k',unit=105,status='old')
+    READ(105,*) k
+    CLOSE(unit=105)
+
+  ELSE 
+
+    !if k file not present, calculate from potential at qeq
+    ALLOCATE(y2(0:np-1))
+    yp1 = (Vq(2) - Vq(0))/(q(2)-q(0))
+    ypn = (Vq(np-1) - Vq(np-3))/(q(np-1) - q(np-3))
+    h = 1.0D-8
+
+    CALL spline(q(1:np-2),Vq(1:np-2),np-2,yp1,ypn,y2(1:np-2),np-2)
+    CALL splint(q(1:np-2),Vq(1:np-2),y2(1:np-2),np-2,qeq+h,yf,error)
+    CALL splint(q(1:np-2),Vq(1:np-2),y2(1:np-2),np-2,qeq,ym,error)
+    CALL splint(q(1:np-2),Vq(1:np-2),y2(1:np-2),np-2,qeq-h,yb,error)
+
+    !from central differences, 2nd derivative
+    k = (yf - 2*ym + yb)/(h)**2.0
+
+    DEALLOCATE(y2)
+    !check k values
+    IF (ABS((yf-ym) - (ym-yb)) .GT. 1.0D-15) THEN
+      WRITE(*,*) "WARNING : potentially bad k value"
+      WRITE(*,*) "forwards and backwards differences not equal:"
+      WRITE(*,*) yf-ym, ym-yb
+      WRITE(*,*) 
+    END IF
+ 
+    CALL checkval(k,error)
+    IF (error) THEN
+      WRITE(*,*) "input:get_k -- error out of checkval"
+      RETURN
+    END IF
+ 
+  END IF
+
+END SUBROUTINE get_k
 !---------------------------------------------------------------------
 ! getfline
 !       James H. Thorpe
