@@ -1,0 +1,60 @@
+
+ Starting VHO calcuation
+ James H. Thorpe
+
+ Converting Å -> Bohrs
+ Converting μ(gfm) -> μ(me)
+
+ Number of basis functions :         150
+ Equilibrium position      :   1.4013029439811107     
+ Basis function k          :  0.36789560509800878     
+ Basis function m          :   925.18335000000002     
+ Basis function offset     :   1.1737005316868521     
+ Basis function alpha      :   4.2952465932122781     
+ Fit function type         :           3
+ Fit RMS convergence       :   1.0000000000000001E-005
+ ---------------------------------------------------------------------
+ Fitting the surface
+
+ Fitting options are:
+  -1             : Display abscissa needed
+   0             : Precalculated abscissa
+   1             : a*exp(-b*r)
+   2             : a*x^i
+   3             : cubic spline
+   4             : no fitting
+
+ Option (3) selected
+
+ Determining location of abscissa
+ Performing cubic spline interpolation of surface
+ Cublic spline interpolation stored in gauss.dat
+ ---------------------------------------------------------------------
+
+ Calculating HO integrals
+
+ Starting Gaussian Quadrature for potential energy integrals
+
+ Diagonalizing the Hamiltonian
+ Info is:           0
+
+ Vibrational Eigenvalues (a.u, cm-1)
+ Eigenvalues written to eigs.dat
+           0   9.8791117203045828E-003   2168.1686492552467     
+           1   2.8775374602054388E-002   6315.3314639128766     
+           2   4.6608533144826034E-002   10229.174769294970     
+           3   6.3400314214806436E-002   13914.466960723568     
+           4   7.9164260699844516E-002   17374.180295794875     
+           5   9.3904783181783011E-002   20609.282764905918     
+           6  0.10761587688114915        23618.456499105803     
+           7  0.12027937149945014        26397.713662984323     
+           8  0.13186240520805748        28939.842071012376     
+           9  0.14231391416701428        31233.634742234623     
+          10  0.15155962068077969        33262.789950810715     
+          11  0.15949462593613814        35004.285554204238     
+          12  0.16597651616226916        36426.866002133211     
+          13  0.17099545108172520        37528.371648906228     
+          14  0.17560299522532311        38539.589362101658     
+          15  0.18103916524727701        39732.665596819883     
+
+ Eigenvectors written to evec.dat

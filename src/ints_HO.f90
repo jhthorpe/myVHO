@@ -152,7 +152,6 @@ SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
         DO i=j,nb-1
           Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*&
                    (Vnp - 0.5*k*(q(u)/a)**2.0D0) 
-                   !(Vnp - 0.5*k*q(u)**2.0D0/a) 
         END DO
         Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
       END DO
@@ -163,7 +162,6 @@ SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
         DO i=j,nb-1
           Hij(i,j) = Hij(i,j) + Wq(u)*Ht(i)*Ht(j)*&
                    (Vq(u) - 0.5*k*(q(u)/a)**2.0D0) 
-                   !(Vq(u) - 0.5*k*q(u)**2.0D0/a) 
         END DO
         Ni(j) = Ni(j) + Wq(u)*Ht(j)*Ht(j)
       END DO
@@ -177,6 +175,7 @@ SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
 
   !check values and normalize
   DO j=0,nb-1
+    CALL checkval(Ni(j),error)
     IF (error) THEN
       WRITE(*,*) "gauss_potential -- bad integral at N",j
       DEALLOCATE(Vq)
@@ -198,7 +197,6 @@ SUBROUTINE gauss_potential(Hij,Ni,nb,np,qmin,qmax,Vnp,a,k,error)
       END IF
       Hij(i,j) = Hij(i,j)*Ni(i)*Ni(j) 
     END DO
-    CALL checkval(Ni(j),error)
   END DO
 
   
@@ -508,6 +506,7 @@ SUBROUTINE HO_harmonic(Hij,N,k,m,error)
 
   DO i=0,N-1
     Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5) !using Viral theorum 
+!    Hij(i,i) = Hij(i,i) + -1.406912999D-5
   END DO
 
 END SUBROUTINE HO_harmonic

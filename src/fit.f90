@@ -79,7 +79,7 @@ SUBROUTINE fit_surf(func,Fx,x,np,tol,ord,coef,a,m,nb,qeq,error)
 
   ELSE IF (func .EQ. 3) THEN
     WRITE(*,*) "Option (3) selected"
-    CALL spline_fit(Fx(0:np-1),x(0:np-1),np,a,m,nb,error)
+    CALL spline_fit(Fx(0:np-1),x(0:np-1),np,a,m,nb,qeq,error)
 
   ELSE IF (func .EQ. 4) THEN
     WRITE(*,*) "Option (4) selected"
@@ -171,16 +171,16 @@ END SUBROUTINE absc_calc
 ! nb            : int, nubmer of HO basis functions
 ! error         : bool, true on exit if there was a problem
 
-SUBROUTINE spline_fit(Fx,x,np,a,m,nb,error)
+SUBROUTINE spline_fit(Fx,x,np,a,m,nb,qeq,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(0:np-1), INTENT(IN) :: Fx,x
-  REAL(KIND=8), INTENT(IN) :: a,m
+  REAL(KIND=8), INTENT(IN) :: a,m,qeq
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: np,nb
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: ab,Vab,W,y2
-  REAL(KIND=8) :: qmin,qmax,yp1,ypn
+  REAL(KIND=8) :: qmin,qmax,yp1,ypn,h,yf,yb
   INTEGER :: na,i
 
   error = .FALSE.

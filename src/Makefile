@@ -23,8 +23,8 @@ all: $(objects)
 	cp conv.o $(bindir)/conv
 	cp scat.o $(bindir)/scat
 
-input.o : input.f90 
-	$(FC) $(FFLAGS) -c input.f90
+input.o : input.f90 fit.o val.o 
+	$(FC) $(FFLAGS) -c input.f90 fit.o val.o
 
 ints_HO.o : ints_HO.f90 nints.o fit.o val.o
 	$(FC) $(FFLAGS) -c ints_HO.f90 nints.o fit.o val.o
@@ -38,7 +38,7 @@ linal.o : linal.f90
 nints.o : nints.f90
 	$(FC) $(FFLAGS) -c nints.f90
 
-fit.o : fit.f90 linal.o val.o nints.o
+fit.o : fit.f90 linal.o val.o nints.o 
 	$(FC) $(FFLAGS) $(LINAL) -c fit.f90 linal.o val.o nints.o
 
 val.o : val.f90
