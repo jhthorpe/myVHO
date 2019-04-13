@@ -42,7 +42,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
-  REAL(KIND=8) :: temp,infty,A2B,me2mp
+  REAL(KIND=8) :: temp,infty,A2B,amu2me
   INTEGER :: dummy,i,ueq,exitval,units
   LOGICAL :: exists
   
@@ -50,7 +50,8 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
   fname = "Vq"
   infty = HUGE(qmin)
   A2B = 1.88973
-  me2mp = 1836 
+  !amu2me = 1836 
+  amu2me = 1822.89
   
   !check input file exists
   INQUIRE(file='vho.dat',EXIST=exists)
@@ -88,7 +89,7 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
     WRITE(*,*) "Converting μ(gfm) -> μ(me)" 
     q = q*A2B
     qeq = qeq*A2B
-    m = m*me2mp
+    m = m*amu2me
   ELSE IF (units .EQ. 0) THEN
     WRITE(*,*) "No units will be converted... be very careful"
   ELSE

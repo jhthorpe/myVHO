@@ -73,8 +73,8 @@ SUBROUTINE read_input(Vq,q,qmin,qmax,qeq,npoints,Voff,m,En,error)
   error = .FALSE.
   fname = "Vq"
   infty = HUGE(qmin)
-  A2B = 3.7794519772
-  me2mp = 1836 
+  A2B = 1.88973D0
+  me2mp = 1822.89D0 
   
   !check input file exists
   INQUIRE(file='scat.dat',EXIST=exists)
