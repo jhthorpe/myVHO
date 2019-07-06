@@ -135,8 +135,10 @@ SUBROUTINE plot_wave(N,vmax,qmin,qmax,qeq,a,Cij,Ni,error)
   WRITE(*,*)
   WRITE(*,*) "Calculating Frank-Condon integrals"
   nsteps = 100000
-  fcmin = -20.0
-  fcmax = 20.0
+  !fcmin = -20.0
+  !fcmax = 20.0
+  fcmin = qmin*20.0
+  fcmax = qmax*20.0
   dq = (fcmax - fcmin)/nsteps  
   q = fcmin - qeq
   WRITE(*,*) "Number of points :", nsteps 

@@ -29,7 +29,7 @@ CONTAINS
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true if error
 
-SUBROUTINE HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,np,&
+SUBROUTINE HO1D_integrals(func,units,N,Vq,q,qmin,qmax,qeq,np,&
                           k,m,Voff,a,Hij,Ni,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
@@ -37,7 +37,7 @@ SUBROUTINE HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,np,&
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Vq,q
   REAL(KIND=8), INTENT(IN) :: qmin,qmax,qeq,k,m,Voff,a
   LOGICAL, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: N, np, func
+  INTEGER, INTENT(IN) :: N, np, func, units
 
   INTEGER :: i
   error = .FALSE.
@@ -80,7 +80,7 @@ SUBROUTINE HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,np,&
     WRITE(*,*) "HO1D_integrals -- this option not implemented"
   END IF
 
-  CALL HO_harmonic(Hij,N,k,m,error) !this is the same no matter what
+  CALL HO_harmonic(units,Hij,N,k,m,error) !this is the same no matter what
  
 END SUBROUTINE HO1D_integrals
 
@@ -484,6 +484,7 @@ END SUBROUTINE RHS_kinetic
 !               -adds in harmonic energy terms to diagaonals 
 !---------------------------------------------------------------------
 ! Variables
+! units         : int, unit type, 2 -> dimensionless normal coordinates
 ! Hij           : 2D real*8, matrix of integrals
 ! N             : int, number of basis functions
 ! k             : real*8, k of basis functions
@@ -492,17 +493,21 @@ END SUBROUTINE RHS_kinetic
 ! Ncon          : 1D real*8, list of normalization constants
 ! error         : bool, true on exit if problem
 
-SUBROUTINE HO_harmonic(Hij,N,k,m,error)
+SUBROUTINE HO_harmonic(units,Hij,N,k,m,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), INTENT(IN) :: k,m
   LOGICAL, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: N
+  INTEGER, INTENT(IN) :: N,units
   REAL(KIND=8) :: w
   INTEGER :: i
 
   error = .FALSE.
-  w = SQRT(k/m)
+  IF (units .NE. 2) THEN
+    w = SQRT(k/m)
+  ELSE
+    w = k
+  END IF
 
   DO i=0,N-1
     Hij(i,i) = Hij(i,i) + w*(1.0*i+0.5) !using Viral theorum 
