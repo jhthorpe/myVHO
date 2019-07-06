@@ -16,19 +16,20 @@ CONTAINS
 !---------------------------------------------------------------------
 ! Variables
 ! N             : int, number of harmonic oscillator basis funbtions
+! units         : int, units
 ! vmax          : int, max vibrational quantum number
 ! Hij           : 2D real*8, Hamiltonian Matrix, on exit, coeffs
 ! Ei		: 1D real*8, vibrational energy levels
 ! Voff          : real*8, potential energy offset
 ! error         : bool, true if error
 
-SUBROUTINE diag(N,vmax,Hij,Ei,error)
+SUBROUTINE diag(N,units,vmax,Hij,Ei,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Ei
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   LOGICAL, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: N,vmax
+  INTEGER, INTENT(IN) :: N,vmax,units
 
   INTEGER :: i,j
 
@@ -80,18 +81,31 @@ SUBROUTINE diag(N,vmax,Hij,Ei,error)
   END DO
 
   WRITE(*,*) 
-  WRITE(*,*) "Vibrational Eigenvalues (a.u, cm-1)"
-  WRITE(*,*) "Eigenvalues written to eigs.dat"
-  OPEN(unit=103,file='eigs.dat',status='replace')
-  DO j=0,MIN(vmax+1,N)-1
-    WRITE(*,*) j, Ei(j), Ei(j)*au2cm
-    WRITE(103,*) j, Ei(j),Ei(j)*au2cm
-  END DO 
-  DO j=MIN(vmax+1,N)+1,N-1
-    WRITE(103,*) j, Ei(j), Ei(j)*au2cm
-  END DO
-  CLOSE(unit=103)
-
+  IF (units .NE. 2) THEN
+    WRITE(*,*) "Vibrational Eigenvalues (a.u, cm-1)"
+    WRITE(*,*) "Eigenvalues written to eigs.dat"
+    OPEN(unit=103,file='eigs.dat',status='replace')
+    DO j=0,MIN(vmax+1,N)-1
+      WRITE(*,*) j, Ei(j), Ei(j)*au2cm
+      WRITE(103,*) j, Ei(j),Ei(j)*au2cm
+    END DO 
+    DO j=MIN(vmax+1,N)+1,N-1
+      WRITE(103,*) j, Ei(j), Ei(j)*au2cm
+    END DO
+    CLOSE(unit=103)
+  ELSE
+    WRITE(*,*) "Vibrational Eigenvalues (cm-1)"
+    WRITE(*,*) "Eigenvalues written to eigs.dat"
+    OPEN(unit=103,file='eigs.dat',status='replace')
+    DO j=0,MIN(vmax+1,N)-1
+      WRITE(*,*) j, Ei(j)
+      WRITE(103,*) j, Ei(j)
+    END DO 
+    DO j=MIN(vmax+1,N)+1,N-1
+      WRITE(103,*) j, Ei(j)
+    END DO
+    CLOSE(unit=103)
+  END IF
 
   WRITE(*,*) 
   WRITE(*,*) "Eigenvectors written to evec.dat"

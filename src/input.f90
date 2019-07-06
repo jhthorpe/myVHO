@@ -31,19 +31,20 @@ CONTAINS
 ! a     	: real*8, alpha value of basis functions 
 ! func           : int, type of functing function
 ! conv          : real*8, convergence for func
+! units         : int, units (and coordinate system)
 ! error		: bool, true if error
 
-SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
+SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,units,error)
   IMPLICIT NONE
 
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT)  :: Vq,q
   REAL(KIND=8), INTENT(INOUT) :: qmin,qmax,qeq,k,m,Voff,a,conv
-  INTEGER, INTENT(INOUT) :: N, np,vmax,func
+  INTEGER, INTENT(INOUT) :: N, np,vmax,func,units
   LOGICAL, INTENT(INOUT)  :: error
   
   CHARACTER(LEN=1024) :: fname,word 
   REAL(KIND=8) :: temp,infty,A2B,amu2me
-  INTEGER :: dummy,i,ueq,exitval,units
+  INTEGER :: dummy,i,ueq,exitval
   LOGICAL :: exists
   
   error = .FALSE.
@@ -92,11 +93,15 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
     m = m*amu2me
   ELSE IF (units .EQ. 0) THEN
     WRITE(*,*) "No units will be converted... be very careful"
+  ELSE IF (units .EQ. 2) THEN
+    WRITE(*,*) "Using Dimensionless Normal Coordinates"
+    WRITE(*,*) "Converting Hartrees -> cm-1"
   ELSE
     WRITE(*,*) "That unit conversion not supported!"
     WRITE(*,*) "Possible unit options are:"
     WRITE(*,*) " 0  :  no conversions at all"
-    WRITE(*,*) " 1  :  Å -> Bohr, gfm -> me"
+    WRITE(*,*) " 1  :  Å -> Bohr, gfm -> me "
+    WRITE(*,*) " 2  :  DNC, Hartree -> cm-1 "
     error = .TRUE.
     RETURN
   END IF
@@ -108,12 +113,30 @@ SUBROUTINE read_input(N,vmax,Vq,q,qmin,qmax,qeq,np,k,m,Voff,a,func,conv,error)
   Voff = -1.0*MINVAL(Vq)
   Vq = Vq + Voff
 
-  !Get k
-  CALL get_k(Vq(0:np-1),q(0:np-1),qeq,np,k,error)
-  q = q - qeq
+  IF (units .NE. 2) THEN !anything other than normal coordinates
+    !Get k
+    CALL get_k(Vq(0:np-1),q(0:np-1),qeq,np,k,error)
+    a = SQRT(m*SQRT(k/m))
+    q = q - qeq
+  ELSE !we are in normal coordinates
+    m = 1.0D0
+    a = 1.0D0
+    qeq = 0.0D0
+    Vq = Vq * 219474.63 !convert to cm-1
+    Voff = Voff * 219474.63
+    INQUIRE(file='k',EXIST=exists)
+    IF (.NOT. exists) THEN
+      WRITE(*,*) "You need to create the input file 'k'"
+      error = .TRUE.
+    ELSE
+      OPEN(file='k',unit=100,status='old')
+        READ(100,*) k
+      CLOSE(unit=100) 
+    END IF 
+    IF (error) RETURN
+  END IF
 
   !print output
-  a = SQRT(m*SQRT(k/m))
   WRITE(*,*) "Number of basis functions :", N
   WRITE(*,*) "Equilibrium position      :", qeq
   WRITE(*,*) "Basis function k          :", k
@@ -224,8 +247,5 @@ SUBROUTINE getfline(fline,fname,flag)
   CLOSE(unit=999)
 
 END SUBROUTINE getfline
-
-!---------------------------------------------------------------------
-
 
 END MODULE input

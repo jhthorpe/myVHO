@@ -11,7 +11,7 @@ PROGRAM vho
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij,coef
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE  :: Vq,q,Ei,Ni
   REAL(KIND=8) :: qmin,qmax,qeq,k,m,V_off,a,conv
-  INTEGER :: N, npoints,vmax,ord,func
+  INTEGER :: N, npoints,vmax,ord,func,units
   LOGICAL :: error
 
   WRITE(*,*) 
@@ -20,7 +20,7 @@ PROGRAM vho
   WRITE(*,*)
 
   CALL read_input(N,vmax,Vq,q,qmin,qmax,qeq,npoints,k,m,V_off,a,&
-                 func,conv,error)
+                 func,conv,units,error)
   IF (error) THEN
     WRITE(*,*) 
     WRITE(*,*) "ERROR ERROR ERROR"
@@ -42,7 +42,7 @@ PROGRAM vho
    
   IF (func .EQ. -1) STOP
 
-  CALL HO1D_integrals(func,N,Vq,q,qmin,qmax,qeq,&
+  CALL HO1D_integrals(func,units,N,Vq,q,qmin,qmax,qeq,&
                       npoints,k,m,V_off,a,Hij,Ni,error)
   IF (error) THEN 
     WRITE(*,*) 
@@ -67,7 +67,7 @@ PROGRAM vho
     STOP 0
   END IF
 
-  CALL diag(N,vmax,Hij,Ei,error)
+  CALL diag(N,units,vmax,Hij,Ei,error)
   IF (error) THEN
     WRITE(*,*) 
     WRITE(*,*) "ERROR ERROR ERROR"
@@ -80,8 +80,6 @@ PROGRAM vho
     IF (ALLOCATED(coef)) DEALLOCATE(coef)
     STOP 4 
   END IF
-
-  STOP "stopping here for now"
 
   CALL make_gnuplot(N,vmax,Vq,q,qmin,qmax,qeq,npoints,&
                     k,m,V_off,a,Ei,Hij,Ni,error)
