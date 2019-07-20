@@ -1,8 +1,7 @@
 buildir = ..
 include $(buildir)/make.config
 
-objects = xvho
-
+objects = xvho input.o
 
 all : $(objects)
 	cp xvho $(bindir)/xvho
@@ -10,6 +9,9 @@ all : $(objects)
 clean : 
 	rm *.o *.mod
 
-xvho : vho.f90
-	$(FC) $(FFLAGS) -o xvho vho.f90
+input.o : input.f90
+	$(FC) $(FFLAGS) -c input.f90
+
+xvho : vho.f90 input.o
+	$(FC) $(FFLAGS) -o xvho vho.f90 input.o
 	

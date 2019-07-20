@@ -1,0 +1,6 @@
+0    	!job type
+2    	!2 dimensions
+20 10 	!#basis functions in each dimension
+6	!convergence
+100	!memory in MB
+
