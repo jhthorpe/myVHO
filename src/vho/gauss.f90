@@ -38,8 +38,9 @@ SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
   ALLOCATE(W(0:nabs-1))
 
   CALL gauss_hermite(nabs,q,W,error)  
-  
+
   WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
+  WRITE(*,*) 
   OPEN(file='abscissa.dat',unit=101,status='replace')
   DO i=0,nabs-1
     WRITE(101,*) q(i),W(i)

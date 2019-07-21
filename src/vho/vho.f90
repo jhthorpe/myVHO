@@ -8,7 +8,8 @@
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
 ! error         : int, error code
-! H             : 2D real*8, hamiltonian
+! Hij           : 2D real*8, hamiltonian
+! Herm          : 2D real*8, Hermite polynomials [dimension,abscissa]
 ! q             : 1D real*8, list of abscissa
 ! W             : 1D real*8, list of weights
 ! nabs          : int, number of abscissa
@@ -16,9 +17,9 @@
 PROGRAM vho
   USE input
   USE gauss 
-  USE ints
+  USE H
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: H
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Herm
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W
   INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
   INTEGER(KIND=8) :: mem
@@ -31,11 +32,10 @@ PROGRAM vho
   CALL vho_strtmsg()
   
   CALL input_jobinfo(job,ndim,nbas,mem,error)
-  CALL gauss_generate(job,ndim,nbas,mem,nabs,q,W,H,error)
+  CALL gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
 
   IF (job .NE. -1) THEN
-    ALLOCATE(H(0:SUM(nbas)-1),0:SUM(nbas)-1)
-    CALL H_build(job,ndim,nbas,nabs,mem,q,W,H,error)  
+    CALL H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)  
   END IF
 
   CALL CPU_TIME(tf)
@@ -72,6 +72,8 @@ SUBROUTINE vho_endmsg(ti,tf,error)
   INTEGER, INTENT(IN) :: error
 
   WRITE(*,'(1x,A26,I2,A4,F6.1,1x,A1)') "xvho finished with status ", error," in ",tf-ti,"s" 
+  WRITE(*,*) "======================================================="
+  WRITE(*,*) 
 
 END SUBROUTINE vho_endmsg
 !------------------------------------------------------------

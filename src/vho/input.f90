@@ -140,6 +140,38 @@ SUBROUTINE input_write(job,ndim,nbas,mem,error)
   WRITE(*,*) "nbas    :",nbas
   WRITE(*,*) "mem     :",mem 
 END SUBROUTINE input_write
+
+!------------------------------------------------------------
+! input_fline
+!       - checks if a file exists, and if so, how many lines are in it
+!------------------------------------------------------------
+
+SUBROUTINE input_fline(fline,fname,error)
+  IMPLICIT NONE
+  !Inout
+  CHARACTER(LEN=1024), INTENT(IN) :: fname
+  INTEGER, INTENT(INOUT) :: fline,error
+  !Internal
+  INTEGER :: io
+  LOGICAL :: ex
+  error = 0
+  INQUIRE(file=TRIM(fname),EXIST=ex)
+  IF (.NOT. ex) THEN
+    WRITE(*,*) "You need to create the input file : ", TRIM(fname)
+    error = 1
+    fline = -1
+    RETURN
+  END IF
+  fline = 0
+  io = 0
+  OPEN(unit=999,file=TRIM(fname),status='old',access='sequential')
+  DO WHILE (io .EQ. 0)
+    READ(999,*,iostat=io)
+    IF (io .EQ. 0) fline = fline + 1
+  END DO
+  CLOSE(unit=999)
+
+END SUBROUTINE input_fline
 !------------------------------------------------------------
 
 END MODULE input
