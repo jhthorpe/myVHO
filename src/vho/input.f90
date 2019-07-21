@@ -81,15 +81,17 @@ END SUBROUTINE input_read
 
 SUBROUTINE input_check(job,ndim,nbas,mem,error)
   IMPLICIT NONE
-  INTEGER, DIMENSION(0:ndim-1), INTENT(IN) :: nbas
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,ndim
   error = 0
-  IF (job .NE. 0) THEN
+  IF (job .LT. -1 .OR. job .GT. 1) THEN
     WRITE(*,*) "vho.in line #1"
     WRITE(*,*) "Jobtype", job," is not supported. Options are..."
-    WRITE(*,*) "0 : generate abscissa and weights needed"
+    WRITE(*,*) "-1 : print abscissa and weights needed"
+    WRITE(*,*) " 0 : use precalculated abscissa and weights"
+    WRITE(*,*) " 1 : cublic spline interpolation of potentials" 
     error = 1
   END IF
   IF (ndim .LT. 1) THEN
@@ -121,14 +123,18 @@ END SUBROUTINE input_check
 
 SUBROUTINE input_write(job,ndim,nbas,mem,error)
   IMPLICIT NONE
-  INTEGER, DIMENSION(0:ndim-1), INTENT(IN) :: nbas
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,ndim
   error = 0
   CALL EXECUTE_COMMAND_LINE('cat vho.in')
-  IF (job .EQ. 0) THEN
-    WRITE(*,*) "job     : 0 - abscissa and weights will be determined"
+  IF (job .EQ. -1) THEN
+    WRITE(*,*) "job     : -1 - abscissa and weights will be printed"
+  ELSE IF (job .EQ. 0) THEN
+    WRITE(*,*) "job     : 0 - precalculated abscissa will be used"
+  ELSE IF (job .EQ. 1) THEN 
+    WRITE(*,*) "job     : 1 - potential interpolated by cubic spline" 
   END IF
   WRITE(*,*) "ndim    :",ndim
   WRITE(*,*) "nbas    :",nbas

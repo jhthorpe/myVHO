@@ -8,14 +8,22 @@
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
 ! error         : int, error code
+! H             : 2D real*8, hamiltonian
+! q             : 1D real*8, list of abscissa
+! W             : 1D real*8, list of weights
+! nabs          : int, number of abscissa
 
 PROGRAM vho
   USE input
+  USE gauss 
+  USE ints
   IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: H
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W
   INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
-  INTEGER :: ndim,job,error
+  INTEGER :: ndim,job,error,nabs
   
   CALL CPU_TIME(ti)
   error = 0
@@ -23,6 +31,12 @@ PROGRAM vho
   CALL vho_strtmsg()
   
   CALL input_jobinfo(job,ndim,nbas,mem,error)
+  CALL gauss_generate(job,ndim,nbas,mem,nabs,q,W,H,error)
+
+  IF (job .NE. -1) THEN
+    ALLOCATE(H(0:SUM(nbas)-1),0:SUM(nbas)-1)
+    CALL H_build(job,ndim,nbas,nabs,mem,q,W,H,error)  
+  END IF
 
   CALL CPU_TIME(tf)
   CALL vho_endmsg(ti,tf,error)
