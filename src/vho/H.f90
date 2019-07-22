@@ -53,7 +53,7 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
     RETURN
   END IF
 
-  !Get abscissa for potential energies
+  !Get potential energies at abscissa 
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
     ALLOCATE(Vij(0:ndim-1,0:nabs-1))
     CALL V_get(job,ndim,nabs,q,Vij,error)
@@ -65,16 +65,16 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
     CALL H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
   END IF
 
+  !Generate coupling information
 
-  !Get potential integrals
-  IF (job .EQ. 0) THEN  !read the integrals
-    WRITE(*,*) "Sorry, this jobtype is not supported yet",0
+
+  !Evaluate integrals
+  IF (job .NE. 0) THEN 
+    WRITE(*,*) "Sorry, only jobtype 1 is supported"
     error = 1
     RETURN
-  ELSE IF (job .EQ. 1) THEN  !generate the potential integrals
+  ELSE IF (job .EQ. 1) THEN
 
-  !get coupling integrals
-    
   END IF
 
   CALL CPU_TIME(tf)
