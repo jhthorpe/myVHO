@@ -15,39 +15,54 @@ CONTAINS
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 ! nabs          : 1D int, number of abscissa for each dimension
-! q             : 1D real*8, list of abscissa  
-! W             : 1D real*8, list of weights   
+! q             : 1D real*8, list of abscissa [abscissa,dimension]
+! W             : 1D real*8, list of weights  [abscissa,dimension]
 
 SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: q,W
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: q,W
+  INTEGER, DIMENSION(:), ALLOCATABLE :: nabs
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
-  INTEGER, INTENT(INOUT) :: nabs,error
+  INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,ndim
 
-  INTEGER ::i,j
+  REAL(KINd=8), DIMENSION(0:ndim-1) :: line
+  INTEGER ::i,j,cnt
 
   error = 0
   WRITE(*,*) 
   WRITE(*,*) "gauss_generate : called"
   WRITE(*,*) "Generating Gauss-Hermite abscissa and weights"
   
-  nabs = MAX(50,MAXVAL(nbas) + 10)
-  WRITE(*,*) "Number of abscissa to be used", nabs
-  ALLOCATE(q(0:nabs-1))
-  ALLOCATE(W(0:nabs-1))
+  ALLOCATE(nabs(0:ndim-1))
+  DO i=0,ndim-1
+    nabs(i) = nbas(i) + 10
+  END DO
 
-  CALL gauss_hermite(nabs,q,W,error)  
+  WRITE(*,*) "Number of abscissa to be used", nabs
+  ALLOCATE(q(0:MAXVAL(nabs)-1,0:ndim-1))
+  ALLOCATE(W(0:MAXVAL(nabs)-1,0:ndim-1))
+  q = 0
+  W = 0
+
+  DO j=0,ndim-1
+    CALL gauss_hermite(nabs(j),q(0:nabs(j)-1,j),W(0:nabs(j)-1,j),error)  
+  END DO
 
   WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
   WRITE(*,*) 
   OPEN(file='abscissa.dat',unit=101,status='replace')
-  DO i=0,nabs-1
-    WRITE(101,*) q(i),W(i)
-  END DO
+  cnt = 0
+  DO j=0,ndim-1
+    line = 0.0D0
+    DO i=0,nabs(j)-1
+      cnt = cnt + 1
+      line(j) = q(i,j)
+      WRITE(101,*) cnt,line,W(i,j)
+    END DO
+  END DO 
   CLOSE(unit=101)
-  
 
 END SUBROUTINE gauss_generate
 

@@ -15,20 +15,20 @@ CONTAINS
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
-! nabs          : int, number of abscissa
+! nabs          : 1D int, number of abscissa
 ! q             : 1D real*8, list of abscissa
 ! W             : 1D real*8, list of weights
 ! Hij             : 2D real*8, hamiltonian
-! Herm          : 2D real*8, Hermite polynomials [dimension,abscissa]
+! Herm          : 2D real*8, Hermite polynomials [quantum number,abscissa]
 ! error         : int, error code
 
 SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij,Herm
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q,W
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER(KIND=8), INTENT(IN) :: mem
-  INTEGER, INTENT(IN) :: job,ndim,nabs
+  INTEGER, INTENT(IN) :: job,ndim
   INTEGER, INTENT(INOUT) :: error
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij
@@ -55,16 +55,15 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
 
   !Get potential energies at abscissa 
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
-    ALLOCATE(Vij(0:ndim-1,0:nabs-1))
+    ALLOCATE(Vij(0:MAXVAL(nabs)-1,0:ndim-1))
     CALL V_get(job,ndim,nabs,q,Vij,error)
     IF (error .NE. 0) RETURN
   END IF
 
-  !Generate Hermite polynomials
+  !Allocate space for hermite polynomials
+  ! this will be generated on the fly, though
   IF (memstat .EQ. 2) THEN
-    ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:nabs-1))
-    CALL H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
-    IF (error .NE. 0) RETURN
+    ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:MAXVAL(nabs)-1))
   END IF
 
   !Generate coupling information
@@ -96,16 +95,16 @@ END SUBROUTINE H_build
 ! N             : int, size of hamiltonian
 ! ndim          : int, number of dimensions
 ! nbas          : int, number of basis in each dimension
-! nabs          : int, number of abscissa
+! nabs          : 1D int, number of abscissa
 ! memstat       : int, memory status
 ! error         : int, exit code
 
 SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
   IMPLICIT NONE
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   REAL(KIND=8), INTENT(IN) :: qmem
   INTEGER, INTENT(INOUT) :: memstat,error
-  INTEGER, INTENT(IN) :: job,N,nabs,ndim
+  INTEGER, INTENT(IN) :: job,N,ndim
   REAL(KIND=8) :: minmem,incoremem,basemem
   
   error = 0
@@ -121,8 +120,8 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
     ! weights     : nabs
     ! V           : nabs * ndim
     ! hermite     : either nabs*max(nbas) or max(nbas)
-    minmem = N**2.0D0 + 2*nabs + MAXVAL(nbas) + nabs*ndim + basemem
-    incoremem = N**2.0D0 + 2*nabs + MAXVAL(nbas)*nabs + nabs*ndim + basemem
+    minmem = N**2.0D0 + 2*MAXVAL(nabs) + MAXVAL(nbas) + MAXVAL(nabs)*ndim + basemem
+    incoremem = N**2.0D0 + 2*MAXVAL(nabs) + MAXVAL(nbas)*MAXVAL(nabs) + MAXVAL(nabs)*ndim + basemem
   END IF
 
   WRITE(*,*) "Values are in MB"
@@ -159,18 +158,18 @@ END SUBROUTINE H_mem_build
 !       - preconstruct all the Hermite polynomials needed
 !------------------------------------------------------------
 ! job           : int, jobtype
-! ndim          : int, nubmer of dimensions
-! nabs          : int, nubmer of abscissa
+! ndim          : 1D int, nubmer of dimensions
+! nabs          : 1D int, nubmer of abscissa
 ! q             : 1D real*8, abscissa
 ! error         : int, exit code
 
 SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Herm
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim,nabs
+  INTEGER, INTENT(IN) :: job,ndim
   
   REAL(KIND=8) :: qval
   INTEGER :: i,j,imax
@@ -178,8 +177,10 @@ SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
   imax = MAXVAL(nbas)-1
   
   Herm = 0.0D0
-  DO j=0,nabs-1
-    qval = q(j)
+  !DO j=0,nabs-1
+  DO j=0,-1  ! THIS IS VERY WRONG
+    !qval = q(j)
+    qval = 0 !!! THIS IS VERY WRONG
     IF (imax .EQ. 1) THEN
       Herm(0,j) = 1.0D0
       CYCLE
@@ -194,6 +195,10 @@ SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
       END DO
     END IF
   END DO
+
+  WRITE(*,*) "WARNING WARNING WARNING"
+  WRITE(*,*) "H_Herm_incore has not been adapted to the new setup"
+  STOP
 
 END SUBROUTINE H_Herm_incore
 !------------------------------------------------------------

@@ -9,22 +9,21 @@
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 ! Hij           : 2D real*8, hamiltonian
-! Herm          : 2D real*8, Hermite polynomials [dimension,abscissa]
-! q             : 1D real*8, list of abscissa
-! W             : 1D real*8, list of weights
-! nabs          : int, number of abscissa
+! Herm          : 2D real*8, Hermite polynomials [abscissa,dimension]
+! q             : 2D real*8, list of abscissa    [abscissa,dimension]
+! W             : 2D real*8, list of weights     [abscissa,dimension]
+! nabs          : 1D int, number of abscissa
 
 PROGRAM vho
   USE input
   USE gauss 
   USE H
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Herm
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W
-  INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Herm,q,W
+  INTEGER, DIMENSION(:), ALLOCATABLE :: nbas,nabs
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
-  INTEGER :: ndim,job,error,nabs
+  INTEGER :: ndim,job,error
   
   CALL CPU_TIME(ti)
   error = 0
