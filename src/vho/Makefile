@@ -1,7 +1,7 @@
 buildir = ..
 include $(buildir)/make.config
 
-objects = xvho input.o gauss.o H.o V.o fname.o fit.o
+objects = xvho input.o gauss.o H.o V.o fname.o fit.o val.o
 
 all : $(objects)
 	cp xvho $(bindir)/xvho
@@ -18,15 +18,18 @@ gauss.o : gauss.f90
 fname.o : fname.f90
 	$(FC) $(FFLAGS) -c fname.f90
 
+val.o : val.f90
+	$(FC) $(FFLAGS) -c val.f90
+
 fit.o : fit.f90
 	$(FC) $(FFLAGS) -c fit.f90
 
-V.o : V.f90 fname.o input.o fit.o
-	$(FC) $(FFLAGS) -c V.f90 fname.o input.o fit.o
+V.o : V.f90 fname.o input.o fit.o val.o
+	$(FC) $(FFLAGS) -c V.f90 fname.o input.o fit.o val.o
 
 H.o : H.f90 V.o
 	$(FC) $(FFLAGS) -c H.f90 V.o
 
-xvho : vho.f90 input.o gauss.o H.o V.o fname.o fit.o
-	$(FC) $(FFLAGS) -o xvho vho.f90 input.o gauss.o H.o V.o fname.o fit.o
+xvho : vho.f90 input.o gauss.o H.o V.o fname.o fit.o val.o
+	$(FC) $(FFLAGS) -o xvho vho.f90 input.o gauss.o H.o V.o fname.o fit.o val.o
 	

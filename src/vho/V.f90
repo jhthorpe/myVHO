@@ -7,6 +7,7 @@ MODULE V
   USE fname
   USE input
   USE fit
+  USE val
 
 CONTAINS
 !------------------------------------------------------------
@@ -134,7 +135,7 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
  
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: y2
   INTEGER, DIMENSION(:), ALLOCATABLE :: Vtype
-  REAL(KIND=8) :: yp1,ypn,qmin,qmax
+  REAL(KIND=8) :: yp1,ypn,beta,alpha,val
   INTEGER :: np
   INTEGER :: i,j
 
@@ -144,19 +145,28 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
 
   !Determine Vtype for each dimension
   ! type 1      : V -> +inf as q -> +/- 
+  !               model +/- as a*x^b
   ! type 2      : V -> De as q -> +, V -> +inf as q-> -
+  !               model + as alpha*exp(-beta*q),  
+  !               model - as a*x^b
   ! type 3      : V -> De as q -> -, V -> +inf as q-> +
+  !               model - as alpha*exp(-beta*q),  
+  !               model + as a*x^b
   ALLOCATE(Vtype(0:ndim-1))
-  DO i=0,ndim-1
-   
-  END DO
+  !DO i=0,ndim-1
+  !  Vtype = 1
+  !END DO
+  Vtype(0) = 1
+  Vtype(1) = 2
+
+  !WRITE(*,*) "TESTING TESTING TESTING" 
+  !WRITE(*,*) "qtemp0 is", qtemp(:,0)
+  !WRITE(*,*) "qtemp1 is", qtemp(:,1)
  
   ALLOCATE(y2(0:MAXVAL(npot)-1))
   !generate y2 for each dimension 
   DO i=0,ndim-1
     np = npot(i)
-    qmin = qtemp(i,0)
-    qmax = qtemp(i,np-1)
     yp1 = 0.5D0*( Vtemp(1,i) - Vtemp(0,i) )/( qtemp(1,i) - qtemp(0,i) )
     yp1 = yp1 + 0.5D0*( Vtemp(2,i) - Vtemp(1,i) )/( qtemp(2,i) - qtemp(1,i) )
     ypn = 0.5D0*( Vtemp(np-2,i) - Vtemp(np-3,i) )/( qtemp(np-2,i) - qtemp(np-3,i) )
@@ -165,14 +175,86 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     
     !interpolate for each abscissa
     DO j=0,nabs-1
-     
+
+      !catch edge cases
+      IF (q(j) .LT. qtemp(1,i)) THEN
+
+        IF (Vtype(i) .EQ. 1) THEN
+          beta = LOG(Vtemp(0,i) / Vtemp(1,i))/LOG(qtemp(0,i) / qtemp(1,i))
+          alpha = Vtemp(0,i)/ABS(qtemp(0,i))**beta
+          val = alpha*ABS(q(j))**beta
+
+        ELSE IF (Vtype(i) .EQ. 2) THEN
+          beta = LOG(Vtemp(0,i) / Vtemp(1,i))/LOG(qtemp(0,i) / qtemp(1,i))
+          alpha = Vtemp(0,i)/ABS(qtemp(0,i))**beta
+          val = alpha*ABS(q(j))**beta
+          WRITE(*,*) "alpha is", alpha
+          WRITE(*,*) "beta is", beta
+
+        ELSE IF (Vtype(i) .EQ. 3) THEN
+          beta = -1.0D0*LOG(Vtemp(1,i)/Vtemp(0,i))/(qtemp(1,i) - qtemp(0,i))
+          alpha = Vtemp(0,i)/EXP(-1.0D0*beta*qtemp(0,i))
+          val = alpha*EXP(-1.0D0*beta*q(j))
+
+        ELSE
+          WRITE(*,*) "ERROR"
+          WRITE(*,*) "V_spline  : only coded to handle potential types 1,2,3"
+          error = 1
+          RETURN
+        END IF
+
+      ELSE IF (q(j) .GT. qtemp(np-2,i)) THEN
+        IF (Vtype(i) .EQ. 1) THEN
+          beta = LOG(Vtemp(np-1,i) / Vtemp(np-2,i))/LOG(qtemp(np-1,i) / qtemp(np-2,i))
+          alpha = Vtemp(np-1,i)/ABS(qtemp(np-1,i))**beta
+          val = alpha*ABS(q(j))**beta
+
+        ELSE IF (Vtype(i) .EQ. 2) THEN
+          beta = -1.0D0*LOG(Vtemp(np-1,i)/Vtemp(np-2,i))/(qtemp(np-1,i) - qtemp(np-2,i))
+          alpha = Vtemp(np-1,i)/EXP(-1.0D0*beta*qtemp(np-1,i))
+          val = alpha*EXP(-1.0D0*beta*q(j))
+          
+        ELSE IF (Vtype(i) .EQ. 3) THEN
+          beta = LOG(Vtemp(np-1,i) / Vtemp(np-2,i))/LOG(qtemp(np-1,i) / qtemp(np-2,i))
+          alpha = Vtemp(np-1,i)/ABS(qtemp(np-1,i))**beta
+          val = alpha*ABS(q(j))**beta
+    
+        ELSE
+          WRITE(*,*) "ERROR"
+          WRITE(*,*) "V_spline  : only coded to handle potential types 1,2,3"
+          error = 1
+          RETURN
+        END IF
+ 
+      ELSE
+        CALL fit_splint(qtemp(1:np-2,i),Vtemp(1:np-2,i),y2(1:np-2),np,q(j),val,error)
+        IF (error .NE. 0) THEN
+          WRITE(*,*) "ERROR"
+          WRITE(*,*) "V_spline  : error out of fit_splint"
+          !RETURN
+         END IF
+       END IF
+       CALL val_check(val,error)
+       IF (error .NE. 0) THEN
+         WRITE(*,*) "V_spline  : Abscissa", j," of dimension", i," had a bad value"
+         !RETURN
+        ELSE
+          Vij(i,j) = val
+        END IF
 
     END DO
     
     !adjust potentials to be zero
+    Vij(i,0:nabs-1) = Vij(i,0:nabs-1) - MINVAL(Vij(i,0:nabs-1))
 
   END DO 
 
+  WRITE(*,*) "Writing spline output to spline.dat"
+  OPEN(file="spline.dat",unit=150,status='replace')
+  DO j=0,nabs-1
+    WRITE(150,*) q(j),Vij(0:ndim-1,j)
+  END DO
+  CLOSE(unit=150)
 
   DEALLOCATE(y2)
   DEALLOCATE(Vtype)

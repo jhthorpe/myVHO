@@ -57,12 +57,14 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
     ALLOCATE(Vij(0:ndim-1,0:nabs-1))
     CALL V_get(job,ndim,nabs,q,Vij,error)
+    IF (error .NE. 0) RETURN
   END IF
 
   !Generate Hermite polynomials
   IF (memstat .EQ. 2) THEN
     ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:nabs-1))
     CALL H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
+    IF (error .NE. 0) RETURN
   END IF
 
   !Generate coupling information
