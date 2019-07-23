@@ -25,9 +25,9 @@ CONTAINS
 ! Herm          : 2D real*8, Hermite polynomials [quantum number,abscissa]
 ! error         : int, error code
 
-SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
+SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij,Herm
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER(KIND=8), INTENT(IN) :: mem
@@ -75,20 +75,18 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
                    nPQ,qPQ,PQ,error)
   IF (error .NE. 0) RETURN
 
-  !Allocate space for hermite polynomials
-  ! this will be generated on the fly, though
-  IF (memstat .EQ. 2) THEN
-    ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:MAXVAL(nabs)-1))
-  END IF
-
   !Evaluate integrals
   IF (job .NE. 1 ) THEN 
     WRITE(*,*) "Sorry, only jobtype 1 is supported"
     error = 1
     RETURN
   ELSE IF (job .EQ. 1) THEN
-    !CALL H_build_incore()
-
+    IF (memstat .EQ. 2) THEN
+      CALL H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
+                      nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+                      nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
+                      nQP,qQP,QP,nPQ,qPQ,PQ,Hij,error)
+    END IF
   END IF
 
   CALL CPU_TIME(tf)
@@ -123,7 +121,7 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
   WRITE(*,*) 
   WRITE(*,*) "Starting memory analysis..." 
 
-  basemem = 500
+  basemem = 1000
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
     ! hamiltonian : N^2
     ! abscissa    : nabs
@@ -211,7 +209,81 @@ SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
   STOP
 
 END SUBROUTINE H_Herm_incore
-!------------------------------------------------------------
 
+!------------------------------------------------------------
+! H_build_incore
+!       - constructs hamiltonian holding everything in memory
+!       - naming scheme is as follows: aXY
+!       - a = n,q,nothing. n -> number, q -> list of quant.
+!             number, nothing -> actual values
+!       - X = Q,P,QP,PQ
+!       - Y = 1,2,3,4, order. 
+!       - example: nQ4 -> number of Q^4 type force constants 
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nbas          : 1D int, number of basis functions
+! nabs          : 1D int, number of abscissa
+! q             : 2D real*8, abscissa [abscissa,dimension]
+! W             : 2D real*8, weights  [weight,dimension]
+! Vij           : 2D real*8, potential [potential,dimension]
+! basK          : 1D real*8, basis function force constant
+! nXY           : int, force constant X of order Y 
+! qXY           : 1D int,  QN of FC X of order Y
+! XY            : 1D real*8, FC X of order Y
+! Hij           : 2D real*8, product basis hamiltonian
+! error         : int, exit code
+!------------------------------------------------------------
+SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
+                     nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+                     nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
+                     nQP,qQP,QP,nPQ,qPQ,PQ,Hij,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W,Vij
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Q1,Q2,Q3,Q4,P1,&
+                                             P2,QP,PQ,basK 
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,qQ1,qQ2,qQ3,&
+                                        qQ4,qP1,qP2,qQP,qPQ
+  INTEGER, INTENT(IN) :: ndim,nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
+  INTEGER, INTENT(INOUT) :: error
+
+  REAL(KIND=8), DIMENSION(0:MAXVAL(nabs)-1) :: HL,HR
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Norm,qmax,Wmax
+  INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,key
+  INTEGER :: i,j,N,nmax
+  
+  error = 0
+  N = PRODUCT(nbas)
+  nmax = MAXVAL(nabs)  
+  j = MAXLOC(nabs,1)-1
+  ALLOCATE(Norm(0:N-1))
+  ALLOCATE(qmax(0:nmax-1))
+  ALLOCATE(Wmax(0:nmax-1))
+  qmax = q(0:nmax-1,j)
+  Wmax = W(0:nmax-1,j)
+
+  CALL ints_key(ndim,nbas,key,error)
+  IF (error .NE. 0) RETURN
+
+  !Go through vector by vector
+  DO j=0,N-1
+
+    !generate Hermite polynomials, and quantum numbers of R
+    CALL ints_qnum(ndim,j,nbas,key,PsiR,error)
+    IF (error .NE. 0) RETURN
+
+    !CALL H_Hermite()
+    IF (error .NE. 0) RETURN
+    
+
+  END DO
+
+  DEALLOCATE(Norm)
+  DEALLOCATE(qmax)
+  DEALLOCATE(Wmax)
+
+END SUBROUTINE H_build_incore
+
+!------------------------------------------------------------
 END MODULE H
 !------------------------------------------------------------

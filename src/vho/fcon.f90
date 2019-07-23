@@ -9,17 +9,17 @@ CONTAINS
 !------------------------------------------------------------
 ! fcon_get
 !       - read in force constants
-!       - naming scheme is as follows: axy
+!       - naming scheme is as follows: aXY
 !       - a = n,q,nothing. n -> number, q -> list of quant.
 !             number, nothing -> actual values
-!       - x = q,p,QP,PQ
-!       - y = 1,2,3,4, order. 
-!       - example: nQ4 -> number of q^4 type force constants 
+!       - X = Q,P,QP,PQ
+!       - Y = 1,2,3,4, order. 
+!       - example: nQ4 -> number of Q^4 type force constants 
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
-! nxy           : int, number of constant x order y 
-! qxy           : 1D int, quantum numbers of constant x order y 
-! xy            : 1D real*8, force constants of x order y
+! nXY           : int, number of constant x order y 
+! qXY           : 1D int, quantum numbers of constant x order y 
+! XY            : 1D real*8, force constants of x order y
 ! error         : int, exit code
 
 SUBROUTINE fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&

@@ -9,7 +9,6 @@
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 ! Hij           : 2D real*8, hamiltonian
-! Herm          : 2D real*8, Hermite polynomials [abscissa,dimension]
 ! q             : 2D real*8, list of abscissa    [abscissa,dimension]
 ! W             : 2D real*8, list of weights     [abscissa,dimension]
 ! nabs          : 1D int, number of abscissa
@@ -19,7 +18,7 @@ PROGRAM vho
   USE gauss 
   USE H
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Herm,q,W
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,q,W
   INTEGER, DIMENSION(:), ALLOCATABLE :: nbas,nabs
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
@@ -50,7 +49,7 @@ PROGRAM vho
     STOP 0
   END IF
 
-  CALL H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)  
+  CALL H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)  
   IF (error .NE. 0) THEN
     CALL CPU_TIME(tf)
     CALL vho_endmsg(ti,tf,error)
