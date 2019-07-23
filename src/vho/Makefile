@@ -1,7 +1,7 @@
 buildir = ..
 include $(buildir)/make.config
 
-objects = xvho input.o gauss.o H.o V.o fname.o fit.o val.o fcon.o basis.o
+objects = xvho input.o gauss.o H.o V.o fname.o fit.o val.o fcon.o basis.o ints.o
 
 all : $(objects)
 	cp xvho $(bindir)/xvho
@@ -24,6 +24,9 @@ val.o : val.f90
 fcon.o : fcon.f90
 	$(FC) $(FFLAGS) -c fcon.f90
 
+ints.o : ints.f90
+	$(FC) $(FFLAGS) -c ints.f90
+
 fit.o : fit.f90
 	$(FC) $(FFLAGS) -c fit.f90
 
@@ -33,9 +36,9 @@ basis.o : basis.f90 input.o
 V.o : V.f90 fname.o input.o fit.o val.o
 	$(FC) $(FFLAGS) -c V.f90 fname.o input.o fit.o val.o
 
-H.o : H.f90 V.o fcon.o basis.o
-	$(FC) $(FFLAGS) -c H.f90 V.o fcon.o basis.o
+H.o : H.f90 V.o fcon.o basis.o ints.o
+	$(FC) $(FFLAGS) -c H.f90 V.o fcon.o basis.o ints.o
 
-xvho : vho.f90 input.o gauss.o H.o V.o fname.o fit.o val.o fcon.o basis.o
-	$(FC) $(FFLAGS) -o xvho vho.f90 input.o gauss.o H.o V.o fname.o fit.o val.o fcon.o basis.o
+xvho : vho.f90 input.o gauss.o H.o V.o fname.o fit.o val.o fcon.o basis.o ints.o
+	$(FC) $(FFLAGS) -o xvho vho.f90 input.o gauss.o H.o V.o fname.o fit.o val.o fcon.o basis.o ints.o
 	

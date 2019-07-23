@@ -67,8 +67,8 @@ SUBROUTINE basis_get(ndim,basK,error)
     error = 1
   END IF
 
-  WRITE(*,*) "basis is..."
-  WRITE(*,*) basK
+  !WRITE(*,*) "basis is..."
+  !WRITE(*,*) basK
 
 END SUBROUTINE basis_get
 !------------------------------------------------------------

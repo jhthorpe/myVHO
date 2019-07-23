@@ -141,7 +141,6 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
   INTEGER :: i,j
 
   error = 0
-  WRITE(*,*) 
   WRITE(*,*) "Performing cubic spline interpolation of surface"
 
   !Determine Vtype for each dimension

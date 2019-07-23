@@ -7,6 +7,7 @@ MODULE H
   USE V
   USE fcon
   USE basis
+  USE ints
 
 CONTAINS
 !------------------------------------------------------------
@@ -45,18 +46,21 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
   CALL CPU_TIME(ti)
   error = 0
   N = PRODUCT(nbas)
-  WRITE(*,*) "H_build  : called"
+  WRITE(*,*) "Beginning Construction of Hamiltonian"
 
   !analyze the memory situation 
   qmem = mem*1000000/8 !memory in qwords, 1 real*8 per qword
   CALL H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error) 
   IF (error .NE. 0) RETURN
-
   IF (memstat .NE. 2) THEN 
     WRITE(*,*) "Sorry, only incore memory coded"
     error = 1
     RETURN
   END IF
+
+  !Read in basis set information
+  CALL basis_get(ndim,basK,error)
+  IF (error .NE. 0) RETURN
 
   !Get potential energies at abscissa 
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
@@ -65,21 +69,17 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
     IF (error .NE. 0) RETURN
   END IF
 
-  !Allocate space for hermite polynomials
-  ! this will be generated on the fly, though
-  IF (memstat .EQ. 2) THEN
-    ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:MAXVAL(nabs)-1))
-  END IF
-
   !Read in force constant data 
   CALL fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                    nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,nQP,qQP,QP,&
                    nPQ,qPQ,PQ,error)
   IF (error .NE. 0) RETURN
 
-  !Read in basis set information
-  CALL basis_get(ndim,basK,error)
-  IF (error .NE. 0) RETURN
+  !Allocate space for hermite polynomials
+  ! this will be generated on the fly, though
+  IF (memstat .EQ. 2) THEN
+    ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:MAXVAL(nabs)-1))
+  END IF
 
   !Evaluate integrals
   IF (job .NE. 1 ) THEN 
@@ -87,6 +87,7 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
     error = 1
     RETURN
   ELSE IF (job .EQ. 1) THEN
+    !CALL H_build_incore()
 
   END IF
 
@@ -118,10 +119,9 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
   REAL(KIND=8) :: minmem,incoremem,basemem
   
   error = 0
-  WRITE(*,*) "H_mem_build  : called"
   WRITE(*,*) "Dimension of Hamiltonian", N
-  WRITE(*,*) "Starting memory analysis" 
   WRITE(*,*) 
+  WRITE(*,*) "Starting memory analysis..." 
 
   basemem = 500
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
@@ -134,10 +134,10 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
     incoremem = N**2.0D0 + 2*MAXVAL(nabs) + MAXVAL(nbas)*MAXVAL(nabs) + MAXVAL(nabs)*ndim + basemem
   END IF
 
-  WRITE(*,*) "Values are in MB"
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*8.0D0/1000000.0D0
   WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*8.0D0/1000000.0D0
   WRITE(*,'(A20,F12.2)') "Incore memory      ", incoremem*8.0D0/1000000.0D0
+  WRITE(*,*) "Values are in MB"
 
   WRITE(*,*)
   IF (qmem .LT. minmem) THEN
