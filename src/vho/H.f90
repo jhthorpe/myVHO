@@ -5,6 +5,7 @@
 !------------------------------------------------------------
 MODULE H
   USE V
+  USE fcon
 
 CONTAINS
 !------------------------------------------------------------
@@ -32,8 +33,11 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
   INTEGER, INTENT(INOUT) :: error
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q1,q2,q3,q4,p1,p2,qp,pq
+  INTEGER, DIMENSION(:), ALLOCATABLE :: qq1,qq2,qq3,qq4,qp1,qp2,qqp,qpq
   REAL(KIND=8) :: qmem
   REAL(KIND=8) :: ti,tf
+  INTEGER :: nq1,nq2,nq3,nq4,np1,np2,nqp,npq
   INTEGER :: memstat
   INTEGER :: i,j,N
 
@@ -66,8 +70,14 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)
     ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:MAXVAL(nabs)-1))
   END IF
 
-  !Generate coupling information
+  !Read in coupling information
+  CALL fcon_get(ndim,nq1,qq1,q1,nq2,qq2,q2,nq3,qq3,q3,&
+                   nq4,qq4,q4,np1,qp1,p1,np2,qp2,p2,nqp,qqp,qp,&
+                   npq,qpq,pq,error)
+  IF (error .NE. 0) RETURN
 
+  !Read in basis set information
+  !CALL input_basis(ndim,basK,error)
 
   !Evaluate integrals
   IF (job .NE. 0) THEN 
@@ -113,7 +123,7 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
   WRITE(*,*) "Starting memory analysis" 
   WRITE(*,*) 
 
-  basemem = 100
+  basemem = 500
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
     ! hamiltonian : N^2
     ! abscissa    : nabs

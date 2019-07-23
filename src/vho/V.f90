@@ -37,8 +37,7 @@ SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
   !read in potential energies
   CALL V_read(job,ndim,npot,qtemp,Vtemp,error)
   IF (error .NE. 0) RETURN 
-
-  !Generate the V at abscissa
+  
   IF (job .EQ. 1) THEN
     CALL V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     IF (error .NE. 0) THEN
@@ -104,6 +103,7 @@ SUBROUTINE V_read(job,ndim,npot,qtemp,Vtemp,error)
     error = 1
     RETURN
   END IF
+  WRITE(*,*)
 
 END SUBROUTINE V_read
 
@@ -173,7 +173,7 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
       IF( vn0 - vn1 .GT. vn1 - vn2) THEN
         Vtype(j) = 3
       ELSE
-        WRITE(*,*) "There is a case I haven't prediced" 
+        WRITE(*,*) "There is a case I haven't predicted" 
         error = 1
       END IF
     END IF

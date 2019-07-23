@@ -31,10 +31,30 @@ PROGRAM vho
   CALL vho_strtmsg()
   
   CALL input_jobinfo(job,ndim,nbas,mem,error)
-  CALL gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
+  IF (error .NE. 0) THEN
+    CALL CPU_TIME(tf)
+    CALL vho_endmsg(ti,tf,error)
+    STOP 1
+  END IF
 
-  IF (job .NE. -1) THEN
-    CALL H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)  
+  CALL gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
+  IF (error .NE. 0) THEN
+    CALL CPU_TIME(tf)
+    CALL vho_endmsg(ti,tf,error)
+    STOP 1
+  END IF
+
+  IF (job .EQ. -1) THEN
+    CALL CPU_TIME(tf)
+    CALL vho_endmsg(ti,tf,error)
+    STOP 0
+  END IF
+
+  CALL H_build(job,ndim,nbas,nabs,mem,q,W,Hij,Herm,error)  
+  IF (error .NE. 0) THEN
+    CALL CPU_TIME(tf)
+    CALL vho_endmsg(ti,tf,error)
+    STOP 1
   END IF
 
   CALL CPU_TIME(tf)

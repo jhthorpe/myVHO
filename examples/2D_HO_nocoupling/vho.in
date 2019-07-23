@@ -1,5 +1,5 @@
 1    	!job type
 2    	!2 dimensions
-6 5 	!#basis functions in each dimension
+5 5 	!#basis functions in each dimension
 100	!memory in MB
 
