@@ -14,54 +14,42 @@ CONTAINS
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
 ! error         : int, error code
-! nabs          : 1D int, number of abscissa for each dimension
-! q             : 1D real*8, list of abscissa [abscissa,dimension]
-! W             : 1D real*8, list of weights  [abscissa,dimension]
+! nabs          : int, number of abscissa 
+! q             : 1D real*8, list of abscissa
+! W             : 1D real*8, list of weights 
 
 SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: q,W
-  INTEGER, DIMENSION(:), ALLOCATABLE :: nabs
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: q,W
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
-  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(INOUT) :: error,nabs
   INTEGER, INTENT(IN) :: job,ndim
 
   REAL(KINd=8), DIMENSION(0:ndim-1) :: line
-  INTEGER ::i,j,cnt
+  INTEGER ::i
 
   error = 0
   WRITE(*,*) 
   WRITE(*,*) "gauss_generate : called"
   WRITE(*,*) "Generating Gauss-Hermite abscissa and weights"
   
-  ALLOCATE(nabs(0:ndim-1))
-  DO i=0,ndim-1
-    nabs(i) = nbas(i) + 10
-  END DO
+  nabs = MAXVAL(nbas)+10
 
   WRITE(*,*) "Number of abscissa to be used", nabs
-  ALLOCATE(q(0:MAXVAL(nabs)-1,0:ndim-1))
-  ALLOCATE(W(0:MAXVAL(nabs)-1,0:ndim-1))
+  ALLOCATE(q(0:nabs-1))
+  ALLOCATE(W(0:nabs-1))
   q = 0
   W = 0
 
-  DO j=0,ndim-1
-    CALL gauss_hermite(nabs(j),q(0:nabs(j)-1,j),W(0:nabs(j)-1,j),error)  
-  END DO
+  CALL gauss_hermite(nabs,q,W,error)  
 
   WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
   WRITE(*,*) 
   OPEN(file='abscissa.dat',unit=101,status='replace')
-  cnt = 0
-  DO j=0,ndim-1
-    line = 0.0D0
-    DO i=0,nabs(j)-1
-      cnt = cnt + 1
-      line(j) = q(i,j)
-      WRITE(101,*) cnt,line,W(i,j)
-    END DO
-  END DO 
+  DO i=0,nabs-1
+    WRITE(101,*) i,q(i),W(i)
+  END DO
   CLOSE(unit=101)
 
 END SUBROUTINE gauss_generate

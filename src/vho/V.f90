@@ -16,18 +16,17 @@ CONTAINS
 !------------------------------------------------------------
 ! job           : int, job type
 ! ndim          : int, number of dimensions
-! nabs          : 1D int, number of abscissa
-! q             : 2D real*8, abscissa         [abscissa,dimension]
+! nabs          : int, number of abscissa
+! q             : 1D real*8, abscissa        
 ! Vij           : 2D real*8, potential energy [abscissa,dimension]
 ! error         : int, exit code          
 
 SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim
+  INTEGER, INTENT(IN) :: job,ndim,nabs
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vtemp,qtemp
   INTEGER, DIMENSION(0:ndim-1) :: npot
@@ -117,9 +116,9 @@ END SUBROUTINE V_read
 !         arrays are small and this won't cause problems
 !------------------------------------------------------------
 ! ndim          : int, nubmer of dimensions
-! nabs          : 1D int, nubmer of abscissa
+! nabs          : int, nubmer of abscissa
 ! npot          : 1D int, points per potential
-! q             : 2D real*8, abscissa               [abscissa,dimension]
+! q             : 1D real*8, abscissa
 ! qtemp         : 2D real*8, input q's              [npot,ndim]
 ! Vtemp         : 2D real*8, input V's              [npot,ndim]
 ! Vij           : 2D real*8, potential at abscissa  [ndim,nabs]
@@ -128,10 +127,11 @@ END SUBROUTINE V_read
 SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij 
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,qtemp,Vtemp
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs,npot
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: qtemp,Vtemp
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
+  INTEGER, DIMENSION(0:), INTENT(IN) :: npot
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,nabs
  
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: y2
   INTEGER, DIMENSION(:), ALLOCATABLE :: Vtype
@@ -195,27 +195,27 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     CALL fit_spline(qtemp(1:np-2,j),Vtemp(1:np-2,j),np-2,yp1,ypn,y2(1:npot(j)-2),np-2)
     
     !interpolate for each abscissa
-    DO i=0,nabs(j)-1
+    DO i=0,nabs-1
 
       !catch edge cases
-      IF (q(i,j) .LT. qtemp(1,j)) THEN
+      IF (q(i) .LT. qtemp(1,j)) THEN
 
         IF (Vtype(j) .EQ. 1) THEN
           beta = LOG(Vtemp(0,j) / Vtemp(1,j))/LOG(qtemp(0,j) / qtemp(1,j))
           alpha = Vtemp(0,j)/ABS(qtemp(0,j))**beta
-          val = alpha*ABS(q(i,j))**beta
+          val = alpha*ABS(q(i))**beta
 
         ELSE IF (Vtype(j) .EQ. 2) THEN
           beta = LOG(Vtemp(0,j) / Vtemp(1,j))/LOG(qtemp(0,j) / qtemp(1,j))
           alpha = Vtemp(0,j)/ABS(qtemp(0,j))**beta
-          val = alpha*ABS(q(i,j))**beta
+          val = alpha*ABS(q(i))**beta
           WRITE(*,*) "alpha is", alpha
           WRITE(*,*) "beta is", beta
 
         ELSE IF (Vtype(j) .EQ. 3) THEN
           beta = -1.0D0*LOG(Vtemp(1,j)/Vtemp(0,j))/(qtemp(1,j) - qtemp(0,j))
           alpha = Vtemp(0,j)/EXP(-1.0D0*beta*qtemp(0,j))
-          val = alpha*EXP(-1.0D0*beta*q(i,j))
+          val = alpha*EXP(-1.0D0*beta*q(i))
 
         ELSE
           WRITE(*,*) "ERROR"
@@ -224,21 +224,21 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
           RETURN
         END IF
 
-      ELSE IF (q(i,j) .GT. qtemp(np-2,j)) THEN
+      ELSE IF (q(i) .GT. qtemp(np-2,j)) THEN
         IF (Vtype(j) .EQ. 1) THEN
           beta = LOG(Vtemp(np-1,j) / Vtemp(np-2,j))/LOG(qtemp(np-1,j) / qtemp(np-2,j))
           alpha = Vtemp(np-1,j)/ABS(qtemp(np-1,j))**beta
-          val = alpha*ABS(q(i,j))**beta
+          val = alpha*ABS(q(i))**beta
 
         ELSE IF (Vtype(j) .EQ. 2) THEN
           beta = -1.0D0*LOG(Vtemp(np-1,j)/Vtemp(np-2,j))/(qtemp(np-1,j) - qtemp(np-2,j))
           alpha = Vtemp(np-1,j)/EXP(-1.0D0*beta*qtemp(np-1,j))
-          val = alpha*EXP(-1.0D0*beta*q(i,j))
+          val = alpha*EXP(-1.0D0*beta*q(i))
           
         ELSE IF (Vtype(j) .EQ. 3) THEN
           beta = LOG(Vtemp(np-1,j) / Vtemp(np-2,j))/LOG(qtemp(np-1,j) / qtemp(np-2,j))
           alpha = Vtemp(np-1,j)/ABS(qtemp(np-1,j))**beta
-          val = alpha*ABS(q(i,j))**beta
+          val = alpha*ABS(q(i))**beta
     
         ELSE
           WRITE(*,*) "ERROR"
@@ -248,7 +248,7 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
         END IF
  
       ELSE
-        CALL fit_splint(qtemp(1:np-2,j),Vtemp(1:np-2,j),y2(1:np-2),np,q(i,j),val,error)
+        CALL fit_splint(qtemp(1:np-2,j),Vtemp(1:np-2,j),y2(1:np-2),np,q(i),val,error)
         IF (error .NE. 0) THEN
           WRITE(*,*) "ERROR"
           WRITE(*,*) "V_spline  : error out of fit_splint"
@@ -266,7 +266,7 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     END DO
     
     !adjust potentials to be zero
-    Vij(0:nabs(j)-1,j) = Vij(0:nabs(j)-1,j) - MINVAL(Vij(0:nabs(j)-1,j))
+    Vij(0:nabs-1,j) = Vij(0:nabs-1,j) - MINVAL(Vij(0:nabs-1,j))
 
   END DO 
 
@@ -277,8 +277,8 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     CALL fname_splinedat(j+1,fname,error)
     IF (error .NE. 0) RETURN
     OPEN(file=TRIM(fname),unit=fid,status='replace')
-    DO i=0,nabs(j)-1
-      WRITE(fid,*) q(i,j),Vij(i,j)    
+    DO i=0,nabs-1
+      WRITE(fid,*) q(i),Vij(i,j)    
     END DO
     CLOSE(unit=fid)
   END DO

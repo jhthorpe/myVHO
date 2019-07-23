@@ -18,23 +18,22 @@ CONTAINS
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
-! nabs          : 1D int, number of abscissa
+! nabs          : int, number of abscissa
 ! q             : 1D real*8, list of abscissa
 ! W             : 1D real*8, list of weights
-! Hij             : 2D real*8, hamiltonian
-! Herm          : 2D real*8, Hermite polynomials [quantum number,abscissa]
+! Hij           : 2D real*8, hamiltonian
 ! error         : int, error code
 
 SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q,W
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
-  INTEGER, INTENT(IN) :: job,ndim
+  INTEGER, INTENT(IN) :: job,ndim,nabs
   INTEGER, INTENT(INOUT) :: error
 
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij, Herm
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Q1,Q2,Q3,Q4,P1,P2,QP,PQ,basK
   INTEGER, DIMENSION(:), ALLOCATABLE :: qQ1,qQ2,qQ3,qQ4,qP1,qP2,qQP,qPQ
   REAL(KIND=8) :: qmem
@@ -64,7 +63,7 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
 
   !Get potential energies at abscissa 
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
-    ALLOCATE(Vij(0:MAXVAL(nabs)-1,0:ndim-1))
+    ALLOCATE(Vij(0:nabs-1,0:ndim-1))
     CALL V_get(job,ndim,nabs,q,Vij,error)
     IF (error .NE. 0) RETURN
   END IF
@@ -73,6 +72,13 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   CALL fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                    nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,nQP,qQP,QP,&
                    nPQ,qPQ,PQ,error)
+  IF (error .NE. 0) RETURN
+
+  !Generate Hermite Polynomials
+  IF (memstat .EQ. 2) THEN
+    ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:nabs-1))
+    CALL H_Hermite_incore(nabs,nbas,q,Herm,error)
+  END IF
   IF (error .NE. 0) RETURN
 
   !Evaluate integrals
@@ -85,7 +91,7 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
       CALL H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
                       nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                       nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
-                      nQP,qQP,QP,nPQ,qPQ,PQ,Hij,error)
+                      nQP,qQP,QP,nPQ,qPQ,PQ,Herm,Hij,error)
     END IF
   END IF
 
@@ -110,10 +116,10 @@ END SUBROUTINE H_build
 
 SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
   IMPLICIT NONE
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   REAL(KIND=8), INTENT(IN) :: qmem
   INTEGER, INTENT(INOUT) :: memstat,error
-  INTEGER, INTENT(IN) :: job,N,ndim
+  INTEGER, INTENT(IN) :: job,N,ndim,nabs
   REAL(KIND=8) :: minmem,incoremem,basemem
   
   error = 0
@@ -128,10 +134,11 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
     ! weights     : nabs
     ! V           : nabs * ndim
     ! hermite     : either nabs*max(nbas) or max(nbas)
-    minmem = N**2.0D0 + 2*MAXVAL(nabs) + MAXVAL(nbas) + MAXVAL(nabs)*ndim + basemem
-    incoremem = N**2.0D0 + 2*MAXVAL(nabs) + MAXVAL(nbas)*MAXVAL(nabs) + MAXVAL(nabs)*ndim + basemem
+    minmem = N**2.0D0 + 2*nabs + MAXVAL(nbas) + nabs*ndim + basemem
+    incoremem = N**2.0D0 + 2*nabs + MAXVAL(nbas)*nabs + nabs*ndim + basemem
   END IF
 
+  WRITE(*,*) "JAMES, CHECK THIS IS STILL ALL GOOD"
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*8.0D0/1000000.0D0
   WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*8.0D0/1000000.0D0
   WRITE(*,'(A20,F12.2)') "Incore memory      ", incoremem*8.0D0/1000000.0D0
@@ -145,11 +152,11 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
     memstat = -1
     RETURN
   ELSE IF (qmem .LT. incoremem .AND. qmem .GE. minmem) THEN
-    WRITE(*,*) "Building Hamiltonian with minimal memory"
+    WRITE(*,*) "Hamiltonian will be built with minimal memory"
     memstat = 0
     
   ELSE IF (qmem .GE. incoremem) THEN
-    WRITE(*,*) "Building Hamiltonian with everything in core"
+    WRITE(*,*) "Hamiltonian will be built with incore memory"
     memstat = 2
   ELSE
     WRITE(*,*) "H_mem_build  : ERROR" 
@@ -162,22 +169,22 @@ SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
 END SUBROUTINE H_mem_build
 
 !------------------------------------------------------------
-! H_Herm_incore
+! H_Hermite_incore
 !       - preconstruct all the Hermite polynomials needed
 !------------------------------------------------------------
-! job           : int, jobtype
-! ndim          : 1D int, nubmer of dimensions
-! nabs          : 1D int, nubmer of abscissa
+! nabs          : int, nubmer of abscissa
+! nbas          : 1D int, nubmer of basis functions
 ! q             : 1D real*8, abscissa
+! Herm          : 2D real*8, hermite poly [order,abscissa]
 ! error         : int, exit code
 
-SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
+SUBROUTINE H_Hermite_incore(nabs,nbas,q,Herm,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Herm
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim
+  INTEGER, INTENT(IN) :: nabs
   
   REAL(KIND=8) :: qval
   INTEGER :: i,j,imax
@@ -185,10 +192,8 @@ SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
   imax = MAXVAL(nbas)-1
   
   Herm = 0.0D0
-  !DO j=0,nabs-1
-  DO j=0,-1  ! THIS IS VERY WRONG
-    !qval = q(j)
-    qval = 0 !!! THIS IS VERY WRONG
+  DO j=0,nabs-1
+    qval = q(j)
     IF (imax .EQ. 1) THEN
       Herm(0,j) = 1.0D0
       CYCLE
@@ -204,11 +209,7 @@ SUBROUTINE H_Herm_incore(job,ndim,nbas,nabs,q,Herm,error)
     END IF
   END DO
 
-  WRITE(*,*) "WARNING WARNING WARNING"
-  WRITE(*,*) "H_Herm_incore has not been adapted to the new setup"
-  STOP
-
-END SUBROUTINE H_Herm_incore
+END SUBROUTINE H_Hermite_incore
 
 !------------------------------------------------------------
 ! H_build_incore
@@ -222,45 +223,40 @@ END SUBROUTINE H_Herm_incore
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
 ! nbas          : 1D int, number of basis functions
-! nabs          : 1D int, number of abscissa
-! q             : 2D real*8, abscissa [abscissa,dimension]
+! nabs          : int, number of abscissa
+! q             : 1D real*8, abscissa [abscissa,dimension]
 ! W             : 2D real*8, weights  [weight,dimension]
 ! Vij           : 2D real*8, potential [potential,dimension]
 ! basK          : 1D real*8, basis function force constant
 ! nXY           : int, force constant X of order Y 
 ! qXY           : 1D int,  QN of FC X of order Y
 ! XY            : 1D real*8, FC X of order Y
+! Herm          : 2D real*8, hermite polynomials
 ! Hij           : 2D real*8, product basis hamiltonian
 ! error         : int, exit code
 !------------------------------------------------------------
 SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
                      nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                      nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
-                     nQP,qQP,QP,nPQ,qPQ,PQ,Hij,error)
+                     nQP,qQP,QP,nPQ,qPQ,PQ,Herm,Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W,Vij
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Q1,Q2,Q3,Q4,P1,&
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Herm,Vij
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q,W,Q1,Q2,Q3,Q4,P1,&
                                              P2,QP,PQ,basK 
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,qQ1,qQ2,qQ3,&
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,qQ1,qQ2,qQ3,&
                                         qQ4,qP1,qP2,qQP,qPQ
-  INTEGER, INTENT(IN) :: ndim,nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
+  INTEGER, INTENT(IN) :: ndim,nabs,nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
   INTEGER, INTENT(INOUT) :: error
 
-  REAL(KIND=8), DIMENSION(0:MAXVAL(nabs)-1) :: HL,HR
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Norm,qmax,Wmax
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Norm
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,key
-  INTEGER :: i,j,N,nmax
+  INTEGER :: i,j,N
   
   error = 0
+  WRITE(*,*) "Constructing Hamiltonian"
   N = PRODUCT(nbas)
-  nmax = MAXVAL(nabs)  
-  j = MAXLOC(nabs,1)-1
   ALLOCATE(Norm(0:N-1))
-  ALLOCATE(qmax(0:nmax-1))
-  ALLOCATE(Wmax(0:nmax-1))
-  qmax = q(0:nmax-1,j)
-  Wmax = W(0:nmax-1,j)
 
   CALL ints_key(ndim,nbas,key,error)
   IF (error .NE. 0) RETURN
@@ -268,19 +264,26 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   !Go through vector by vector
   DO j=0,N-1
 
-    !generate Hermite polynomials, and quantum numbers of R
+    !generate quantum number of R
     CALL ints_qnum(ndim,j,nbas,key,PsiR,error)
     IF (error .NE. 0) RETURN
 
-    !CALL H_Hermite()
-    IF (error .NE. 0) RETURN
-    
+    !Generate normalization 
+  
+    !lower triangular
+    DO i=j,N-1
+      CALL ints_qnum(ndim,i,nbas,key,PsiL,error)
+      IF (error .NE. 0) RETURN
+     
+      !Construct each part of the integral
+      !Potential + Kinetic
+      !coupling
+  
+    END DO
 
   END DO
 
   DEALLOCATE(Norm)
-  DEALLOCATE(qmax)
-  DEALLOCATE(Wmax)
 
 END SUBROUTINE H_build_incore
 

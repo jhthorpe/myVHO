@@ -18,11 +18,12 @@ PROGRAM vho
   USE gauss 
   USE H
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,q,W
-  INTEGER, DIMENSION(:), ALLOCATABLE :: nbas,nabs
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W
+  INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
-  INTEGER :: ndim,job,error
+  INTEGER :: ndim,job,error,nabs
   
   CALL CPU_TIME(ti)
   error = 0
