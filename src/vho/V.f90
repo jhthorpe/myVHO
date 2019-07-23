@@ -283,6 +283,7 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     END DO
     CLOSE(unit=fid)
   END DO
+  WRITE(*,*)
 
   DEALLOCATE(y2)
   DEALLOCATE(Vtype)
