@@ -88,6 +88,7 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
     RETURN
   ELSE IF (job .EQ. 1) THEN
     IF (memstat .EQ. 2) THEN
+      ALLOCATE(Hij(0:N-1,0:N-1))
       CALL H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
                       nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                       nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
@@ -189,7 +190,7 @@ SUBROUTINE H_Hermite_incore(nabs,nbas,q,Herm,error)
   REAL(KIND=8) :: qval
   INTEGER :: i,j,imax
 
-  imax = MAXVAL(nbas)-1
+  imax = MAXVAL(nbas)
   
   Herm = 0.0D0
   DO j=0,nabs-1
@@ -203,7 +204,7 @@ SUBROUTINE H_Hermite_incore(nabs,nbas,q,Herm,error)
     ELSE
       Herm(0,j) = 1.0D0
       Herm(1,j) = 2.0*qval
-      DO i=1,imax-1
+      DO i=1,imax-2
         Herm(i+1,j) = 2.0D0*qval*Herm(i,j) - 2.0D0*i*Herm(i-1,j)
       END DO
     END IF
@@ -231,7 +232,7 @@ END SUBROUTINE H_Hermite_incore
 ! nXY           : int, force constant X of order Y 
 ! qXY           : 1D int,  QN of FC X of order Y
 ! XY            : 1D real*8, FC X of order Y
-! Herm          : 2D real*8, hermite polynomials
+! Herm          : 2D real*8, hermite polynomials [order,abscissa]
 ! Hij           : 2D real*8, product basis hamiltonian
 ! error         : int, exit code
 !------------------------------------------------------------
@@ -249,17 +250,56 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   INTEGER, INTENT(IN) :: ndim,nabs,nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
   INTEGER, INTENT(INOUT) :: error
 
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Norm
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: Vint
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: norm
+  REAL(KIND=8), DIMENSION(0:nabs-1) :: HL,HR
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,key
-  INTEGER :: i,j,N
+  INTEGER :: i,j,k,N
   
   error = 0
+  Hij = 0.0
   WRITE(*,*) "Constructing Hamiltonian"
   N = PRODUCT(nbas)
-  ALLOCATE(Norm(0:N-1))
 
+  !generate keys
   CALL ints_key(ndim,nbas,key,error)
   IF (error .NE. 0) RETURN
+
+  !Generate normalization constants
+  WRITE(*,*) "Calculating Normalization Constants..."
+  ALLOCATE(norm(0:MAXVAL(nbas)-1))
+  DO i=0,MAXVAL(nbas)-1
+    HR = Herm(i,0:nabs-1)
+    CALL ints_norm(nabs,W,HR,norm(i),error)
+    IF (error .NE. 0) RETURN
+    CALL val_check(norm(i),error) 
+    IF (error .NE. 0) THEN
+      WRITE(*,*) "H_build_incore  : ERROR"
+      WRITE(*,*) "This normalization constant had a bad value", i
+      RETURN
+    END IF
+  END DO
+
+  !genreate V integrals
+  WRITE(*,*) "Calculating Potential Integrals..."
+  ALLOCATE(Vint(0:MAXVAL(nbas)-1,0:MAXVAL(nbas)-1,0:ndim-1))
+  Vint = 0.0D0
+  DO k=0,ndim-1
+    DO j=0,nbas(k)-1
+      HR = Herm(j,0:nabs-1)
+      DO i=j,nbas(k)-1
+        HL = Herm(i,0:nabs-1)
+        CALL ints_Vint(nabs,W,HL,HR,Vij(:,k),Vint(i,j,k),error)
+        IF (error .NE. 0 ) RETURN
+        CALL val_check(Vint(i,j,k),error) 
+        IF (error .NE. 0) THEN
+          WRITE(*,*) "H_build_incore  : ERROR" 
+          WRITE(*,*) "Bad potential at i,j,k",i,j,k
+          RETURN
+        END IF
+      END DO
+    END DO 
+  END DO
 
   !Go through vector by vector
   DO j=0,N-1
@@ -268,8 +308,6 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
     CALL ints_qnum(ndim,j,nbas,key,PsiR,error)
     IF (error .NE. 0) RETURN
 
-    !Generate normalization 
-  
     !lower triangular
     DO i=j,N-1
       CALL ints_qnum(ndim,i,nbas,key,PsiL,error)
@@ -277,13 +315,28 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
      
       !Construct each part of the integral
       !Potential + Kinetic
-      !coupling
+      !CALL ints_VT(ndim,nabs,nbas,PsiL,PsiR,basK,q,W,&
+      !             Vij,Herm,Hij(i,j),error)
+
+      !force constants
+
+      !normalize
+      CALL ints_normalize(ndim,PsiL,PsiR,Hij(i,j),norm,error)
+
+      !check the value
+      CALL val_check(Hij(i,j),error) 
+      IF (error .NE. 0) THEN
+        WRITE(*,*) "H_build_incore  : ERROR"
+        WRITE(*,*) "This integral had a bad value",N
+        WRITE(*,*) "PsiL",PsiL
+        WRITE(*,*) "PsiR",PsiR
+      END IF
   
     END DO
 
   END DO
 
-  DEALLOCATE(Norm)
+  DEALLOCATE(norm)
 
 END SUBROUTINE H_build_incore
 

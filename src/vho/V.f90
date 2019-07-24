@@ -43,6 +43,8 @@ SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
       RETURN
     END IF 
   END IF
+ 
+  Vij = Vij*219474.63 !convert hartrees to cm-1
 
   IF(ALLOCATED(Vtemp)) DEALLOCATE(Vtemp)
   IF(ALLOCATED(qtemp)) DEALLOCATE(qtemp)
