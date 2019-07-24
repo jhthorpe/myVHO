@@ -24,7 +24,7 @@ CONTAINS
 SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
+  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: q
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,ndim,nabs
 
@@ -34,8 +34,12 @@ SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
 
   error = 0
   !read in potential energies
-  CALL V_read(job,ndim,npot,qtemp,Vtemp,error)
+  CALL V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
   IF (error .NE. 0) RETURN 
+  IF (job .EQ. 0) THEN
+    Vij = Vtemp
+    q = qtemp(:,0)
+  END IF
   
   IF (job .EQ. 1) THEN
     CALL V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
@@ -57,17 +61,18 @@ END SUBROUTINE V_get
 !------------------------------------------------------------
 ! job           : int, jobtype
 ! ndim          : int, number of dimensions
+! nabs          : int, number of abscissa
 ! npot          : 1D int, number of points per dimension
 ! Vtemp         : 2D real*8, potentials at points [potential, dimension]
 ! qtemp         : 2D real*8, normco at points [normco, dimension]
 ! error         : int, error code
 
-SUBROUTINE V_read(job,ndim,npot,qtemp,Vtemp,error)
+SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Vtemp,qtemp
   INTEGER, DIMENSION(0:), INTENT(INOUT) :: npot
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,job
+  INTEGER, INTENT(IN) :: ndim,job,nabs
 
   CHARACTER(LEN=1024) :: fname
   INTEGER :: foff,fid,dummy 
@@ -75,7 +80,7 @@ SUBROUTINE V_read(job,ndim,npot,qtemp,Vtemp,error)
 
   error = 0
   foff = 200
-  IF (job .EQ. 1) THEN  !if we are not already in abscissa form
+  IF (job .EQ. 1 .OR. job .EQ. 0) THEN  !if we are not already in abscissa form
     !check files exist and get the number of lines
     DO i=0,ndim-1
       CALL fname_Vin(i+1,fname,error)
@@ -99,12 +104,18 @@ SUBROUTINE V_read(job,ndim,npot,qtemp,Vtemp,error)
     END DO
 
   ELSE !we are already in abscissa form
-    WRITE(*,*) "ERROR"
-    WRITE(*,*) "Vread  : not coded to deal with precalced abscissa yet"
+    WRITE(*,*) "V_read  : ERROR"
+    WRITE(*,*) "Bad jobtype" 
     error = 1
     RETURN
   END IF
-  WRITE(*,*)
+
+  IF (job .EQ. 0) THEN
+    IF (ANY(npot .NE. nabs)) THEN
+      WRITE(*,*) "V_read  : ERROR"
+      WRITE(*,*) "Incorrect number of abscissa provided"
+    END IF
+  END IF
 
 END SUBROUTINE V_read
 
@@ -195,6 +206,8 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
     ypn = 0.5D0*( Vtemp(np-2,j) - Vtemp(np-3,j) )/( qtemp(np-2,j) - qtemp(np-3,j) )
     ypn = ypn + 0.5D0*( Vtemp(np-1,j) -Vtemp(np-2,j) )/( qtemp(np-1,j) - qtemp(np-2,j) )
     CALL fit_spline(qtemp(1:np-2,j),Vtemp(1:np-2,j),np-2,yp1,ypn,y2(1:npot(j)-2),np-2)
+
+    !outside of trusted potential
     
     !interpolate for each abscissa
     DO i=0,nabs-1

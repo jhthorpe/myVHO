@@ -12,9 +12,6 @@ clean :
 input.o : input.f90
 	$(FC) $(FFLAGS) -c input.f90
 
-gauss.o : gauss.f90
-	$(FC) $(FFLAGS) -c gauss.f90
-
 fname.o : fname.f90
 	$(FC) $(FFLAGS) -c fname.f90
 
@@ -32,6 +29,9 @@ ints.o : ints.f90
 
 fit.o : fit.f90
 	$(FC) $(FFLAGS) -c fit.f90
+
+gauss.o : gauss.f90 input.o
+	$(FC) $(FFLAGS) -c gauss.f90 input.o
 
 memory.o : memory.f90 val.o linal.o
 	$(FC) $(FFLAGS) -c memory.f90 val.o linal.o

@@ -3,6 +3,7 @@
 !       - module containing subroutines for gaussian quadrature
 !---------------------------------------------------------------------
 MODULE gauss
+  USE input
 
 CONTAINS
 !---------------------------------------------------------------------
@@ -52,6 +53,10 @@ SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
     WRITE(101,*) i,q(i),W(i)
   END DO
   CLOSE(unit=101)
+
+  IF (job .EQ. -1) THEN
+    CALL gauss_2_xyz(ndim,nabs,q,error)
+  END IF
 
 END SUBROUTINE gauss_generate
 
@@ -131,7 +136,46 @@ SUBROUTINE gauss_hermite(n,x,w,error)
   END DO
 
 END SUBROUTINE gauss_hermite
+
 !---------------------------------------------------------------------
+! gauss_2_xyz
+!       - converts gaussian quadrature to xyz coordinates
+!       - reads QUADRATURE file from CFOUR
+!---------------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nabs          : int, number of abscissa
+! q             : 1D real*8, abscsissa
+! error         : int, exit code
 
+SUBROUTINE gauss_2_xyz(ndim,nabs,q,error)
+  IMPLICIT NONE
+  
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,nabs
 
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: q0,qproj,xyz
+  REAL(KIND=8), DIMENSION(0:ndim-1) :: basK
+  INTEGER :: natoms
+  
+  error = 0
+  natoms = -1
+  
+  CALL input_QUAD_natoms(natoms,error)
+
+  ALLOCATE(q0(0:natoms-1,0:2))
+  ALLOCATE(qproj(0:natoms-1,0:2))
+  ALLOCATE(xyz(0:natoms-1,0:2))
+  
+  CALL input_QUAD_q0(natoms,q0,error)
+  IF (error .NE. 0) RETURN
+  CALL input_QUAD_bask(ndim,bask,error)
+  IF (error .NE. 0) RETURN
+!  CALL input_QUAD_qproj(ndim,natoms,qproj,error)
+!  IF (error .NE. 0) RETURN
+  
+
+END SUBROUTINE gauss_2_xyz
+
+!---------------------------------------------------------------------
 END MODULE gauss

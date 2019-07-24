@@ -211,6 +211,123 @@ SUBROUTINE input_nline(nline,fname)
   CLOSE(unit=999)
 
 END SUBROUTINE input_nline
+
+!------------------------------------------------------------
+! input_QUAD_natoms
+!       - gets number of atoms in input file
+!------------------------------------------------------------
+! natoms        : int, number of atoms
+! error         : int, exit code
+
+SUBROUTINE input_QUAD_natoms(natoms,error)
+  IMPLICIT NONE
+  INTEGER, INTENT(INOUT) :: natoms,error
+  CHARACTER(LEN=1024) :: fname
+  CHARACTER(LEN=4) :: dummy, line
+  INTEGER :: fline,fid
+  error = 0
+  fname = "QUADRATURE"
+  fid = 99
+  line = "    " 
+  CALL input_fline(fline,fname,error)
+  IF (error .NE. 0) RETURN
+  OPEN(file=TRIM(fname),unit=fid,status='old')
+  DO WHILE( line .NE. "back")
+    READ(fid,*) dummy, line
+    IF (line .EQ. "freq") READ(fid,*)
+  END DO
+  DO WHILE (line .NE. "freq") 
+    natoms = natoms + 1
+    READ(fid,*) dummy, line
+  END DO
+  CLOSE(unit=fid)
+
+  WRITE(*,*) "Number of atoms: ", natoms
+
+END SUBROUTINE input_QUAD_natoms
+
+!------------------------------------------------------------
+! input_QUAD_q0
+!       - reads undisplaced geometry from QUADRATURE file
+!------------------------------------------------------------
+! natoms        : int, number of atoms
+! q0            : 2D real*8, undisplaced geometry   [atom,xyz]
+! error         : int, error code
+
+SUBROUTINE input_QUAD_q0(natoms,q0,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: q0
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: natoms
+  REAL(KIND=8), DIMENSION(0:2) :: xyz
+  CHARACTER(LEN=1024) :: fname
+  CHARACTER(LEN=9) :: dummy,line
+  INTEGER :: fline,fid,i
+  error = 0
+  fname = "QUADRATURE"
+  fid = 99
+  line = "        "
+  CALL input_fline(fline,fname,error)
+  IF (error .NE. 0) RETURN
+  OPEN(file=TRIM(fname),unit=fid,status='old')
+  DO WHILE (line .NE. "Reference")
+    READ(fid,*) dummy, line
+  END DO
+  DO i=0,natoms-1
+    READ(fid,*) xyz 
+    q0(i,0:2) = xyz
+  END DO
+  CLOSE(unit=fid)
+  
+  WRITE(*,*) "Undisplaced coordinates" 
+  DO i=0,natoms-1
+    WRITE(*,*) q0(i,0:2)
+  END DO
+
+END SUBROUTINE input_QUAD_q0
+
+!------------------------------------------------------------
+! input_QUAD_bas
+!       - gets the basis function frequencies 
+!------------------------------------------------------------
+! ndim          : int, number of dimensions 
+! n
+! bask          : 1D real*8, basis function force constants
+! error         : int, exit code
+
+SUBROUTINE input_QUAD_bask(ndim,bask,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: bask
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  CHARACTER(LEN=1024) :: fname
+  CHARACTER(LEN=4) :: dummy, line
+  INTEGER :: fline,fid,i
+  error = 0
+  fname = "QUADRATURE"
+  fid = 99
+  line = "    " 
+  bask = 0
+  CALL input_fline(fline,fname,error)
+  IF (error .NE. 0) RETURN
+  OPEN(file=TRIM(fname),unit=fid,status='old')
+  DO i=0,ndim-1
+    DO WHILE( line .NE. "freq")
+      READ(fid,*) dummy, line
+    END DO
+    READ(fid,*) bask(i)
+    line = "    "
+  END DO
+  CLOSE(unit=fid)
+  WRITE(*,*) "Writing basis force constants to basis.in"
+  OPEN(file='basis.in',unit=100,status='replace')
+  DO i=0,ndim-1
+    WRITE(100,*) i+1,bask(i)
+  END DO
+  CLOSE(unit=100)
+  
+
+END SUBROUTINE input_QUAD_bask
 !------------------------------------------------------------
 
 END MODULE input
