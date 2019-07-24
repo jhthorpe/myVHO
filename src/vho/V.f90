@@ -70,7 +70,7 @@ SUBROUTINE V_read(job,ndim,npot,qtemp,Vtemp,error)
   INTEGER, INTENT(IN) :: ndim,job
 
   CHARACTER(LEN=1024) :: fname
-  INTEGER :: foff,fid 
+  INTEGER :: foff,fid,dummy 
   INTEGER :: i,j
 
   error = 0
@@ -93,7 +93,7 @@ SUBROUTINE V_read(job,ndim,npot,qtemp,Vtemp,error)
       IF (error .NE. 0) RETURN
       OPEN(file=TRIM(fname),unit=fid,status='old')
       DO i=0,npot(j)-1
-        READ(fid,*) qtemp(i,j),Vtemp(i,j)
+        READ(fid,*) dummy, qtemp(i,j),Vtemp(i,j)
       END DO
       CLOSE(unit=fid)
     END DO
@@ -211,8 +211,6 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
           beta = LOG(Vtemp(0,j) / Vtemp(1,j))/LOG(qtemp(0,j) / qtemp(1,j))
           alpha = Vtemp(0,j)/ABS(qtemp(0,j))**beta
           val = alpha*ABS(q(i))**beta
-          WRITE(*,*) "alpha is", alpha
-          WRITE(*,*) "beta is", beta
 
         ELSE IF (Vtype(j) .EQ. 3) THEN
           beta = -1.0D0*LOG(Vtemp(1,j)/Vtemp(0,j))/(qtemp(1,j) - qtemp(0,j))

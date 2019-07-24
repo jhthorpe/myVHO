@@ -6,6 +6,7 @@
 ! job           : int, job type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
+! enum          : int, number of eigenvalues to compute          
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 ! Hij           : 2D real*8, hamiltonian
@@ -18,19 +19,19 @@ PROGRAM vho
   USE gauss 
   USE H
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W,eval
   INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
-  INTEGER :: ndim,job,error,nabs
+  INTEGER :: ndim,job,error,nabs,enum
   
   CALL CPU_TIME(ti)
   error = 0
   WRITE(*,*) "xvho : called"
   CALL vho_strtmsg()
   
-  CALL input_jobinfo(job,ndim,nbas,mem,error)
+  CALL input_jobinfo(job,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) THEN
     CALL CPU_TIME(tf)
     CALL vho_endmsg(ti,tf,error)
@@ -56,6 +57,8 @@ PROGRAM vho
     CALL vho_endmsg(ti,tf,error)
     STOP 1
   END IF
+
+  CALL H_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
 
   CALL CPU_TIME(tf)
   CALL vho_endmsg(ti,tf,error)
@@ -90,6 +93,7 @@ SUBROUTINE vho_endmsg(ti,tf,error)
   REAL(KIND=8), INTENT(IN) :: ti,tf
   INTEGER, INTENT(IN) :: error
 
+  WRITE(*,*)
   WRITE(*,'(1x,A26,I2,A4,F6.1,1x,A1)') "xvho finished with status ", error," in ",tf-ti,"s" 
   WRITE(*,*) "======================================================="
   WRITE(*,*) 

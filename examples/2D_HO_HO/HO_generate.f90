@@ -12,8 +12,10 @@ program generate
   read(*,*) qstep
 
   q = qmin
+  i = 0
   do while (q .LE. qmax)
-    write(100,*) q, 0.5*k*q**2.0D0
+    i = i+1
+    write(100,*) i,q, 0.5*k*q**2.0D0
     q = q + qstep
   END DO 
 

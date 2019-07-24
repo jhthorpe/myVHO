@@ -35,6 +35,7 @@ SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
   WRITE(*,*) "Generating Gauss-Hermite abscissa and weights"
   
   nabs = MAXVAL(nbas)+10
+  !nabs = MAXVAL(nbas)
 
   WRITE(*,*) "Number of abscissa to be used", nabs
   ALLOCATE(q(0:nabs-1))

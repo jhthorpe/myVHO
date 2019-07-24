@@ -137,38 +137,6 @@ SUBROUTINE ints_VTint(nabs,q,W,HL,HR,basK,Vij,VTint,error)
 END SUBROUTINE ints_VTint
 
 !------------------------------------------------------------
-! ints_VT
-!       - calculates potential and kinetic integrals from 
-!         the V.in files
-!------------------------------------------------------------
-! ndim          : int, number of dimensions
-! nabs          : int, number of abscissa
-! nbas          : 1D int, number of basis functions
-! PsiL          : 1D int, left hand quantum numbers
-! PsiR          : 1D int, right hand quantum numbers
-! basK          : 1D real*8, basis function force constants
-! q             : 1D real*8, abscissa
-! W             : 1D real*8, weights
-! Vij           : 2D real*8, potential energies [abscissa,dim] 
-! Herm          : 2D real*8, hermitie poly      [abscissa,bas]
-! Hij           : real*8, integral to evaluate
-! error         : int, exit code
 
-SUBROUTINE ints_VT(ndim,nabs,nbas,PsiL,PsiR,basK,q,W,Vij,Herm,Hij,error)
-  IMPLICIT NONE
-
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Vij,Herm
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: basK,q,W
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,PsiL,PsiR
-  REAL(KIND=8), INTENT(INOUT) :: Hij
-  INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,nabs
-  INTEGER :: i,j
-  error = 0
-  Hij = 0.0D0
-   
-
-END SUBROUTINE ints_VT
-!------------------------------------------------------------
 END MODULE ints
 !------------------------------------------------------------

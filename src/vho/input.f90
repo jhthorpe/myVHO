@@ -14,24 +14,25 @@ CONTAINS
 ! job           : int, job type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
+! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 
-SUBROUTINE input_jobinfo(job,ndim,nbas,mem,error)
+SUBROUTINE input_jobinfo(job,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: nbas
   INTEGER(KIND=8), INTENT(INOUT) :: mem
-  INTEGER, INTENT(INOUT) :: job,ndim,error
+  INTEGER, INTENT(INOUT) :: job,ndim,enum,error
 
   error = 0
   WRITE(*,*) "input_jobinfo : called"
   WRITE(*,*) "Reading input from vho.in"
 
-  CALL input_read(job,ndim,nbas,mem,error)
+  CALL input_read(job,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) RETURN
-  CALL input_check(job,ndim,nbas,mem,error)
+  CALL input_check(job,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) RETURN
-  CALL input_write(job,ndim,nbas,mem,error)
+  CALL input_write(job,ndim,nbas,enum,mem,error)
 
   WRITE(*,*) "input_jobinfo : completed with status ", error
   WRITE(*,*) "======================================================="
@@ -45,13 +46,14 @@ END SUBROUTINE input_jobinfo
 ! job           : int, job type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
+! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 
-SUBROUTINE input_read(job,ndim,nbas,mem,error)
+SUBROUTINE input_read(job,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: nbas
   INTEGER(KIND=8), INTENT(INOUT) :: mem
-  INTEGER, INTENT(INOUT) :: job,ndim, error
+  INTEGER, INTENT(INOUT) :: job,ndim,enum,error
   LOGICAL :: ex
   error = 0
   INQUIRE(file='vho.in',EXIST=ex)
@@ -65,6 +67,7 @@ SUBROUTINE input_read(job,ndim,nbas,mem,error)
   READ(100,*) ndim
   ALLOCATE(nbas(0:ndim-1))
   READ(100,*) nbas 
+  READ(100,*) enum
   READ(100,*) mem
   CLOSE(unit=100)
 
@@ -77,14 +80,15 @@ END SUBROUTINE input_read
 ! job           : int, job type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
+! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 
-SUBROUTINE input_check(job,ndim,nbas,mem,error)
+SUBROUTINE input_check(job,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim
+  INTEGER, INTENT(IN) :: job,ndim,enum
   error = 0
   IF (job .LT. -1 .OR. job .GT. 1) THEN
     WRITE(*,*) "vho.in line #1"
@@ -104,8 +108,12 @@ SUBROUTINE input_check(job,ndim,nbas,mem,error)
     WRITE(*,*) "All dimensions need at least one basis function"
     error = 3
   END IF
+  IF (enum .LT. 1 ) THEN
+    WRITE(*,*) "vho.in line #4"
+    WRITE(*,*) "Need at least one eigenvalue"
+  END IF
   IF (mem .LT. 1) THEN
-    WRITE(*,*) "vho line #4"
+    WRITE(*,*) "vho line #5"
     WRITE(*,*) "Must have at least 1 MB of memory"
     error = 4
   END IF
@@ -118,15 +126,16 @@ END SUBROUTINE input_check
 ! job           : int, job type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
+! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 
-SUBROUTINE input_write(job,ndim,nbas,mem,error)
+SUBROUTINE input_write(job,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim
+  INTEGER, INTENT(IN) :: job,ndim,enum
   error = 0
   CALL EXECUTE_COMMAND_LINE('cat vho.in')
   IF (job .EQ. -1) THEN
@@ -138,6 +147,7 @@ SUBROUTINE input_write(job,ndim,nbas,mem,error)
   END IF
   WRITE(*,*) "ndim    :",ndim
   WRITE(*,*) "nbas    :",nbas
+  WRITE(*,*) "enum    :",enum
   WRITE(*,*) "mem     :",mem 
 END SUBROUTINE input_write
 

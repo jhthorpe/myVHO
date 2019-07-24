@@ -8,6 +8,7 @@ MODULE H
   USE fcon
   USE basis
   USE ints
+  USE memory
 
 CONTAINS
 !------------------------------------------------------------
@@ -46,10 +47,12 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   error = 0
   N = PRODUCT(nbas)
   WRITE(*,*) "Beginning Construction of Hamiltonian"
+  WRITE(*,*) "Dimension of Hamiltonian",N
+  WRITE(*,*)
 
   !analyze the memory situation 
   qmem = mem*1000000/8 !memory in qwords, 1 real*8 per qword
-  CALL H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error) 
+  CALL memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error) 
   IF (error .NE. 0) RETURN
   IF (memstat .NE. 2) THEN 
     WRITE(*,*) "Sorry, only incore memory coded"
@@ -96,78 +99,14 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
     END IF
   END IF
 
+  DEALLOCATE(Vij)
+  DEALLOCATE(Herm)
+
   CALL CPU_TIME(tf)
   WRITE(*,'(1x,A29,I2,A4,F6.1,1x,A1)') "H_build  : finished with status ", error," in ", tf-ti, "s"
+  WRITE(*,*)
 
 END SUBROUTINE H_build
-
-!------------------------------------------------------------
-! H_mem_build
-!       - analyses the memory situation for building the 
-!         hamiltonian
-!------------------------------------------------------------
-! job           : int, jobtype
-! qmem          : int, memory in qwords (1 qword = 1 DP)
-! N             : int, size of hamiltonian
-! ndim          : int, number of dimensions
-! nbas          : int, number of basis in each dimension
-! nabs          : 1D int, number of abscissa
-! memstat       : int, memory status
-! error         : int, exit code
-
-SUBROUTINE H_mem_build(job,qmem,N,ndim,nbas,nabs,memstat,error)
-  IMPLICIT NONE
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
-  REAL(KIND=8), INTENT(IN) :: qmem
-  INTEGER, INTENT(INOUT) :: memstat,error
-  INTEGER, INTENT(IN) :: job,N,ndim,nabs
-  REAL(KIND=8) :: minmem,incoremem,basemem
-  
-  error = 0
-  WRITE(*,*) "Dimension of Hamiltonian", N
-  WRITE(*,*) 
-  WRITE(*,*) "Starting memory analysis..." 
-
-  basemem = 1000
-  IF (job .EQ. 0 .OR. job .EQ. 1) THEN
-    ! hamiltonian : N^2
-    ! abscissa    : nabs
-    ! weights     : nabs
-    ! V           : nabs * ndim
-    ! hermite     : either nabs*max(nbas) or max(nbas)
-    minmem = N**2.0D0 + 2*nabs + MAXVAL(nbas) + nabs*ndim + basemem
-    incoremem = N**2.0D0 + 2*nabs + MAXVAL(nbas)*nabs + nabs*ndim + basemem
-  END IF
-
-  WRITE(*,*) "JAMES, CHECK THIS IS STILL ALL GOOD"
-  WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*8.0D0/1000000.0D0
-  WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*8.0D0/1000000.0D0
-  WRITE(*,'(A20,F12.2)') "Incore memory      ", incoremem*8.0D0/1000000.0D0
-  WRITE(*,*) "Values are in MB"
-
-  WRITE(*,*)
-  IF (qmem .LT. minmem) THEN
-    WRITE(*,*) "H_mem_build  : ERROR"
-    WRITE(*,*) "Not enough memory has been given"
-    error = 2
-    memstat = -1
-    RETURN
-  ELSE IF (qmem .LT. incoremem .AND. qmem .GE. minmem) THEN
-    WRITE(*,*) "Hamiltonian will be built with minimal memory"
-    memstat = 0
-    
-  ELSE IF (qmem .GE. incoremem) THEN
-    WRITE(*,*) "Hamiltonian will be built with incore memory"
-    memstat = 2
-  ELSE
-    WRITE(*,*) "H_mem_build  : ERROR" 
-    WRITE(*,*) "Yours truely has somehow coded this badly..."
-    error = 3
-    RETURN
-  END IF 
-  WRITE(*,*) 
-
-END SUBROUTINE H_mem_build
 
 !------------------------------------------------------------
 ! H_Hermite_incore
@@ -289,13 +228,15 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
     DO j=0,nbas(k)-1
       HR = Herm(j,0:nabs-1)
       DO i=j,nbas(k)-1
+
         HL = Herm(i,0:nabs-1)
         !potential - HO integral
         CALL ints_VTint(nabs,q,W,HL,HR,basK(k),Vij(:,k),VTint(i,j,k),error)
         IF (error .NE. 0 ) RETURN
+        VTint(i,j,k) = VTint(i,j,k)*norm(i)*norm(j)
         ! + HO value (this is the kinetic term)  
         IF (i .EQ. j) VTint(i,j,k) = VTint(i,j,k) &
-                      + SQRT(bask(k))*(1.0D0*i+0.5D0)
+                      + bask(k)*(1.0D0*i+0.5D0)
         CALL val_check(VTint(i,j,k),error) 
         IF (error .NE. 0) THEN
           WRITE(*,*) "H_build_incore  : ERROR" 
@@ -309,6 +250,7 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   !Perhaps this can be reversed? Loop over dimensions, and then
   ! over i,j ?
   !Go through vector by vector
+  WRITE(*,*) "Filling in Hamiltonian..."
   DO j=0,N-1
 
     !generate quantum number of R
@@ -328,9 +270,6 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
 
       !force constants
 
-      !normalize
-      CALL ints_normalize(ndim,PsiL,PsiR,Hij(i,j),norm,error)
-
       !check the value
       CALL val_check(Hij(i,j),error) 
       IF (error .NE. 0) THEN
@@ -339,14 +278,70 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
         WRITE(*,*) "PsiL",PsiL
         WRITE(*,*) "PsiR",PsiR
       END IF
+
   
     END DO
 
   END DO
 
+  WRITE(*,*)
   DEALLOCATE(norm)
+  DEALLOCATE(VTint)
 
 END SUBROUTINE H_build_incore
+
+!------------------------------------------------------------
+! H_diag
+!       - diagonalizes the hamiltonian
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nbas          : 1D int, basis functions per dimension
+! enum          : int, number of eigenvalues to calc
+! mem           : int*8, memory in MB
+! Hij           : 2D real*8, hamiltonian
+! eval          : 1D real*8, array of eigenvalues
+! Cij           : 2D real*8, coefficients 
+! error         : int, error 
+
+SUBROUTINE H_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Cij
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: eval
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  INTEGER, DIMENSION(:), INTENT(IN) :: nbas
+  INTEGER(KIND=8), INTENT(IN) :: mem
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,enum
+
+  INTEGER :: memstat,lwork,N
+  INTEGER :: i
+  
+  error = 0
+  N = PRODUCT(nbas)
+
+  CALL memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
+  IF (error .NE. 0) RETURN
+  IF (memstat .NE. 2) THEN
+    WRITE(*,*) "H_diag  : ERROR"
+    WRITE(*,*) "Sorry, only incore diagonalization has been coded"
+    error = 1
+    RETURN
+  END IF
+
+  ALLOCATE(eval(0:enum-1))
+  ALLOCATE(Cij(0:N-1,0:enum-1))
+ 
+  WRITE(*,*) "Diagonalizing the Hamiltonian"
+  CALL linal_dsyevx(N,enum,lwork,Hij,eval,Cij,error)
+
+  WRITE(*,*) "Eigenvalues (cm-1)"
+  DO i=0,enum-1
+    WRITE(*,*) i,eval(i)
+  END DO
+  
+ 
+
+END SUBROUTINE H_diag
 
 !------------------------------------------------------------
 END MODULE H
