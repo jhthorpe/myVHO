@@ -107,30 +107,35 @@ SUBROUTINE ints_normalize(ndim,PsiL,PsiR,Hij,norm,error)
 END SUBROUTINE ints_normalize
 
 !------------------------------------------------------------
-! ints_Vint
+! ints_VTint
 !       - calculates integrals of the potential 
 !------------------------------------------------------------
 ! nabs          : int, nubmer of abscissa
+! q             : 1D real*8, abscissa
 ! W             : 1D real*8, weights
 ! HL            : 1D real*8, left hermite polynomials
 ! HR            : 1D real*8, right hermite polynomials
+! basK          : 1D real*8, basis set force constants
 ! Vij           : 1D real*8, potential energy of dimension
-! Vint          : real*8, integral to return
+! VTint          : real*8, integral to return
 ! error         : int, exit code
 
-SUBROUTINE ints_Vint(nabs,W,HL,HR,Vij,Vint,error)
+SUBROUTINE ints_VTint(nabs,q,W,HL,HR,basK,Vij,VTint,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: W,HL,HR,Vij
-  REAL(KIND=8), INTENT(INOUT) :: Vint 
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q,W,HL,HR,Vij
+  REAL(KIND=8), INTENT(INOUT) :: VTint 
+  REAL(KIND=8), INTENT(IN) :: basK
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: nabs
   INTEGER :: i
   error = 0
-  Vint = 0
+  VTint = 0
   DO i=0,nabs-1
-    Vint = Vint + W(i)*HL(i)*HR(i)*Vij(i)
+    VTint = VTint + W(i)*HL(i)*HR(i)*&
+           (Vij(i) - 0.5D0*basK*q(i)**2.0D0)
   END DO
-END SUBROUTINE ints_Vint
+END SUBROUTINE ints_VTint
+
 !------------------------------------------------------------
 ! ints_VT
 !       - calculates potential and kinetic integrals from 

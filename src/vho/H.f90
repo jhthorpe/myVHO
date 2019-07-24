@@ -250,8 +250,9 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   INTEGER, INTENT(IN) :: ndim,nabs,nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
   INTEGER, INTENT(INOUT) :: error
 
-  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: Vint
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: VTint
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: norm
+  REAL(KIND=8), DIMENSION(0:ndim-1) :: Vk
   REAL(KIND=8), DIMENSION(0:nabs-1) :: HL,HR
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,key
   INTEGER :: i,j,k,N
@@ -280,18 +281,22 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
     END IF
   END DO
 
-  !genreate V integrals
+  !generate V integrals
   WRITE(*,*) "Calculating Potential Integrals..."
-  ALLOCATE(Vint(0:MAXVAL(nbas)-1,0:MAXVAL(nbas)-1,0:ndim-1))
-  Vint = 0.0D0
+  ALLOCATE(VTint(0:MAXVAL(nbas)-1,0:MAXVAL(nbas)-1,0:ndim-1))
+  VTint = 0.0D0
   DO k=0,ndim-1
     DO j=0,nbas(k)-1
       HR = Herm(j,0:nabs-1)
       DO i=j,nbas(k)-1
         HL = Herm(i,0:nabs-1)
-        CALL ints_Vint(nabs,W,HL,HR,Vij(:,k),Vint(i,j,k),error)
+        !potential - HO integral
+        CALL ints_VTint(nabs,q,W,HL,HR,basK(k),Vij(:,k),VTint(i,j,k),error)
         IF (error .NE. 0 ) RETURN
-        CALL val_check(Vint(i,j,k),error) 
+        ! + HO value (this is the kinetic term)  
+        IF (i .EQ. j) VTint(i,j,k) = VTint(i,j,k) &
+                      + SQRT(bask(k))*(1.0D0*i+0.5D0)
+        CALL val_check(VTint(i,j,k),error) 
         IF (error .NE. 0) THEN
           WRITE(*,*) "H_build_incore  : ERROR" 
           WRITE(*,*) "Bad potential at i,j,k",i,j,k
@@ -301,6 +306,8 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
     END DO 
   END DO
 
+  !Perhaps this can be reversed? Loop over dimensions, and then
+  ! over i,j ?
   !Go through vector by vector
   DO j=0,N-1
 
@@ -314,9 +321,10 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
       IF (error .NE. 0) RETURN
      
       !Construct each part of the integral
-      !Potential + Kinetic
-      !CALL ints_VT(ndim,nabs,nbas,PsiL,PsiR,basK,q,W,&
-      !             Vij,Herm,Hij(i,j),error)
+      !Potential + Kinetic precalculated
+      DO k=0,ndim-1
+        Hij(i,j) = Hij(i,j) + VTint(PsiL(k),PsiR(k),k)
+      END DO
 
       !force constants
 
