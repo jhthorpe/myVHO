@@ -4,6 +4,7 @@
 !---------------------------------------------------------------------
 MODULE gauss
   USE input
+  USE fname
 
 CONTAINS
 !---------------------------------------------------------------------
@@ -154,26 +155,60 @@ SUBROUTINE gauss_2_xyz(ndim,nabs,q,error)
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim,nabs
 
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: q0,qproj,xyz
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: qmat
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: q0,xyz
   REAL(KIND=8), DIMENSION(0:ndim-1) :: basK
-  INTEGER :: natoms
+  CHARACTER(LEN=1024) :: fname
+  LOGICAL :: ex
+  INTEGER :: natoms,fid,i,j,k
   
   error = 0
   natoms = -1
   
+  INQUIRE(file='QUADRATURE',EXIST=ex)
+  IF (.NOT. ex) THEN
+    WRITE(*,*) "gauss_2_xyz  : ERROR"
+    WRITE(*,*) "Could not find QUADRATURE output from cfour"
+    error = 1
+    RETURN
+  END IF
+
   CALL input_QUAD_natoms(natoms,error)
 
   ALLOCATE(q0(0:natoms-1,0:2))
-  ALLOCATE(qproj(0:natoms-1,0:2))
+  ALLOCATE(qmat(0:natoms-1,0:2,0:ndim-1))
   ALLOCATE(xyz(0:natoms-1,0:2))
   
   CALL input_QUAD_q0(natoms,q0,error)
   IF (error .NE. 0) RETURN
   CALL input_QUAD_bask(ndim,bask,error)
   IF (error .NE. 0) RETURN
-!  CALL input_QUAD_qproj(ndim,natoms,qproj,error)
-!  IF (error .NE. 0) RETURN
-  
+  CALL input_QUAD_qmat(ndim,natoms,qmat,error)
+  IF (error .NE. 0) RETURN
+
+  WRITE(*,*) "The following normal coordinates were read"
+  DO j=0,ndim-1
+    WRITE(*,*)
+    WRITE(*,'(1x,A11,1x,F16.10)') "Frequency :", bask(j)
+    DO i=0,natoms-1
+      WRITE(*,'(1x,3(f14.10,2x))') qmat(i,0:2,j)
+    END DO  
+  END DO
+  WRITE(*,*) 
+
+  WRITE(*,*) "Writing points to 'pointsX.txt'"
+  WRITE(*,*) "Format is atom1_x,atom1_y,atom1_z,atom2_x,...."
+  DO j=0,ndim-1
+    fid = 500 + j
+    CALL fname_pointstxt(j+1,fname,error)
+    OPEN(file=TRIM(fname),unit=fid,status='replace')
+    DO i=0,nabs-1 
+      xyz = q0 + q(i)*qmat(0:natoms-1,0:2,j)
+      !This is just hilariously bad code, but who cares
+      WRITE(fid,*) TRANSPOSE(xyz)
+    END DO
+    CLOSE(unit=fid)
+  END DO
 
 END SUBROUTINE gauss_2_xyz
 

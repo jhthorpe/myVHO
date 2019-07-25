@@ -224,13 +224,11 @@ SUBROUTINE input_QUAD_natoms(natoms,error)
   INTEGER, INTENT(INOUT) :: natoms,error
   CHARACTER(LEN=1024) :: fname
   CHARACTER(LEN=4) :: dummy, line
-  INTEGER :: fline,fid
+  INTEGER :: fid
   error = 0
   fname = "QUADRATURE"
   fid = 99
   line = "    " 
-  CALL input_fline(fline,fname,error)
-  IF (error .NE. 0) RETURN
   OPEN(file=TRIM(fname),unit=fid,status='old')
   DO WHILE( line .NE. "back")
     READ(fid,*) dummy, line
@@ -262,13 +260,11 @@ SUBROUTINE input_QUAD_q0(natoms,q0,error)
   REAL(KIND=8), DIMENSION(0:2) :: xyz
   CHARACTER(LEN=1024) :: fname
   CHARACTER(LEN=9) :: dummy,line
-  INTEGER :: fline,fid,i
+  INTEGER :: fid,i
   error = 0
   fname = "QUADRATURE"
   fid = 99
   line = "        "
-  CALL input_fline(fline,fname,error)
-  IF (error .NE. 0) RETURN
   OPEN(file=TRIM(fname),unit=fid,status='old')
   DO WHILE (line .NE. "Reference")
     READ(fid,*) dummy, line
@@ -281,8 +277,9 @@ SUBROUTINE input_QUAD_q0(natoms,q0,error)
   
   WRITE(*,*) "Undisplaced coordinates" 
   DO i=0,natoms-1
-    WRITE(*,*) q0(i,0:2)
+    WRITE(*,'(1x,3(f14.10,2x))') q0(i,0:2)
   END DO
+  WRITE(*,*)
 
 END SUBROUTINE input_QUAD_q0
 
@@ -291,7 +288,6 @@ END SUBROUTINE input_QUAD_q0
 !       - gets the basis function frequencies 
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions 
-! n
 ! bask          : 1D real*8, basis function force constants
 ! error         : int, exit code
 
@@ -302,14 +298,12 @@ SUBROUTINE input_QUAD_bask(ndim,bask,error)
   INTEGER, INTENT(IN) :: ndim
   CHARACTER(LEN=1024) :: fname
   CHARACTER(LEN=4) :: dummy, line
-  INTEGER :: fline,fid,i
+  INTEGER :: fid,i
   error = 0
   fname = "QUADRATURE"
   fid = 99
   line = "    " 
   bask = 0
-  CALL input_fline(fline,fname,error)
-  IF (error .NE. 0) RETURN
   OPEN(file=TRIM(fname),unit=fid,status='old')
   DO i=0,ndim-1
     DO WHILE( line .NE. "freq")
@@ -325,9 +319,43 @@ SUBROUTINE input_QUAD_bask(ndim,bask,error)
     WRITE(100,*) i+1,bask(i)
   END DO
   CLOSE(unit=100)
-  
-
 END SUBROUTINE input_QUAD_bask
+
+!------------------------------------------------------------
+! input_QUAD_qmat
+!       - read normal coordinate matricies from QUADRATURE
+!------------------------------------------------------------
+! ndim          : int, number of dimensions 
+! natoms        : int, number of atoms
+! qmat          : 3D real*8,q matricies, [atom,xyz,dim]
+! error         : int, exit code
+
+SUBROUTINE input_QUAD_qmat(ndim,natoms,qmat,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(INOUT) :: qmat
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,natoms
+  CHARACTER(LEN=1024) :: fname
+  CHARACTER(LEN=4) :: dummy, line
+  INTEGER :: fid,i,j
+  error = 0
+  fname = "QUADRATURE"
+  fid = 99
+  line = "    " 
+  qmat = 0
+  OPEN(file=TRIM(fname),unit=fid,status='old')
+  DO i=0,ndim-1
+    DO WHILE( line .NE. "back")
+      READ(fid,*) dummy, line
+      IF (line .EQ. "freq") READ(fid,*)
+    END DO
+    DO j=0,natoms-1
+      READ(fid,*) qmat(j,0:2,i)
+    END DO
+    line = "    "
+  END DO
+  CLOSE(unit=fid)
+END SUBROUTINE input_QUAD_qmat
 !------------------------------------------------------------
 
 END MODULE input

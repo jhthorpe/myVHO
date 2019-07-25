@@ -30,8 +30,8 @@ ints.o : ints.f90
 fit.o : fit.f90
 	$(FC) $(FFLAGS) -c fit.f90
 
-gauss.o : gauss.f90 input.o
-	$(FC) $(FFLAGS) -c gauss.f90 input.o
+gauss.o : gauss.f90 input.o fname.o
+	$(FC) $(FFLAGS) -c gauss.f90 input.o fname.o
 
 memory.o : memory.f90 val.o linal.o
 	$(FC) $(FFLAGS) -c memory.f90 val.o linal.o

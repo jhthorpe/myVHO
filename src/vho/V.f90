@@ -103,7 +103,7 @@ SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
       CLOSE(unit=fid)
     END DO
 
-  ELSE !we are already in abscissa form
+  ELSE !we are in some other form 
     WRITE(*,*) "V_read  : ERROR"
     WRITE(*,*) "Bad jobtype" 
     error = 1
