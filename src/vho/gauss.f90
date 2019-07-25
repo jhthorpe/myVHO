@@ -51,7 +51,7 @@ SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
   WRITE(*,*) 
   OPEN(file='abscissa.dat',unit=101,status='replace')
   DO i=0,nabs-1
-    WRITE(101,*) i,q(i),W(i)
+    WRITE(101,*) i+1,q(i),W(i)
   END DO
   CLOSE(unit=101)
 

@@ -80,6 +80,7 @@ SUBROUTINE linal_dsyevx(N,IU,LWORK,A,W,Z,error)
   CHARACTER(LEN=1) :: JOBZ,RANG,UPLO
   REAL(KIND=8) :: VL,VU,ABSTOL
   INTEGER :: LDA,IL,M,LDZ,INFO
+  INTEGER :: i,j
 
   error = 0
   JOBZ = 'V'
@@ -105,6 +106,12 @@ SUBROUTINE linal_dsyevx(N,IU,LWORK,A,W,Z,error)
     WRITE(*,*) IFAIL
     error = 1
   END IF
+
+  !Standardize the eigenvectors
+  DO j=0,IU-1
+    i = MAXLOC(ABS(Z(0:N-1,j)),1)-1
+    IF (Z(i,j) .LT. 0.0D0) Z(0:N-1,j) = -1.0D0*Z(0:N-1,j) 
+  END DO
 
 END SUBROUTINE linal_dsyevx
 

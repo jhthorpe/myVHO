@@ -48,6 +48,11 @@ SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
     END IF 
   END IF
  
+  !adjust potentials to be zero
+  DO j=0,ndim-1
+    Vij(0:nabs-1,j) = Vij(0:nabs-1,j) - MINVAL(Vij(0:nabs-1,j))
+  END DO
+
   Vij = Vij*219474.63 !convert hartrees to cm-1
 
   IF(ALLOCATED(Vtemp)) DEALLOCATE(Vtemp)
@@ -75,6 +80,7 @@ SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
   INTEGER, INTENT(IN) :: ndim,job,nabs
 
   CHARACTER(LEN=1024) :: fname
+  REAL(KIND=8) :: val1,val2
   INTEGER :: foff,fid,dummy 
   INTEGER :: i,j
 
@@ -98,7 +104,11 @@ SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
       IF (error .NE. 0) RETURN
       OPEN(file=TRIM(fname),unit=fid,status='old')
       DO i=0,npot(j)-1
-        READ(fid,*) dummy, qtemp(i,j),Vtemp(i,j)
+        READ(fid,*) dummy, val1, val2
+        dummy = dummy - 1
+        qtemp(dummy,j) = val1
+        Vtemp(dummy,j) = val2
+        !READ(fid,*) dummy, qtemp(i,j),Vtemp(i,j)
       END DO
       CLOSE(unit=fid)
     END DO
@@ -116,6 +126,14 @@ SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
       WRITE(*,*) "Incorrect number of abscissa provided"
     END IF
   END IF
+
+  !WRITE(*,*) "TESTING TESTING TESTING"
+  !DO i=0,ndim-1
+  !  WRITE(*,*) "------------------------"
+  !  DO j=0,npot(i)-1
+  !    WRITE(*,*) j,qtemp(j,i),Vtemp(j,i)
+  !  END DO
+  !END DO
 
 END SUBROUTINE V_read
 
@@ -278,9 +296,6 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
 
     END DO
     
-    !adjust potentials to be zero
-    Vij(0:nabs-1,j) = Vij(0:nabs-1,j) - MINVAL(Vij(0:nabs-1,j))
-
   END DO 
 
   WRITE(*,*) "Writing spline output to spline.dat"

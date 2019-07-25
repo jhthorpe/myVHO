@@ -1,4 +1,4 @@
--1    	!job type
+1    	!job type
 1    	!# dimensions
 100	!# basis functions in each dimension
 4	!# eigenvalues to compute

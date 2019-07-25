@@ -9,6 +9,7 @@ MODULE H
   USE basis
   USE ints
   USE memory
+  USE evec
 
 CONTAINS
 !------------------------------------------------------------
@@ -85,18 +86,18 @@ SUBROUTINE H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IF (error .NE. 0) RETURN
 
   !Evaluate integrals
-  IF (job .NE. 1 ) THEN 
-    WRITE(*,*) "Sorry, only jobtype 1 is supported"
+  IF (job .NE. 1 .AND. job .NE. 0 ) THEN 
+    WRITE(*,*) "H_build  : ERROR"
+    WRITE(*,*) "Sorry, only jobtype 0,1 are supported" 
     error = 1
     RETURN
-  ELSE IF (job .EQ. 1) THEN
-    IF (memstat .EQ. 2) THEN
-      ALLOCATE(Hij(0:N-1,0:N-1))
-      CALL H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
-                      nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-                      nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
-                      nQP,qQP,QP,nPQ,qPQ,PQ,Herm,Hij,error)
-    END IF
+  END IF
+  IF (memstat .EQ. 2) THEN
+    ALLOCATE(Hij(0:N-1,0:N-1))
+    CALL H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
+                    nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+                    nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
+                    nQP,qQP,QP,nPQ,qPQ,PQ,Herm,Hij,error)
   END IF
 
   DEALLOCATE(Vij)
@@ -197,7 +198,7 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   INTEGER :: i,j,k,N
   
   error = 0
-  Hij = 0.0
+  Hij = 0.0D0
   WRITE(*,*) "Constructing Hamiltonian"
   N = PRODUCT(nbas)
 
@@ -257,6 +258,10 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
     CALL ints_qnum(ndim,j,nbas,key,PsiR,error)
     IF (error .NE. 0) RETURN
 
+    !WRITE(*,*) 
+    !WRITE(*,*) "-------------------------------------"
+    !WRITE(*,*) "Psi R", PsiR
+
     !lower triangular
     DO i=j,N-1
       CALL ints_qnum(ndim,i,nbas,key,PsiL,error)
@@ -265,9 +270,15 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
       !Construct each part of the integral
       !Potential + Kinetic precalculated
       DO k=0,ndim-1
-        Hij(i,j) = Hij(i,j) + VTint(PsiL(k),PsiR(k),k)
+        IF (ALL(PsiL(0:k-1) .EQ. PsiR(0:k-1)) .AND. &
+            ALL(PsiL(k+1:ndim-1) .EQ. PsiR(k+1:ndim-1))) THEN
+        !IF (PsiL(0:k-1) .EQ. PsiR(0:k-1) .AND. &
+        !    PsiL(k+1:ndim-1) .EQ. PsiR(k+1:ndim-1)) THEN
+          Hij(i,j) = Hij(i,j) + VTint(PsiL(k),PsiR(k),k)
+        END IF
       END DO
-
+   
+      !WRITE(*,*) PsiL,Hij(i,j)
       !force constants
 
       !check the value
@@ -278,10 +289,9 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
         WRITE(*,*) "PsiL",PsiL
         WRITE(*,*) "PsiR",PsiR
       END IF
-
   
     END DO
-
+  
   END DO
 
   WRITE(*,*)
@@ -333,14 +343,9 @@ SUBROUTINE H_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
  
   WRITE(*,*) "Diagonalizing the Hamiltonian"
   CALL linal_dsyevx(N,enum,lwork,Hij,eval,Cij,error)
+  CALL evec_print(ndim,nbas,N,enum,eval,Cij,error)
 
-  WRITE(*,*) "Eigenvalues (cm-1)"
-  DO i=0,enum-1
-    WRITE(*,*) i,eval(i)
-  END DO
   
- 
-
 END SUBROUTINE H_diag
 
 !------------------------------------------------------------

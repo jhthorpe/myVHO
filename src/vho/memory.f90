@@ -137,7 +137,6 @@ SUBROUTINE memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
   minmem = basemem + N**2 + N + enum + 3*N + 5.0D0*N/2.0D0
   incoremem = basemem + N**2 +  N*enum + enum + lwork + 5.0D0*N/2.0D0
   
-  WRITE(*,*) "JAMES, CHECK THIS IS STILL ALL GOOD"
   WRITE(*,*) "Diagonalization Memory Analysis"
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*qw2mb
   WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*qw2mb
