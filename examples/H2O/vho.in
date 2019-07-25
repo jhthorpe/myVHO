@@ -1,6 +1,6 @@
 0    	!job type
 3    	!# dimensions
 15 15 15	!# basis functions in each dimension
-6	!# eigenvalues to compute
+9	!# eigenvalues to compute
 1000	!memory in MB
 

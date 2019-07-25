@@ -3,7 +3,9 @@ export bindir = $(shell pwd)/bin
 
 progdirs:= vho
 
-all : 
+.PHONY: all clean
+
+all: 
 	if [ ! -d $(bindir) ]; then mkdir -p $(bindir); fi
 	@set -e; \
 	for i in $(progdirs); do \

@@ -199,7 +199,6 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   
   error = 0
   Hij = 0.0D0
-  WRITE(*,*) "Constructing Hamiltonian"
   N = PRODUCT(nbas)
 
   !generate keys
@@ -209,44 +208,12 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   !Generate normalization constants
   WRITE(*,*) "Calculating Normalization Constants..."
   ALLOCATE(norm(0:MAXVAL(nbas)-1))
-  DO i=0,MAXVAL(nbas)-1
-    HR = Herm(i,0:nabs-1)
-    CALL ints_norm(nabs,W,HR,norm(i),error)
-    IF (error .NE. 0) RETURN
-    CALL val_check(norm(i),error) 
-    IF (error .NE. 0) THEN
-      WRITE(*,*) "H_build_incore  : ERROR"
-      WRITE(*,*) "This normalization constant had a bad value", i
-      RETURN
-    END IF
-  END DO
+  CALL ints_normcalc(nabs,nbas,W,Herm,norm,error)
 
-  !generate V integrals
+  !Generate V integrals
   WRITE(*,*) "Calculating Potential Integrals..."
   ALLOCATE(VTint(0:MAXVAL(nbas)-1,0:MAXVAL(nbas)-1,0:ndim-1))
-  VTint = 0.0D0
-  DO k=0,ndim-1
-    DO j=0,nbas(k)-1
-      HR = Herm(j,0:nabs-1)
-      DO i=j,nbas(k)-1
-
-        HL = Herm(i,0:nabs-1)
-        !potential - HO integral
-        CALL ints_VTint(nabs,q,W,HL,HR,basK(k),Vij(:,k),VTint(i,j,k),error)
-        IF (error .NE. 0 ) RETURN
-        VTint(i,j,k) = VTint(i,j,k)*norm(i)*norm(j)
-        ! + HO value (this is the kinetic term)  
-        IF (i .EQ. j) VTint(i,j,k) = VTint(i,j,k) &
-                      + bask(k)*(1.0D0*i+0.5D0)
-        CALL val_check(VTint(i,j,k),error) 
-        IF (error .NE. 0) THEN
-          WRITE(*,*) "H_build_incore  : ERROR" 
-          WRITE(*,*) "Bad potential at i,j,k",i,j,k
-          RETURN
-        END IF
-      END DO
-    END DO 
-  END DO
+  CALL ints_VTcalc(ndim,nabs,nbas,q,W,basK,norm,Herm,Vij,VTint,error)
 
   !Perhaps this can be reversed? Loop over dimensions, and then
   ! over i,j ?
@@ -258,10 +225,6 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
     CALL ints_qnum(ndim,j,nbas,key,PsiR,error)
     IF (error .NE. 0) RETURN
 
-    !WRITE(*,*) 
-    !WRITE(*,*) "-------------------------------------"
-    !WRITE(*,*) "Psi R", PsiR
-
     !lower triangular
     DO i=j,N-1
       CALL ints_qnum(ndim,i,nbas,key,PsiL,error)
@@ -269,17 +232,10 @@ SUBROUTINE H_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
      
       !Construct each part of the integral
       !Potential + Kinetic precalculated
-      DO k=0,ndim-1
-        IF (ALL(PsiL(0:k-1) .EQ. PsiR(0:k-1)) .AND. &
-            ALL(PsiL(k+1:ndim-1) .EQ. PsiR(k+1:ndim-1))) THEN
-        !IF (PsiL(0:k-1) .EQ. PsiR(0:k-1) .AND. &
-        !    PsiL(k+1:ndim-1) .EQ. PsiR(k+1:ndim-1)) THEN
-          Hij(i,j) = Hij(i,j) + VTint(PsiL(k),PsiR(k),k)
-        END IF
-      END DO
+      CALL ints_VTput(ndim,PsiL,PsiR,VTint,Hij(i,j),error)
    
-      !WRITE(*,*) PsiL,Hij(i,j)
       !force constants
+      !CALL ints_Q1put(nabs,PsiL,PsiR,Q1int,Hij(i,j),error)
 
       !check the value
       CALL val_check(Hij(i,j),error) 
@@ -344,7 +300,6 @@ SUBROUTINE H_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
   WRITE(*,*) "Diagonalizing the Hamiltonian"
   CALL linal_dsyevx(N,enum,lwork,Hij,eval,Cij,error)
   CALL evec_print(ndim,nbas,N,enum,eval,Cij,error)
-
   
 END SUBROUTINE H_diag
 

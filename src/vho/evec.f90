@@ -47,6 +47,7 @@ SUBROUTINE evec_print(ndim,nbas,N,enum,eval,Cij,error)
     !write to stdout
     WRITE(*,'(2x,A17,2x,I5)') "Vibrational level", i
     WRITE(*,'(2x,A6,2x,F16.2,1x,A4)') "Energy",eval(i),"cm-1"
+    WRITE(*,'(2x,A6,2x,F16.2,1x,A4)') "v0 -> ",eval(i)-eval(0),"cm-1"
     WRITE(*,*) "--------------------------------"
     CALL evec_order(ndim,nbas,N,Cij(0:N-1,i),str_fmt,key,error) 
     WRITE(*,*) "------------------------------------------------"

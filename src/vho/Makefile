@@ -24,11 +24,11 @@ linal.o : linal.f90
 fcon.o : fcon.f90
 	$(FC) $(FFLAGS) -c fcon.f90
 
-ints.o : ints.f90
-	$(FC) $(FFLAGS) -c ints.f90
-
 fit.o : fit.f90
 	$(FC) $(FFLAGS) -c fit.f90
+
+ints.o : ints.f90 val.o
+	$(FC) $(FFLAGS) -c ints.f90 val.o
 
 evec.o	: evec.f90 ints.o
 	$(FC) $(FFALGS) -c evec.f90 ints.o

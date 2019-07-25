@@ -32,7 +32,7 @@ SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   error = 0
   qw2mb = 8.0D0/1000000.0D0
   qmem = mem/qw2mb
-  WRITE(*,*) "Starting Hbuild memory analysis..."
+  WRITE(*,*) "Hamiltonian Memory Analysis"
   CALL val_check(qmem,error)
   IF (error .NE. 0) THEN
     WRITE(*,*) "memory_Hbuild  : ERROR"
@@ -43,17 +43,24 @@ SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
 
   basemem = 1000
   IF (job .EQ. 0 .OR. job .EQ. 1) THEN
-    ! hamiltonian : N^2
+    ! hamiltonian : N, N^2
     ! abscissa    : nabs
     ! weights     : nabs
-    ! V           : nabs * ndim
-    ! hermite     : either nabs*max(nbas) or max(nbas)
-    minmem = N**2.0D0 + 2*nabs + MAXVAL(nbas) + nabs*ndim + basemem
-    incoremem = N**2.0D0 + 2*nabs + MAXVAL(nbas)*nabs + &
-                nabs*ndim + basemem
+    ! couplings   : 5*ndim (estimated)
+    ! V           : nabs, nabs*ndim 
+    ! hermite     : mbas * nabs 
+    ! VTint       : ndim*mbas, mbas^2*ndim
+    ! Q1-QPint    : ndim*mbas, 6*mbas^2*ndim
+    ! norm        : mbas
+    
+    minmem = N + 3*nabs + 5*ndim + MAXVAL(nbas)*nabs + &
+             MAXVAL(nbas)*ndim + MAXVAL(nbas) + &
+             MAXVAL(nbas)*ndim + basemem
+    incoremem = N**2.0D0 + 2*nabs + 5*ndim + nabs*ndim + &
+                MAXVAL(nbas)*nabs + MAXVAL(nbas)**2.0D0*ndim &
+                + MAXVAL(nbas) + 6*MAXVAL(nbas)*ndim + basemem
   END IF
 
-  WRITE(*,*) "JAMES, CHECK THIS IS STILL ALL GOOD"
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*qw2mb
   WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*qw2mb
   WRITE(*,'(A20,F12.2)') "Incore memory      ", incoremem*qw2mb
