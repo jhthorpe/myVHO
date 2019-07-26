@@ -173,6 +173,8 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
 
   error = 0
   WRITE(*,*) "Performing cubic spline interpolation of surface"
+  WRITE(*,*) "Sorry, this seems to be bugged and is disabled"
+  STOP
 
   !Determine Vtype for each dimension
   ! type 1      : V -> +inf as q -> +/- 

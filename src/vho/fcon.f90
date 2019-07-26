@@ -17,61 +17,97 @@ CONTAINS
 !       - example: nQ4 -> number of Q^4 type force constants 
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
-! nXY           : int, number of constant x order y 
-! qXY           : 1D int, quantum numbers of constant x order y 
-! XY            : 1D real*8, force constants of x order y
+! nQ2           : int, number of quadratic force constants
+! qQ2           : 1D int, QN of quadratic force constants
+! Q2            : 1D real*8, quadratic force constants
+! nQ3           : int, number of cubic force constants
+! qQ3           : 1D int, QN of cubic force constants
+! Q3            : 1D real*8, cubic force constants
+! nQ4           : int, number of quartic force constants
+! qQ4           : 1D int, QN of quartic force constants
+! Q4            : 1D real*8, quartic force constants
 ! error         : int, exit code
+!
 
-SUBROUTINE fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-                 nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,nQP,qQP,QP,&
-                 nPQ,qPQ,PQ,error)
+SUBROUTINE fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+                 nQ4,qQ4,Q4,error)
   IMPLICIT NONE
-  
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q1,Q2,Q3,Q4,&
-                                                            P1,P2,QP,PQ
-  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ1,qQ2,qQ3,qQ4,&
-                                                       qP1,qP2,qQP,qPQ
-  INTEGER, INTENT(INOUT) :: nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q2,Q3,Q4
+  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ2,qQ3,qQ4
+  INTEGER, INTENT(INOUT) :: nQ2,nQ3,nQ4
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim
-
+  INTEGER, INTENT(IN) :: ndim,job
+  INTEGER :: voff
+  LOGICAL :: ex
   error = 0
-
-  CALL fcon_read_Q1(ndim,nQ1,qQ1,Q1,error)
+  WRITE(*,*) "Reading force constants"
+  INQUIRE(file='voff.in',EXIST=ex)
+  IF (ex) THEN
+    OPEN(file='voff.in',unit=100,status='old')
+    READ(100,*) voff
+    CLOSE(unit=100)
+  ELSE
+    voff = 0
+  END IF
+  WRITE(*,*) "Numbering offset is:", voff
+  WRITE(*,*)
+ 
+  IF (job .EQ. 1) THEN
+    CALL fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
+    IF (error .NE. 0) RETURN
+  END IF
+  CALL fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
   IF (error .NE. 0) RETURN
-  CALL fcon_read_Q2(ndim,nQ2,qQ2,Q2,error)
+  CALL fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
   IF (error .NE. 0) RETURN
-  CALL fcon_read_Q3(ndim,nQ3,qQ3,Q3,error)
-  IF (error .NE. 0) RETURN
-  CALL fcon_read_Q4(ndim,nQ4,qQ4,Q4,error)
-  IF (error .NE. 0) RETURN
-  CALL fcon_read_P1(ndim,nP1,qP1,P1,error)
-  IF (error .NE. 0) RETURN
-  CALL fcon_read_P2(ndim,nP2,qP2,P2,error)
-  IF (error .NE. 0) RETURN
-  CALL fcon_read_QP(ndim,nQP,qQP,QP,error)
-  IF (error .NE. 0) RETURN
-  CALL fcon_read_PQ(ndim,nPQ,qPQ,PQ,error)
-  IF (error .NE. 0) RETURN
-
 END SUBROUTINE fcon_get
+
+! OLD CODE
+!SUBROUTINE fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+!                 nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,nQP,qQP,QP,&
+!                 nPQ,qPQ,PQ,error)
+!  IMPLICIT NONE
+!  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q1,Q2,Q3,Q4,&
+!                                                            P1,P2,QP,PQ
+!  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ1,qQ2,qQ3,qQ4,&
+!                                                       qP1,qP2,qQP,qPQ
+!  INTEGER, INTENT(INOUT) :: nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
+!  INTEGER, INTENT(INOUT) :: error
+!  CALL fcon_read_Q1(ndim,nQ1,qQ1,Q1,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_Q2(ndim,nQ2,qQ2,Q2,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_Q3(ndim,nQ3,qQ3,Q3,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_Q4(ndim,nQ4,qQ4,Q4,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_P1(ndim,nP1,qP1,P1,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_P2(ndim,nP2,qP2,P2,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_QP(ndim,nQP,qQP,QP,error)
+!  IF (error .NE. 0) RETURN
+!  CALL fcon_read_PQ(ndim,nPQ,qPQ,PQ,error)
+!  IF (error .NE. 0) RETURN
+!END SUBROUTINE fcon_get
 
 !------------------------------------------------------------
 ! fcon_read_Q1
 !       - read info for force constants of type q^1
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
+! voff          : int, numbering offset
 ! nQ1           : int, number of q^1 force con
 ! qQ1           : 1D int, quantum numbers
 ! Q1            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q1(ndim,nQ1,qQ1,Q1,error)
+SUBROUTINE fcon_read_Q1(ndim,voff,nQ1,qQ1,Q1,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q1
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ1
   INTEGER, INTENT(INOUT) :: nQ1,error
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,voff
   CHARACTER(LEN=1024) :: fname
   INTEGER :: i,j,fid
   LOGICAL :: ex
@@ -91,12 +127,13 @@ SUBROUTINE fcon_read_Q1(ndim,nQ1,qQ1,Q1,error)
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,nQ1-1
       READ(fid,*) j,Q1(i)
-      IF (j .LT. 1 .OR. j .GT. ndim) THEN
+      IF (j-voff .LT. 1 .OR. j-voff .GT. ndim) THEN
         WRITE(*,*) "fcon_read  : ERROR"
         WRITE(*,*) "In Q1.in, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
       ELSE
-        qQ1(i) = j-1
+        qQ1(i) = j-voff-1
       END IF
     END DO
     CLOSE(unit=fid)
@@ -108,46 +145,53 @@ END SUBROUTINE fcon_read_Q1
 
 !------------------------------------------------------------
 ! fcon_read_Q2
-!       - read info for force constants of type q^2
+!       - read quadratic force constants from cfour 
+!         'quadratic' file
+!       - note that quadratic terms are diagonal in normal
+!         coordinates
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
+! voff          : int, numbering offset
 ! nQ2           : int, number of q^2 force con
 ! qQ2           : 1D int, quantum numbers
 ! Q2            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q2(ndim,nQ2,qQ2,Q2,error)
+SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q2
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ2
   INTEGER, INTENT(INOUT) :: nQ2,error
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,voff
   CHARACTER(LEN=1024) :: fname
   INTEGER :: i,j,k,fid
   LOGICAL :: ex
   error = 0
-  fname = 'Q2.in'
+  fname = 'quadratic'
   fid = 402 
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
     CALL input_fline(nQ2,fname,error)
     IF (error .NE. 0) THEN
-      WRITE(*,*) "fcon_read  : ERROR"
+      WRITE(*,*) "fcon_read_Q2  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
-    ALLOCATE(qQ2(0:2*nQ2-1))
+    ALLOCATE(qQ2(0:nQ2-1))
     ALLOCATE(Q2(0:nQ2-1))
+    qQ2 = -1
+    Q2 = 0.0D0
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,nQ2-1
-      READ(fid,*) j,k,Q2(i)
-      IF (j .LT. 1 .OR. j .GT. ndim .OR. k .LT. 1 .OR. k .GT. ndim) THEN
+      READ(fid,*) j,Q2(i)
+      j = j - voff
+      IF (j .LT. 1 .OR. j .GT. ndim) THEN
         WRITE(*,*) "fcon_read  : ERROR"
-        WRITE(*,*) "In Q2.in, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "In quadratic, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
       ELSE
-        qQ2(2*i) = j-1
-        qQ2(2*i+1) = k-1
+        qQ2(i) = j-1
       END IF
     END DO
     CLOSE(unit=fid)
@@ -155,10 +199,11 @@ SUBROUTINE fcon_read_Q2(ndim,nQ2,qQ2,Q2,error)
     nQ2 = 0
   END IF
 
-  !WRITE(*,*) "TESTING TESTING"
-  !DO i=0,nQ2-1
-  !  WRITE(*,*) qQ2(2*i),qQ2(2*i+1),Q2(i)
-  !END DO
+  WRITE(*,*) "quadratic terms"
+  DO i=0,nQ2-1
+    WRITE(*,'(1x,I3,4x,F24.15)') qQ2(i)+1,Q2(i)
+  END DO
+  WRITE(*,*)
 
 END SUBROUTINE fcon_read_Q2
 
@@ -167,40 +212,47 @@ END SUBROUTINE fcon_read_Q2
 !       - read info for force constants of type q^3
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
+! voff          : int, numbering offset
 ! nQ3           : int, number of q^3 force con
 ! qQ3           : 1D int, quantum numbers
 ! Q3            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q3(ndim,nQ3,qQ3,Q3,error)
+SUBROUTINE fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q3
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ3
   INTEGER, INTENT(INOUT) :: nQ3,error
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,voff
   CHARACTER(LEN=1024) :: fname
   INTEGER :: i,j,k,l,fid
   LOGICAL :: ex
   error = 0
-  fname = 'Q3.in'
+  fname = 'cubic'
   fid = 403 
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
     CALL input_fline(nQ3,fname,error)
     IF (error .NE. 0) THEN
-      WRITE(*,*) "fcon_read  : ERROR"
+      WRITE(*,*) "fcon_read_Q3  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
     ALLOCATE(qQ3(0:3*nQ3-1))
     ALLOCATE(Q3(0:nQ3-1))
+    qQ3 = -1
+    Q3 = 0.0D0
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,nQ3-1
       READ(fid,*) j,k,l,Q3(i)
-      IF (j .LT. 1 .OR. j .GT. ndim .OR. k .LT. 1 .OR. k .GT. ndim &
+      j = j - voff
+      k = k  - voff
+      l = l - voff
+      IF (j.LT. 1 .OR. j .GT. ndim .OR. k .LT. 1 .OR. k .GT. ndim &
           .OR. l .LT. 1 .OR. l .GT. ndim) THEN
-        WRITE(*,*) "fcon_read  : ERROR"
-        WRITE(*,*) "In Q3.in, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "fcon_read_Q3  : ERROR"
+        WRITE(*,*) "In cubic, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
       ELSE
         qQ3(3*i) = j-1
@@ -213,10 +265,11 @@ SUBROUTINE fcon_read_Q3(ndim,nQ3,qQ3,Q3,error)
     nQ3 = 0
   END IF
 
-  !WRITE(*,*) "TESTING TESTING"
-  !DO i=0,nQ3-1
-  !  WRITE(*,*) qQ3(3*i:3*i+2),Q3(i)
-  !END DO
+  WRITE(*,*) "cubic terms"
+  DO i=0,nQ3-1
+    WRITE(*,'(1x,3(I3,2x),4x,F24.15)') qQ3(3*i:3*i+2)+1,Q3(i)
+  END DO
+  WRITE(*,*)
 
 END SUBROUTINE fcon_read_Q3
 
@@ -225,41 +278,49 @@ END SUBROUTINE fcon_read_Q3
 !       - read info for force constants of type q^4
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
+! voff          : int, numbering offset
 ! nQ4           : int, number of q^4 force con
 ! qQ4           : 1D int, quantum numbers
 ! Q4            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q4(ndim,nQ4,qQ4,Q4,error)
+SUBROUTINE fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q4
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ4
   INTEGER, INTENT(INOUT) :: nQ4,error
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,voff
   CHARACTER(LEN=1024) :: fname
   INTEGER :: i,j,k,l,m,fid
   LOGICAL :: ex
   error = 0
-  fname = 'Q4.in'
+  fname = 'quartic'
   fid = 404 
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
     CALL input_fline(nQ4,fname,error)
     IF (error .NE. 0) THEN
-      WRITE(*,*) "fcon_read  : ERROR"
+      WRITE(*,*) "fcon_read_Q4  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
     ALLOCATE(qQ4(0:4*nQ4-1))
     ALLOCATE(Q4(0:nQ4-1))
+    qQ4 = -1
+    Q4 = 0.0D0
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,nQ4-1
       READ(fid,*) j,k,l,m,Q4(i)
+      j = j - voff
+      k = k - voff
+      l = l - voff
+      m = m - voff
       IF (j .LT. 1 .OR. j .GT. ndim .OR. k .LT. 1 .OR. k .GT. ndim &
           .OR. l .LT. 1 .OR. l .GT. ndim .OR. &
           m .LT. 1 .OR. m .GT. ndim) THEN
         WRITE(*,*) "fcon_read  : ERROR"
-        WRITE(*,*) "In Q4.in, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "In quartic, input",i,", is outside range [1:ndim]" 
+        WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
       ELSE
         qQ4(4*i) = j-1
@@ -273,10 +334,11 @@ SUBROUTINE fcon_read_Q4(ndim,nQ4,qQ4,Q4,error)
     nQ4 = 0
   END IF
 
-  !WRITE(*,*) "TESTING TESTING"
-  !DO i=0,nQ4-1
-  !  WRITE(*,*) qQ4(4*i:4*i+3),Q4(i)
-  !END DO
+  WRITE(*,*) "quartic terms"
+  DO i=0,nQ4-1
+    WRITE(*,'(1x,4(I3,2x),4x,F24.15)') qQ4(4*i:4*i+3)+1,Q4(i)
+  END DO
+  WRITE(*,*)
 
 END SUBROUTINE fcon_read_Q4
 

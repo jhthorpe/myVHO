@@ -8,9 +8,14 @@ MODULE memory
 
 CONTAINS
 !------------------------------------------------------------
-! memory_Hbuild 
+! memory_HObuild 
 !       - analyses the memory situation for building the 
 !         hamiltonian
+!       - three memory scenarios:
+!         1) minmem, hamiltonian contructed one vector at a time
+!         2) precalc, H one vec, integrals precalced
+!         3) inmem, H incore, integrals precalced
+!       
 !------------------------------------------------------------
 ! job           : int, jobtype
 ! mem           : int, memory in MB
@@ -21,17 +26,19 @@ CONTAINS
 ! memstat       : int, memory status
 ! error         : int, exit code
 
-SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
+SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: memstat,error
   INTEGER, INTENT(IN) :: job,N,ndim,nabs
-  REAL(KIND=8) :: minmem,incoremem,basemem,qw2mb,qmem
+  REAL(KIND=8) :: minmem,premem,inmem,basemem,qw2mb,qmem
+  INTEGER :: mbas
 
   error = 0
   qw2mb = 8.0D0/1000000.0D0
   qmem = mem/qw2mb
+  mbas = MAXVAL(nbas)
   WRITE(*,*) "Hamiltonian Memory Analysis"
   CALL val_check(qmem,error)
   IF (error .NE. 0) THEN
@@ -42,8 +49,10 @@ SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   END IF
 
   basemem = 1000
-  IF (job .EQ. 0 .OR. job .EQ. 1) THEN
-    ! hamiltonian : N, N^2
+  IF (job .EQ. 2) THEN
+    ! terms are [minmem], [premem], [inmem]
+    ! These are out of date
+    ! hamiltonian : N, N, N^2
     ! abscissa    : nabs
     ! weights     : nabs
     ! couplings   : 5*ndim (estimated)
@@ -52,18 +61,39 @@ SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
     ! VTint       : ndim*mbas, mbas^2*ndim
     ! Q1-QPint    : ndim*mbas, 6*mbas^2*ndim
     ! norm        : mbas
+    WRITE(*,*) "memory_HObuild  : WARNING"
+    WRITE(*,*) "Memory analysis for jobtype 2 is probably wrong"
+    WRITE(*,*)
     
     minmem = N + 3*nabs + 5*ndim + MAXVAL(nbas)*nabs + &
              MAXVAL(nbas)*ndim + MAXVAL(nbas) + &
              MAXVAL(nbas)*ndim + basemem
-    incoremem = N**2.0D0 + 2*nabs + 5*ndim + nabs*ndim + &
+    premem = N + 2*nabs + 5*ndim + nabs*ndim + &
                 MAXVAL(nbas)*nabs + MAXVAL(nbas)**2.0D0*ndim &
                 + MAXVAL(nbas) + 6*MAXVAL(nbas)*ndim + basemem
+    inmem = N**2.0D0 + 2*nabs + 5*ndim + nabs*ndim + &
+                MAXVAL(nbas)*nabs + MAXVAL(nbas)**2.0D0*ndim &
+                + MAXVAL(nbas) + 6*MAXVAL(nbas)*ndim + basemem
+  ELSE IF (job .EQ. 1) THEN
+    ! terms are [minmem], [premem], [inmem]
+    ! hamiltonian : N, N, N^2
+    ! FCs         : 5*ndim, 5*ndim, 5*ndim 
+    ! Q1int       : 0, mbas*ndim 
+    ! Q2int       : 0, 2*mbas*ndim
+    ! Q3int       : 0, 2*mbas*ndim
+    ! Q4int       : 0, 3*mbas*ndim       
+    ! P2int       : 0, 2*mbas*ndim
+    minmem = basemem + N + 5*ndim
+    premem = basemem + N + 5*ndim + mbas*ndim  + 2*mbas*ndim &
+             + 2*mbas*ndim + 3*mbas*ndim + 2*mbas*ndim
+    inmem = basemem + N**2 + 5*ndim + mbas*ndim  + 2*mbas*ndim &
+             + 2*mbas*ndim + 3*mbas*ndim + 2*mbas*ndim
   END IF
 
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*qw2mb
   WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*qw2mb
-  WRITE(*,'(A20,F12.2)') "Incore memory      ", incoremem*qw2mb
+  WRITE(*,'(A20,F12.2)') "Precalc memory     ", minmem*qw2mb
+  WRITE(*,'(A20,F12.2)') "Incore memory      ", inmem*qw2mb
   WRITE(*,*) "Values are in MB"
 
   WRITE(*,*)
@@ -73,12 +103,14 @@ SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
     error = 2
     memstat = -1
     RETURN
-  ELSE IF (qmem .LT. incoremem .AND. qmem .GE. minmem) THEN
-    WRITE(*,*) "Hamiltonian will be built with minimal memory"
+  ELSE IF (qmem .LT. inmem .AND. qmem .GE. minmem) THEN
+    WRITE(*,*) "HO Hamiltonian will be built with minimal memory"
     memstat = 0
-
-  ELSE IF (qmem .GE. incoremem) THEN
-    WRITE(*,*) "Hamiltonian will be built with incore memory"
+  ELSE IF (qmem .GT. premem .AND. qmem .LT. inmem) THEN
+    WRITE(*,*) "HO Hamiltonian will be built with precalc memory"
+    memstat = 1
+  ELSE IF (qmem .GE. inmem) THEN
+    WRITE(*,*) "HO Hamiltonian will be built with incore memory"
     memstat = 2
   ELSE
     WRITE(*,*) "memory_Hbuild  : ERROR"
@@ -88,7 +120,7 @@ SUBROUTINE memory_Hbuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   END IF
   WRITE(*,*)
 
-END SUBROUTINE memory_Hbuild
+END SUBROUTINE memory_HObuild
 
 !------------------------------------------------------------
 ! memory_Hdiag
@@ -109,7 +141,7 @@ SUBROUTINE memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: memstat,error,lwork
   INTEGER, INTENT(IN) :: ndim,enum
-  REAL(KIND=8) :: minmem,incoremem,basemem,qw2mb,qmem
+  REAL(KIND=8) :: minmem,inmem,basemem,qw2mb,qmem
   INTEGER :: N
 
   error = 0
@@ -142,12 +174,12 @@ SUBROUTINE memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
   
   basemem = 1000
   minmem = basemem + N**2 + N + enum + 3*N + 5.0D0*N/2.0D0
-  incoremem = basemem + N**2 +  N*enum + enum + lwork + 5.0D0*N/2.0D0
+  inmem = basemem + N**2 +  N*enum + enum + lwork + 5.0D0*N/2.0D0
   
   WRITE(*,*) "Diagonalization Memory Analysis"
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*qw2mb
   WRITE(*,'(A20,F12.2)') "Minimum memory     ", minmem*qw2mb
-  WRITE(*,'(A20,F12.2)') "Incore memory      ", incoremem*qw2mb
+  WRITE(*,'(A20,F12.2)') "Incore memory      ", inmem*qw2mb
   WRITE(*,*) "Values are in MB"
 
   WRITE(*,*)
@@ -157,11 +189,11 @@ SUBROUTINE memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
     error = 2
     memstat = -1
     RETURN
-  ELSE IF (qmem .LT. incoremem .AND. qmem .GE. minmem) THEN
+  ELSE IF (qmem .LT. inmem .AND. qmem .GE. minmem) THEN
     WRITE(*,*) "Hamiltonian will be built with minimal memory"
     memstat = 0
 
-  ELSE IF (qmem .GE. incoremem) THEN
+  ELSE IF (qmem .GE. inmem) THEN
     WRITE(*,*) "Hamiltonian will be built with incore memory"
     memstat = 2
   ELSE

@@ -4,6 +4,7 @@
 !        harmonic oscillator calculations
 !------------------------------------------------------------
 ! job           : int, job type
+! bas           : int, basis type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! enum          : int, number of eigenvalues to compute          
@@ -17,48 +18,52 @@
 PROGRAM vho
   USE input
   USE gauss 
-  USE H
+  USE H_HO
+
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W,eval
   INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
-  INTEGER :: ndim,job,error,nabs,enum
+  INTEGER :: ndim,job,bas,error,nabs,enum
   
   CALL CPU_TIME(ti)
   error = 0
   WRITE(*,*) "xvho : called"
   CALL vho_strtmsg()
   
-  CALL input_jobinfo(job,ndim,nbas,enum,mem,error)
+  CALL input_jobinfo(job,bas,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) THEN
     CALL CPU_TIME(tf)
     CALL vho_endmsg(ti,tf,error)
     STOP 1
   END IF
 
-  CALL gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
-  IF (error .NE. 0) THEN
-    CALL CPU_TIME(tf)
-    CALL vho_endmsg(ti,tf,error)
-    STOP 1
+  IF (ABS(job) .EQ. 2) THEN
+    CALL gauss_generate(job,bas,ndim,nbas,mem,nabs,q,W,error)
+    IF (error .NE. 0) THEN
+      CALL CPU_TIME(tf)
+      CALL vho_endmsg(ti,tf,error)
+      STOP 1
+    END IF
   END IF
 
-  IF (job .EQ. -1) THEN
+  IF (job .LT. 0) THEN
     CALL CPU_TIME(tf)
     CALL vho_endmsg(ti,tf,error)
     STOP 0
   END IF
 
-  CALL H_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)  
-  IF (error .NE. 0) THEN
-    CALL CPU_TIME(tf)
-    CALL vho_endmsg(ti,tf,error)
-    STOP 1
+  IF (bas .EQ. 1) THEN
+    CALL H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)  
+    IF (error .NE. 0) THEN
+      CALL CPU_TIME(tf)
+      CALL vho_endmsg(ti,tf,error)
+      STOP 1
+    END IF
+    CALL H_HO_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
   END IF
-
-  CALL H_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
 
   CALL CPU_TIME(tf)
   CALL vho_endmsg(ti,tf,error)

@@ -12,27 +12,28 @@ CONTAINS
 !       - gets the job info
 !------------------------------------------------------------
 ! job           : int, job type
+! bas           : int, basis type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 
-SUBROUTINE input_jobinfo(job,ndim,nbas,enum,mem,error)
+SUBROUTINE input_jobinfo(job,bas,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: nbas
   INTEGER(KIND=8), INTENT(INOUT) :: mem
-  INTEGER, INTENT(INOUT) :: job,ndim,enum,error
+  INTEGER, INTENT(INOUT) :: job,bas,ndim,enum,error
 
   error = 0
-  WRITE(*,*) "input_jobinfo : called"
   WRITE(*,*) "Reading input from vho.in"
+  WRITE(*,*) 
 
-  CALL input_read(job,ndim,nbas,enum,mem,error)
+  CALL input_read(job,bas,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) RETURN
-  CALL input_check(job,ndim,nbas,enum,mem,error)
+  CALL input_check(job,bas,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) RETURN
-  CALL input_write(job,ndim,nbas,enum,mem,error)
+  CALL input_write(job,bas,ndim,nbas,enum,mem,error)
 
   WRITE(*,*) "input_jobinfo : completed with status ", error
   WRITE(*,*) "======================================================="
@@ -44,16 +45,17 @@ END SUBROUTINE input_jobinfo
 !    - reads input from vho.in file
 !------------------------------------------------------------
 ! job           : int, job type
+! bas           : int, basis type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 
-SUBROUTINE input_read(job,ndim,nbas,enum,mem,error)
+SUBROUTINE input_read(job,bas,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: nbas
   INTEGER(KIND=8), INTENT(INOUT) :: mem
-  INTEGER, INTENT(INOUT) :: job,ndim,enum,error
+  INTEGER, INTENT(INOUT) :: job,bas,ndim,enum,error
   LOGICAL :: ex
   error = 0
   INQUIRE(file='vho.in',EXIST=ex)
@@ -64,6 +66,7 @@ SUBROUTINE input_read(job,ndim,nbas,enum,mem,error)
   END IF
   OPEN(file='vho.in',unit=100,status='old')
   READ(100,*) job
+  READ(100,*) bas
   READ(100,*) ndim
   ALLOCATE(nbas(0:ndim-1))
   READ(100,*) nbas 
@@ -78,44 +81,51 @@ END SUBROUTINE input_read
 !       - checks input of vho.in
 !------------------------------------------------------------
 ! job           : int, job type
+! bas           : int, basis type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 
-SUBROUTINE input_check(job,ndim,nbas,enum,mem,error)
+SUBROUTINE input_check(job,bas,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim,enum
+  INTEGER, INTENT(IN) :: job,bas,ndim,enum
   error = 0
-  IF (job .LT. -1 .OR. job .GT. 1) THEN
+  IF (job .NE. -2 .AND. job .NE. 1 .AND. job .NE. 2) THEN
     WRITE(*,*) "vho.in line #1"
     WRITE(*,*) "Jobtype", job," is not supported. Options are..."
-    WRITE(*,*) "-1 : print abscissa and weights needed"
-    WRITE(*,*) " 0 : use precalculated abscissa and weights"
-    WRITE(*,*) " 1 : cublic spline interpolation of potentials" 
+    WRITE(*,*) "-2 : print points for V gaussian quadrature"
+    WRITE(*,*) " 1 : V from force constants up to 4th order" 
+    WRITE(*,*) " 2 : V seperable from gaussian quadrature" 
     error = 1
   END IF
-  IF (ndim .LT. 1) THEN
-    WRITE(*,*) "vho.in line #2"
-    WRITE(*,*) "Must have at least one dimension"
+  IF (bas .NE. 1) THEN
+    WRITE(*,*) "vho.in line#2"
+    WRITE(*,*) "Basistype",bas," is not supported. Options are..."
+    WRITE(*,*) "1 : Harmonic Oscillator"
     error = 2
   END IF
-  IF (MINVAL(nbas) .LT. 1) THEN
+  IF (ndim .LT. 1) THEN
     WRITE(*,*) "vho.in line #3"
-    WRITE(*,*) "All dimensions need at least one basis function"
+    WRITE(*,*) "Must have at least one dimension"
     error = 3
   END IF
-  IF (enum .LT. 1 ) THEN
+  IF (MINVAL(nbas) .LT. 1) THEN
     WRITE(*,*) "vho.in line #4"
+    WRITE(*,*) "All dimensions need at least one basis function"
+    error = 4
+  END IF
+  IF (enum .LT. 1 ) THEN
+    WRITE(*,*) "vho.in line #5"
     WRITE(*,*) "Need at least one eigenvalue"
   END IF
   IF (mem .LT. 1) THEN
     WRITE(*,*) "vho line #5"
     WRITE(*,*) "Must have at least 1 MB of memory"
-    error = 4
+    error = 5
   END IF
 END SUBROUTINE input_check
 
@@ -124,26 +134,30 @@ END SUBROUTINE input_check
 !       - writes the input of vho.in
 !------------------------------------------------------------
 ! job           : int, job type
+! bas           : int, basis type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! enum          : int, nubmer of eigenvalues to compute
 ! mem           : int*8, memory in MB
 ! error         : int, error code
 
-SUBROUTINE input_write(job,ndim,nbas,enum,mem,error)
+SUBROUTINE input_write(job,bas,ndim,nbas,enum,mem,error)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim,enum
+  INTEGER, INTENT(IN) :: job,bas,ndim,enum
   error = 0
   CALL EXECUTE_COMMAND_LINE('cat vho.in')
-  IF (job .EQ. -1) THEN
-    WRITE(*,*) "job     : -1 - abscissa and weights will be printed"
-  ELSE IF (job .EQ. 0) THEN
-    WRITE(*,*) "job     : 0 - precalculated abscissa will be used"
-  ELSE IF (job .EQ. 1) THEN 
-    WRITE(*,*) "job     : 1 - potential interpolated by cubic spline" 
+  IF (job .EQ. -2) THEN
+    WRITE(*,*) "job     : -2 -> print points for V gaussian quadrature "
+  ELSE IF (job .EQ. 1) THEN
+    WRITE(*,*) "job     : 1 -> V from force constants up to 4th order"
+  ELSE IF (job .EQ. 2) THEN
+    WRITE(*,*) "job     : 2 -> V seperable from gaussian quadrature" 
+  END IF
+  IF (bas .EQ. 1) THEN
+    WRITE(*,*) "bas     : 1 -> Harmonic Oscillator basis"
   END IF
   WRITE(*,*) "ndim    :",ndim
   WRITE(*,*) "nbas    :",nbas

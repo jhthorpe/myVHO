@@ -12,6 +12,7 @@ CONTAINS
 !       - generates or reads gaussian quadrature abscissa and weights
 !---------------------------------------------------------------------
 ! job           : int, job type
+! bas           : int, basis type
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
@@ -20,32 +21,41 @@ CONTAINS
 ! q             : 1D real*8, list of abscissa
 ! W             : 1D real*8, list of weights 
 
-SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
+SUBROUTINE gauss_generate(job,bas,ndim,nbas,mem,nabs,q,W,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: q,W
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error,nabs
-  INTEGER, INTENT(IN) :: job,ndim
+  INTEGER, INTENT(IN) :: job,bas,ndim
 
   REAL(KINd=8), DIMENSION(0:ndim-1) :: line
   INTEGER ::i
 
   error = 0
-  WRITE(*,*) 
-  WRITE(*,*) "gauss_generate : called"
-  WRITE(*,*) "Generating Gauss-Hermite abscissa and weights"
-  
-  nabs = MAXVAL(nbas)+10
-  !nabs = MAXVAL(nbas)
+  IF (bas .EQ. 1) THEN
+    WRITE(*,*) "Generating Gauss-Hermite abscissa and weights"
+    WRITE(*,*) 
+    nabs = MAXVAL(nbas)+10
 
-  WRITE(*,*) "Number of abscissa to be used", nabs
-  ALLOCATE(q(0:nabs-1))
-  ALLOCATE(W(0:nabs-1))
-  q = 0
-  W = 0
+    WRITE(*,*) "Number of abscissa to be used", nabs
+    ALLOCATE(q(0:nabs-1))
+    ALLOCATE(W(0:nabs-1))
+    q = 0.0D0
+    W = 0.0D0
 
-  CALL gauss_hermite(nabs,q,W,error)  
+    CALL gauss_hermite(nabs,q,W,error)  
+    IF (error .NE. 0) RETURN
+    IF (job .EQ. -2) THEN
+      CALL gauss_2_xyz(ndim,nabs,q,error)
+    END IF
+
+  ELSE
+    WRITE(*,*) "gauss_generate  : ERROR"
+    WRITE(*,*) "Sorry, only HO basis is coded now" 
+    error = 1
+    RETURN
+  END IF
 
   WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
   WRITE(*,*) 
@@ -54,10 +64,8 @@ SUBROUTINE gauss_generate(job,ndim,nbas,mem,nabs,q,W,error)
     WRITE(101,*) i+1,q(i),W(i)
   END DO
   CLOSE(unit=101)
-
-  IF (job .EQ. -1) THEN
-    CALL gauss_2_xyz(ndim,nabs,q,error)
-  END IF
+  WRITE(*,*) "----------------------------------------------"
+  WRITE(*,*)
 
 END SUBROUTINE gauss_generate
 
