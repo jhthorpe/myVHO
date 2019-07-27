@@ -288,11 +288,12 @@ END SUBROUTINE H_HO_build_incore
 !
 !       Integrals are stored like:
 !       Q1(i,k) -> <i+1|Qk|i>
-!       Q2(i,k) -> <i|Qk^2|i>    , Q2(i+1,k) -> <i+2|Qk^2|i>
-!       Q3(i,k) -> <i+1|Qk^3|i>  , Q3(i+1,k) -> <i+3|Qk^3|i>
-!       Q4(i,k) -> <i|Qk^4|i>    , Q4(i+1,k) -> <i+2|Qk^4|i>
-!                                , Q4(i+2,k) -> <i+4|Qk^4|i>
-!       P2(i,k) -> <i|Pk^2|i>    , P2(i,k)   -> <i+2|Pk^2|i>
+!       Q2(2*i,k) -> <i|Qk^2|i>    , Q2(2*i+1,k) -> <i+2|Qk^2|i>
+!       Q3(2*i,k) -> <i+1|Qk^3|i>  , Q3(2*i+1,k) -> <i+3|Qk^3|i>
+!       Q4(3*i,k) -> <i|Qk^4|i>    , Q4(3*i+1,k) -> <i+2|Qk^4|i>
+!                                  , Q4(3*i+2,k) -> <i+4|Qk^4|i>
+!       P2(2*i,k) -> <i|Pk^2|i>    , P2(2*i,k)   -> <i+2|Pk^2|i>
+
 !       
 !       Where i indicates the i'th quantum number of the 
 !         k'th dimension
@@ -364,7 +365,7 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   DO j=0,N-1
     CALL ints_HO_qnum(ndim,j,nbas,key,PsiR,error)
     DO i=j,N-1
-      CALL ints_HO_qnum(ndim,j,nbas,key,PsiL,error)
+      CALL ints_HO_qnum(ndim,i,nbas,key,PsiL,error)
       CALL ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
                            nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
                            Q3int,Q4int,P2int,Hij(i,j),error)       
@@ -415,6 +416,7 @@ SUBROUTINE H_HO_diag(ndim,nbas,enum,mem,Hij,eval,Cij,error)
     error = 1
     RETURN
   END IF
+  lwork = MAX(10,lwork)
 
   ALLOCATE(eval(0:enum-1))
   ALLOCATE(Cij(0:N-1,0:enum-1))

@@ -228,6 +228,13 @@ SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
   IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
   IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
+  IF (ndim .NE. nQ2) THEN
+    WRITE(*,*) "fcon_read_Q2  : ERROR"
+    WRITE(*,*) "You seem to be missing some quadratic force constants"
+    WRITE(*,*) "Number of dimensions :", ndim
+    WRITE(*,*) "Number of quadratic phi :", nQ2
+  END IF
+
 END SUBROUTINE fcon_read_Q2
 
 !------------------------------------------------------------

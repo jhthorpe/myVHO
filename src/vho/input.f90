@@ -92,7 +92,7 @@ SUBROUTINE input_check(job,bas,ndim,nbas,enum,mem,error)
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,bas,ndim,enum
+  INTEGER, INTENT(INOUT) :: job,bas,ndim,enum
   error = 0
   IF (job .NE. -2 .AND. job .NE. 1 .AND. job .NE. 2) THEN
     WRITE(*,*) "vho.in line #1"
@@ -121,6 +121,11 @@ SUBROUTINE input_check(job,bas,ndim,nbas,enum,mem,error)
   IF (enum .LT. 1 ) THEN
     WRITE(*,*) "vho.in line #5"
     WRITE(*,*) "Need at least one eigenvalue"
+  ELSE IF (enum .GT. PRODUCT(nbas)) THEN
+    WRITE(*,*) "vho.in line #5"
+    WRITE(*,*) "You requested more eigenvalues than basis functions"
+    WRITE(*,*) "Defaulting to all eigenfunctions"
+    enum = PRODUCT(nbas)
   END IF
   IF (mem .LT. 1) THEN
     WRITE(*,*) "vho line #5"

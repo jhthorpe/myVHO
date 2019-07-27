@@ -298,7 +298,7 @@ END SUBROUTINE ints_HO_Q1calc
 !       - calculates integrals of the kind <i|qi^2|i'> 
 !
 !       Integrals are stored like:
-!       Q2(i,k) -> <i|Qk^2|i>    , Q2(i+1,k) -> <i+2|Qk^2|i>
+!       Q2(2*i,k) -> <i|Qk^2|i>    , Q2(2*i+1,k) -> <i+2|Qk^2|i>
 !      
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
@@ -317,8 +317,8 @@ SUBROUTINE ints_HO_Q2calc(ndim,nbas,Q2int,error)
   WRITE(*,*) "<i|q^2|i'> type integrals"
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
-      Q2int(i,j) = 1.0D0*i + 0.5D0 
-      Q2int(i+1,j) = 0.5D0*SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0))
+      Q2int(2*i,j) = 1.0D0*i + 0.5D0 
+      Q2int(2*i+1,j) = 0.5D0*SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0))
     END DO
   END DO
 END SUBROUTINE ints_HO_Q2calc
@@ -328,7 +328,7 @@ END SUBROUTINE ints_HO_Q2calc
 !       - calculates integrals of the kind <i|qi^3|i'> 
 !
 !       Integrals are stored like:
-!       Q3(i,k) -> <i+1|Qk^3|i>  , Q3(i+1,k) -> <i+3|Qk^3|i>
+!       Q3(2*i,k) -> <i+1|Qk^3|i>  , Q3(2*i+1,k) -> <i+3|Qk^3|i>
 !      
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
@@ -347,8 +347,8 @@ SUBROUTINE ints_HO_Q3calc(ndim,nbas,Q3int,error)
   WRITE(*,*) "<i|q^3|i'> type integrals"
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
-      Q3int(i,j) = 3.0D0*SQRT(0.125D0*(1.0D0*i+1.0D0)**3.0D0) 
-      Q3int(i+1,j) = SQRT(0.125D0*(1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)*&
+      Q3int(2*i,j) = 3.0D0*SQRT(0.125D0*(1.0D0*i+1.0D0)**3.0D0) 
+      Q3int(2*i+1,j) = SQRT(0.125D0*(1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)*&
                           (1.0D0*i+3.0D0)) 
     END DO
   END DO
@@ -359,8 +359,8 @@ END SUBROUTINE ints_HO_Q3calc
 !       - calculates integrals of the kind <i|qi^4|i'> 
 !
 !       Integrals are stored like:
-!        Q4(i,k) -> <i|Qk^4|i>    , Q4(i+1,k) -> <i+2|Qk^4|i>
-!                                 , Q4(i+2,k) -> <i+4|Qk^4|i>
+!        Q4(3*i,k) -> <i|Qk^4|i>    , Q4(3*i+1,k) -> <i+2|Qk^4|i>
+!                                   , Q4(3*i+2,k) -> <i+4|Qk^4|i>
 !      
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
@@ -379,10 +379,10 @@ SUBROUTINE ints_HO_Q4calc(ndim,nbas,Q4int,error)
   WRITE(*,*) "<i|q^4|i'> type integrals"
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
-      Q4int(i,j) = 0.75D0*(2.0D0*i**2.0D0 + 2.0D0*i + 1.0D0) 
-      Q4int(i+1,j) = 0.5D0*(2.0D0*i+3.0D0)*&
+      Q4int(3*i,j) = 0.75D0*(2.0D0*i**2.0D0 + 2.0D0*i + 1.0D0) 
+      Q4int(3*i+1,j) = 0.5D0*(2.0D0*i+3.0D0)*&
                      SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)) 
-      Q4int(i+2,j) = 0.25D0*SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)&
+      Q4int(3*i+2,j) = 0.25D0*SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)&
                      *(1.0D0*i+3.0D0)*(1.0D0*i+4.0D0)) 
     END DO
   END DO
@@ -393,7 +393,7 @@ END SUBROUTINE ints_HO_Q4calc
 !       - calculates integrals of the kind <i|pi^2|i'> 
 !
 !       Integrals are stored like:
-!       P2(i,k) -> <i|Pk^2|i>    , P2(i,k)   -> <i+2|Pk^2|i>
+!       P2(i,k) -> <2*i|Pk^2|i>    , P2(i,k)   -> <2*i+2|Pk^2|i>
 !      
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
@@ -412,8 +412,8 @@ SUBROUTINE ints_HO_P2calc(ndim,nbas,P2int,error)
   WRITE(*,*) "<i|p^2|i'> type integrals"
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
-      P2int(i,j) = 1.0D0*i + 0.5D0 
-      P2int(i+1,j) = -0.5D0*SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)) 
+      P2int(2*i,j) = 1.0D0*i + 0.5D0 
+      P2int(2*i+1,j) = -0.5D0*SQRT((1.0D0*i+1.0D0)*(1.0D0*i+2.0D0)) 
     END DO
   END DO
 END SUBROUTINE ints_HO_P2calc
@@ -425,11 +425,11 @@ END SUBROUTINE ints_HO_P2calc
 !
 !       Integrals are stored like:
 !       Q1(i,k) -> <i+1|Qk|i>
-!       Q2(i,k) -> <i|Qk^2|i>    , Q2(i+1,k) -> <i+2|Qk^2|i>
-!       Q3(i,k) -> <i+1|Qk^3|i>  , Q3(i+1,k) -> <i+3|Qk^3|i>
-!       Q4(i,k) -> <i|Qk^4|i>    , Q4(i+1,k) -> <i+2|Qk^4|i>
-!                                , Q4(i+2,k) -> <i+4|Qk^4|i>
-!       P2(i,k) -> <i|Pk^2|i>    , P2(i,k)   -> <i+2|Pk^2|i>
+!       Q2(2*i,k) -> <i|Qk^2|i>    , Q2(2*i+1,k) -> <i+2|Qk^2|i>
+!       Q3(2*i,k) -> <i+1|Qk^3|i>  , Q3(2*i+1,k) -> <i+3|Qk^3|i>
+!       Q4(3*i,k) -> <i|Qk^4|i>    , Q4(3*i+1,k) -> <i+2|Qk^4|i>
+!                                  , Q4(3*i+2,k) -> <i+4|Qk^4|i>
+!       P2(2*i,k) -> <i|Pk^2|i>    , P2(2*i,k)   -> <i+2|Pk^2|i>
 !       
 !       Where i indicates the i'th quantum number of the 
 !         k'th dimension
@@ -487,8 +487,8 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   END DO
 
   !p^2 (momentum) terms
-  DO i=0,ndim-1
-    CALL ints_HO_momeeval(ndim,PsiL,PsiR,i,&
+  DO i=0,nQ2-1
+    CALL ints_HO_momeeval(ndim,PsiL,PsiR,qQ2(i),Q2(i),&
                         P2int,momeval)     
   END DO
   
@@ -504,31 +504,31 @@ END SUBROUTINE ints_HO_polyput
 ! ndim          : int, number of dimensions
 ! PsiL          : 1D int, LHS quantum numbers
 ! PsiR          : 1D int, RHS quantum numbers
-! qquad         : 1D int, quadratic FC quantum numbers
-! phi           : real*8, quadratic FC value
+! qPhi          : 1D int, quadratic FC quantum numbers
+! Phi           : real*8, quadratic FC value
 ! Q2int         : 2D real*8, <i|q^2|i'> type integrals 
 ! quadval       : real*8, value to add to 
 
-SUBROUTINE ints_HO_quadeval(ndim,PsiL,PsiR,qquad,phi,&
+SUBROUTINE ints_HO_quadeval(ndim,PsiL,PsiR,qPhi,Phi,&
                             Q2int,quadval)     
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q2int
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
   REAL(KIND=8), INTENT(INOUT) :: quadval 
-  REAL(KIND=8), INTENT(IN) :: phi
-  INTEGER, INTENT(IN) :: ndim,qquad
+  REAL(KIND=8), INTENT(IN) :: Phi
+  INTEGER, INTENT(IN) :: ndim,qPhi
   INTEGER :: i,j
-  i = qquad
+  i = qPhi 
   !delta function for noninvolved dimensions
   IF (ALL(PsiL(0:i-1) .EQ. PsiR(0:i-1)) .AND.&
       ALL(PsiL(i+1:ndim-1) .EQ. PsiR(i+1:ndim-1)) ) THEN 
     ! q^2 can be v,v and v+2,v
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       j = PsiR(i)
-      quadval = quadval + 0.5D0*phi*Q2int(j,i)
+      quadval = quadval + 0.5D0*phi*Q2int(2*j,i)
     ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
       j = PsiR(i)
-      quadval = quadval + 0.5D0*phi*Q2int(j+1,i)
+      quadval = quadval + 0.5D0*phi*Q2int(2*j+1,i)
     END IF
   END IF
 END SUBROUTINE ints_HO_quadeval
@@ -540,26 +540,29 @@ END SUBROUTINE ints_HO_quadeval
 ! ndim          : int, number of dimensions
 ! PsiL          : 1D int, LHS quantum numbers
 ! PsiR          : 1D int, RHS quantum numbers
-! i             : int, dimension we are on
+! qPhi          : int, quantum number of FC
+! Phi           : real*8, quadratic force constant
 ! P2int         : 2D real*8, <i|p^2|i'> type integrals
 ! momeval       : real*8, value 
-SUBROUTINE ints_HO_momeeval(ndim,PsiL,PsiR,i,P2int,momeval)     
+SUBROUTINE ints_HO_momeeval(ndim,PsiL,PsiR,qPhi,Phi,P2int,momeval)     
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: P2int
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
   REAL(KIND=8), INTENT(INOUT) :: momeval
-  INTEGER, INTENT(IN) :: ndim,i
-  INTEGER :: j
+  REAL(KIND=8), INTENT(IN) :: Phi
+  INTEGER, INTENT(IN) :: ndim,qPhi
+  INTEGER :: i,j
+  i = qPhi
   !delta function for noninvolved dimensions
   IF (ALL(PsiL(0:i-1) .EQ. PsiR(0:i-1)) .AND.&
       ALL(PsiL(i+1:ndim-1) .EQ. PsiR(i+1:ndim-1))) THEN 
     ! p^2 can be v,v and v+2,v
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       j = PsiR(i)
-      momeval = momeval + P2int(j,i) 
+      momeval = momeval + 0.5*Phi*P2int(2*j,i) 
     ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
       j = PsiR(i)
-      momeval = momeval + P2int(j+1,i) 
+      momeval = momeval + 0.5*Phi*P2int(2*j+1,i) 
     END IF
   END IF
 END SUBROUTINE ints_HO_momeeval
