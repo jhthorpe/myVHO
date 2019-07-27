@@ -464,7 +464,8 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
                            nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
                            Q3int,Q4int,P2int,Hij,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int,Q3int,Q4int
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int,Q3int,&
+                                                Q4int,P2int
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Q2,Q3,Q4
   INTEGER, DIMENSION(0:), INTENT(IN) :: qQ2,qQ3,qQ4
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
@@ -480,7 +481,7 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   quarval = 0.0D0
   momeval = 0.0D0
   !quadratic terms
-  DO n=0,nQ2-1
+  DO i=0,nQ2-1
     CALL ints_HO_quadeval(ndim,PsiL,PsiR,qQ2(i),Q2(i),&
                         Q1int,Q2int,quadval)     
   END DO
@@ -503,23 +504,22 @@ END SUBROUTINE ints_HO_polyput
 ! Q2int         : 2D real*8, <i|q^2|i'> type integrals 
 ! quadval       : real*8, value to add to 
 
-SUBROUTINE ints_HO_quadeval(ndim,PsiL,PsiR,qquad,vqual,&
-                            Q1int,Q2int,quadval,error)     
+SUBROUTINE ints_HO_quadeval(ndim,PsiL,PsiR,qquad,vquad,&
+                            Q1int,Q2int,quadval)     
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int
-  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,qquad
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
   REAL(KIND=8), INTENT(INOUT) :: quadval 
   REAL(KIND=8), INTENT(IN) :: vquad
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,qquad
   INTEGER :: i,j
-  i = MINVAL(qquad(0))
-  j = MAXVAL(qquad(1))
+  !i = MINVAL(qquad(0))
+  !j = MAXVAL(qquad(1))
   !check orthogonality 
-  IF (ANY(PsiL(0:i-1) .NE. ANY(PsiR(0:i-1) .OR.&
-      ANY(PsiL(0:i+1,) .NE. ANY(). .OR. ANY() .NE. ANY()) THEN
-    
-  END IF 
-  
+  !IF (ANY(PsiL(0:i-1) .NE. ANY(PsiR(0:i-1) .OR.&
+  !    ANY(PsiL(0:i+1,) .NE. ANY(). .OR. ANY() .NE. ANY()) THEN
+  !  
+  !END IF 
 
 END SUBROUTINE ints_HO_quadeval
 

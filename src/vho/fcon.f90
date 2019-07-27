@@ -4,6 +4,7 @@
 !------------------------------------------------------------
 MODULE fcon
   USE input
+  USE sort
 
 CONTAINS
 !------------------------------------------------------------
@@ -163,8 +164,11 @@ SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ2
   INTEGER, INTENT(INOUT) :: nQ2,error
   INTEGER, INTENT(IN) :: ndim,voff
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
+  INTEGER, DIMENSION(:), ALLOCATABLE :: Itemp
   CHARACTER(LEN=1024) :: fname
-  INTEGER :: i,j,k,fid
+  REAL(KIND=8) :: val
+  INTEGER :: i,j,k,fid,fline
   LOGICAL :: ex
   error = 0
   fname = 'quadratic'
@@ -172,29 +176,45 @@ SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
-    CALL input_fline(nQ2,fname,error)
+
+    CALL input_fline(fline,fname,error)
     IF (error .NE. 0) THEN
       WRITE(*,*) "fcon_read_Q2  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
-    ALLOCATE(qQ2(0:nQ2-1))
-    ALLOCATE(Q2(0:nQ2-1))
-    qQ2 = -1
-    Q2 = 0.0D0
+    ALLOCATE(Itemp(0:fline-1))
+    ALLOCATE(Rtemp(0:fline-1))
+    Itemp = -1
+    Rtemp = 0.0D0 
+    nQ2 = 0
+
     OPEN(file=TRIM(fname),unit=fid,status='old')
-    DO i=0,nQ2-1
-      READ(fid,*) j,Q2(i)
+    DO i=0,fline-1
+     
+      !read and sort
+      READ(fid,*) j,val
       j = j - voff
       IF (j .LT. 1 .OR. j .GT. ndim) THEN
         WRITE(*,*) "fcon_read  : ERROR"
         WRITE(*,*) "In quadratic, input",i,", is outside range [1:ndim]" 
         WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
-      ELSE
-        qQ2(i) = j-1
+      ELSE IF (ALL(j .NE. Itemp(0:nQ2-1))) THEN
+        nQ2 = nQ2 + 1
+        Itemp(nQ2-1) = j-1
+        Rtemp(nQ2-1) = val
       END IF
     END DO
     CLOSE(unit=fid)
+    
+    !now, put them all in efficient order
+    ALLOCATE(qQ2(0:nQ2-1))
+    ALLOCATE(Q2(0:nQ2-1))
+    DO i=0,nQ2-1
+      qQ2(i) = Itemp(i)
+      Q2(i) = Rtemp(i)
+    END DO
+
   ELSE
     nQ2 = 0
   END IF
@@ -204,6 +224,9 @@ SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
     WRITE(*,'(1x,I3,4x,F24.15)') qQ2(i)+1,Q2(i)
   END DO
   WRITE(*,*)
+
+  IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
+  IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
 END SUBROUTINE fcon_read_Q2
 
@@ -224,43 +247,65 @@ SUBROUTINE fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ3
   INTEGER, INTENT(INOUT) :: nQ3,error
   INTEGER, INTENT(IN) :: ndim,voff
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: Itemp
+  INTEGER, DIMENSION(0:2) :: idx
   CHARACTER(LEN=1024) :: fname
-  INTEGER :: i,j,k,l,fid
-  LOGICAL :: ex
+  REAL(KIND=8) :: val
+  INTEGER :: i,j,k,l,fid,fline
+  LOGICAL :: ex,match
   error = 0
   fname = 'cubic'
   fid = 403 
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
-    CALL input_fline(nQ3,fname,error)
+    CALL input_fline(fline,fname,error)
     IF (error .NE. 0) THEN
       WRITE(*,*) "fcon_read_Q3  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
-    ALLOCATE(qQ3(0:3*nQ3-1))
-    ALLOCATE(Q3(0:nQ3-1))
-    qQ3 = -1
-    Q3 = 0.0D0
+    ALLOCATE(Itemp(0:2,0:fline-1))
+    ALLOCATE(Rtemp(0:fline-1))
+    nQ3 = 0
+
     OPEN(file=TRIM(fname),unit=fid,status='old')
-    DO i=0,nQ3-1
-      READ(fid,*) j,k,l,Q3(i)
-      j = j - voff
-      k = k  - voff
-      l = l - voff
-      IF (j.LT. 1 .OR. j .GT. ndim .OR. k .LT. 1 .OR. k .GT. ndim &
-          .OR. l .LT. 1 .OR. l .GT. ndim) THEN
+    DO i=0,fline-1
+
+      !read and sort
+      READ(fid,*) idx,val
+      idx = idx - voff
+      CALL sort_int_ijk(idx)
+      IF (ANY(idx .LT. 1) .OR. ANY(idx .GT. ndim)) THEN
         WRITE(*,*) "fcon_read_Q3  : ERROR"
         WRITE(*,*) "In cubic, input",i,", is outside range [1:ndim]" 
         WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
-      ELSE
-        qQ3(3*i) = j-1
-        qQ3(3*i+1) = k-1
-        qQ3(3*i+2) = l-1
       END IF
+
+      !check this is something we haven't seen before
+      match = .FALSE.
+      DO j=0,nQ3-1
+        IF (ALL(idx-1 .EQ. Itemp(0:2,j))) match = .TRUE.
+      END DO
+      IF (.NOT. match) THEN 
+        nQ3 = nQ3 + 1
+        Itemp(0:2,i) = idx-1
+        Rtemp(i) = val
+      END IF
+
     END DO
     CLOSE(unit=fid)
+
+    !put into order
+    ALLOCATE(qQ3(0:3*nQ3-1))
+    ALLOCATE(Q3(0:nQ3-1))
+    DO i=0,nQ3-1
+      qQ3(3*i) = Itemp(0,i)
+      qQ3(3*i+1) = Itemp(1,i)
+      qQ3(3*i+2) = Itemp(2,i)
+      Q3(i) = Rtemp(i)
+    END DO
   ELSE
     nQ3 = 0
   END IF
@@ -270,6 +315,9 @@ SUBROUTINE fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
     WRITE(*,'(1x,3(I3,2x),4x,F24.15)') qQ3(3*i:3*i+2)+1,Q3(i)
   END DO
   WRITE(*,*)
+
+  IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
+  IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
 END SUBROUTINE fcon_read_Q3
 
@@ -290,46 +338,68 @@ SUBROUTINE fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ4
   INTEGER, INTENT(INOUT) :: nQ4,error
   INTEGER, INTENT(IN) :: ndim,voff
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: Itemp
+  INTEGER, DIMENSION(0:3) :: idx
   CHARACTER(LEN=1024) :: fname
-  INTEGER :: i,j,k,l,m,fid
-  LOGICAL :: ex
+  REAL(KIND=8) :: val
+  INTEGER :: i,j,k,l,fid,fline
+  LOGICAL :: ex,match
   error = 0
   fname = 'quartic'
   fid = 404 
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
-    CALL input_fline(nQ4,fname,error)
+    CALL input_fline(fline,fname,error)
     IF (error .NE. 0) THEN
       WRITE(*,*) "fcon_read_Q4  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
-    ALLOCATE(qQ4(0:4*nQ4-1))
-    ALLOCATE(Q4(0:nQ4-1))
-    qQ4 = -1
-    Q4 = 0.0D0
+    ALLOCATE(Itemp(0:3,0:fline-1))
+    ALLOCATE(Rtemp(0:fline-1))
+    nQ4 = 0
+
     OPEN(file=TRIM(fname),unit=fid,status='old')
-    DO i=0,nQ4-1
-      READ(fid,*) j,k,l,m,Q4(i)
-      j = j - voff
-      k = k - voff
-      l = l - voff
-      m = m - voff
-      IF (j .LT. 1 .OR. j .GT. ndim .OR. k .LT. 1 .OR. k .GT. ndim &
-          .OR. l .LT. 1 .OR. l .GT. ndim .OR. &
-          m .LT. 1 .OR. m .GT. ndim) THEN
+    DO i=0,fline-1
+
+      !read and sort
+      READ(fid,*) idx,val
+      idx = idx - voff
+      CALL sort_int_ijkl(idx)
+      IF (ANY(idx .LT. 1) .OR. ANY(idx .GT. ndim)) THEN
         WRITE(*,*) "fcon_read  : ERROR"
         WRITE(*,*) "In quartic, input",i,", is outside range [1:ndim]" 
         WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
-      ELSE
-        qQ4(4*i) = j-1
-        qQ4(4*i+1) = k-1
-        qQ4(4*i+2) = l-1
-        qQ4(4*i+3) = m-1
       END IF
+
+      !check this is something we haven't seen before
+      match = .FALSE.
+      DO j=0,nQ4-1
+        IF (ALL(idx-1 .EQ. Itemp(0:3,j))) match = .TRUE.
+      END DO
+      IF (.NOT. match) THEN 
+        nQ4 = nQ4 + 1
+        Itemp(0:3,nQ4-1) = idx-1
+        Rtemp(nQ4-1) = val
+      ELSE
+      END IF
+
     END DO
     CLOSE(unit=fid)
+
+    !put into order
+    ALLOCATE(qQ4(0:4*nQ4-1))
+    ALLOCATE(Q4(0:nQ4-1))
+    DO i=0,nQ4-1
+      qQ4(4*i) = Itemp(0,i)
+      qQ4(4*i+1) = Itemp(1,i)
+      qQ4(4*i+2) = Itemp(2,i)
+      qQ4(4*i+3) = Itemp(3,i)
+      Q4(i) = Rtemp(i)
+    END DO
+    
   ELSE
     nQ4 = 0
   END IF
@@ -339,6 +409,9 @@ SUBROUTINE fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
     WRITE(*,'(1x,4(I3,2x),4x,F24.15)') qQ4(4*i:4*i+3)+1,Q4(i)
   END DO
   WRITE(*,*)
+
+  IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
+  IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
 END SUBROUTINE fcon_read_Q4
 

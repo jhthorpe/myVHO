@@ -1,7 +1,7 @@
 buildir = ..
 include $(buildir)/make.config
 
-objects = xvho input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o evec.o
+objects = xvho input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o evec.o sort.o
 
 all : $(objects)
 	cp xvho $(bindir)/xvho
@@ -21,14 +21,17 @@ val.o : val.f90
 linal.o : linal.f90
 	$(FC) $(FFLAGS) $(LINAL) -c linal.f90
 
-fcon.o : fcon.f90
-	$(FC) $(FFLAGS) -c fcon.f90
-
 fit.o : fit.f90
 	$(FC) $(FFLAGS) -c fit.f90
 
+sort.o : sort.f90
+	$(FC) $(FFLAGS) -c sort.f90
+
+fcon.o : fcon.f90 sort.o
+	$(FC) $(FFLAGS) -c fcon.f90 sort.o
+
 ints_HO.o : ints_HO.f90 val.o
-	$(FC) $(FFLAGS) -c ints_HO.f90 val.o
+	$(FC) $(FFLAGS) -c ints_HO.f90 val.o 
 
 evec.o	: evec.f90 ints_HO.o
 	$(FC) $(FFALGS) -c evec.f90 ints_HO.o
@@ -48,6 +51,6 @@ V.o : V.f90 fname.o input.o fit.o val.o
 H_HO.o : H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o
 	$(FC) $(FFLAGS) -c H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o
 
-xvho : vho.f90 input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o
-	$(FC) $(FFLAGS) $(LINAL) -o xvho vho.f90 input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o
+xvho : vho.f90 input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o sort.o
+	$(FC) $(FFLAGS) $(LINAL) -o xvho vho.f90 input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o sort.o
 	
