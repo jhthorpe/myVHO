@@ -55,7 +55,9 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   !analyze the memory situation 
   CALL memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error) 
   IF (error .NE. 0) RETURN
-  IF (memstat .NE. 2) THEN 
+  IF (memstat .EQ. 2) THEN
+    ALLOCATE(Hij(0:N-1,0:N-1))
+  ELSE 
     WRITE(*,*) "Sorry, only incore memory coded"
     error = 1
     RETURN
@@ -92,22 +94,21 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
                                 nQ4,qQ4,Q4,Hij,error)
   END IF
 
-  STOP
 
   !Evaluate integrals
-  IF (job .NE. 2 .AND. job .NE. 1 ) THEN 
-    WRITE(*,*) "H_HO_build  : ERROR"
-    WRITE(*,*) "Sorry, only jobtype 0,1 are supported" 
-    error = 1
-    RETURN
-  END IF
-  IF (memstat .EQ. 2) THEN
-    ALLOCATE(Hij(0:N-1,0:N-1))
-    CALL H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
-                    nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-                    nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
-                    nQP,qQP,QP,nPQ,qPQ,PQ,Herm,Hij,error)
-  END IF
+  !IF (job .NE. 2 .AND. job .NE. 1 ) THEN 
+  !  WRITE(*,*) "H_HO_build  : ERROR"
+  !  WRITE(*,*) "Sorry, only jobtype 0,1 are supported" 
+  !  error = 1
+  !  RETURN
+  !END IF
+  !IF (memstat .EQ. 2) THEN
+  !  ALLOCATE(Hij(0:N-1,0:N-1))
+  !  CALL H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
+  !                  nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+  !                  nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,&
+  !                  nQP,qQP,QP,nPQ,qPQ,PQ,Herm,Hij,error)
+  !END IF
 
   IF (ALLOCATED(Vij)) DEALLOCATE(Vij)
   IF (ALLOCATED(Herm)) DEALLOCATE(Herm)
@@ -359,6 +360,7 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
 
   CALL ints_HO_key(ndim,nbas,key,error)
 
+  WRITE(*,*) "Filling the Hamiltonian..."
   DO j=0,N-1
     CALL ints_HO_qnum(ndim,j,nbas,key,PsiR,error)
     DO i=j,N-1
@@ -373,6 +375,7 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   DEALLOCATE(Q2int)
   DEALLOCATE(Q3int)
   DEALLOCATE(Q4int)
+  DEALLOCATE(P2int)
 
 END SUBROUTINE H_HO_build_poly_incore
 !------------------------------------------------------------

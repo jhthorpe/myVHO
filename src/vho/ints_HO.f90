@@ -480,10 +480,16 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   cubival = 0.0D0
   quarval = 0.0D0
   momeval = 0.0D0
-  !quadratic terms
+  !phi_ij (quadratic) terms
   DO i=0,nQ2-1
     CALL ints_HO_quadeval(ndim,PsiL,PsiR,qQ2(i),Q2(i),&
-                        Q1int,Q2int,quadval)     
+                        Q2int,quadval)     
+  END DO
+
+  !p^2 (momentum) terms
+  DO i=0,ndim-1
+    CALL ints_HO_momeeval(ndim,PsiL,PsiR,i,&
+                        P2int,momeval)     
   END DO
   
   Hij = quadval + cubival + quarval + momeval
@@ -499,30 +505,64 @@ END SUBROUTINE ints_HO_polyput
 ! PsiL          : 1D int, LHS quantum numbers
 ! PsiR          : 1D int, RHS quantum numbers
 ! qquad         : 1D int, quadratic FC quantum numbers
-! vquad         : real*8, quadratic FC value
-! Q1int         : 2D real*8, <i|q|i'> type integrals 
+! phi           : real*8, quadratic FC value
 ! Q2int         : 2D real*8, <i|q^2|i'> type integrals 
 ! quadval       : real*8, value to add to 
 
-SUBROUTINE ints_HO_quadeval(ndim,PsiL,PsiR,qquad,vquad,&
-                            Q1int,Q2int,quadval)     
+SUBROUTINE ints_HO_quadeval(ndim,PsiL,PsiR,qquad,phi,&
+                            Q2int,quadval)     
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q2int
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
   REAL(KIND=8), INTENT(INOUT) :: quadval 
-  REAL(KIND=8), INTENT(IN) :: vquad
+  REAL(KIND=8), INTENT(IN) :: phi
   INTEGER, INTENT(IN) :: ndim,qquad
   INTEGER :: i,j
-  !i = MINVAL(qquad(0))
-  !j = MAXVAL(qquad(1))
-  !check orthogonality 
-  !IF (ANY(PsiL(0:i-1) .NE. ANY(PsiR(0:i-1) .OR.&
-  !    ANY(PsiL(0:i+1,) .NE. ANY(). .OR. ANY() .NE. ANY()) THEN
-  !  
-  !END IF 
-
+  i = qquad
+  !delta function for noninvolved dimensions
+  IF (ALL(PsiL(0:i-1) .EQ. PsiR(0:i-1)) .AND.&
+      ALL(PsiL(i+1:ndim-1) .EQ. PsiR(i+1:ndim-1)) ) THEN 
+    ! q^2 can be v,v and v+2,v
+    IF (PsiL(i) .EQ. PsiR(i)) THEN
+      j = PsiR(i)
+      quadval = quadval + 0.5D0*phi*Q2int(j,i)
+    ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
+      j = PsiR(i)
+      quadval = quadval + 0.5D0*phi*Q2int(j+1,i)
+    END IF
+  END IF
 END SUBROUTINE ints_HO_quadeval
 
+!------------------------------------------------------------
+! ints_HO_momeeval
+!       - evaluates contribution of momentum
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers
+! i             : int, dimension we are on
+! P2int         : 2D real*8, <i|p^2|i'> type integrals
+! momeval       : real*8, value 
+SUBROUTINE ints_HO_momeeval(ndim,PsiL,PsiR,i,P2int,momeval)     
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: P2int
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: momeval
+  INTEGER, INTENT(IN) :: ndim,i
+  INTEGER :: j
+  !delta function for noninvolved dimensions
+  IF (ALL(PsiL(0:i-1) .EQ. PsiR(0:i-1)) .AND.&
+      ALL(PsiL(i+1:ndim-1) .EQ. PsiR(i+1:ndim-1))) THEN 
+    ! p^2 can be v,v and v+2,v
+    IF (PsiL(i) .EQ. PsiR(i)) THEN
+      j = PsiR(i)
+      momeval = momeval + P2int(j,i) 
+    ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
+      j = PsiR(i)
+      momeval = momeval + P2int(j+1,i) 
+    END IF
+  END IF
+END SUBROUTINE ints_HO_momeeval
 !------------------------------------------------------------
 END MODULE ints_HO
 !------------------------------------------------------------
