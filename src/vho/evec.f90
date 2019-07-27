@@ -162,7 +162,9 @@ SUBROUTINE evec_order(ndim,nbas,N,evec,str3_fmt,key,error)
   DO i=0,MIN(N,9)
     CALL ints_HO_qnum(ndim,sigloc(i),nbas,key,Psi,error)
     IF (error .NE. 0) RETURN
-    WRITE(*,str3_fmt) Psi,sigval(i) 
+    IF (ALL(Psi .GE. 0)) THEN
+      WRITE(*,str3_fmt) Psi,sigval(i) 
+    END IF
   END DO
 
 END SUBROUTINE evec_order
