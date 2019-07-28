@@ -4,7 +4,7 @@
 !         eigenvectors
 !------------------------------------------------------------
 MODULE evec
-  USE ints_HO
+  USE key 
 
 CONTAINS
 !------------------------------------------------------------
@@ -31,8 +31,7 @@ SUBROUTINE evec_print(ndim,nbas,N,enum,eval,Cij,error)
   INTEGER :: i,j
   error = 0
 
-  CALL ints_HO_key(ndim,nbas,key,error)
-  IF (error .NE. 0) RETURN
+  CALL key_generate(ndim,nbas,key)
 
   str_fmt = "(2x,"
   DO i=0,ndim-1
@@ -58,8 +57,7 @@ SUBROUTINE evec_print(ndim,nbas,N,enum,eval,Cij,error)
     WRITE(100,'(2x,A6,2x,F16.2,1x,A4)') "Energy",eval(i),"cm-1"
     WRITE(100,*) "--------------------------------"
     DO j=0,N-1
-      CALL ints_HO_qnum(ndim,j,nbas,key,Psi,error)
-      IF (error .NE. 0) RETURN
+      CALL key_idx2ids(ndim,j,nbas,key,Psi)
       WRITE(100,str_fmt) Psi,Cij(j,i)
     END DO
     WRITE(100,*) "------------------------------------------------"
@@ -160,8 +158,7 @@ SUBROUTINE evec_order(ndim,nbas,N,evec,str3_fmt,key,error)
   WRITE(*,*) "v's, Coef"
   WRITE(*,*) "------------------------------------------------"
   DO i=0,MIN(N,9)
-    CALL ints_HO_qnum(ndim,sigloc(i),nbas,key,Psi,error)
-    IF (error .NE. 0) RETURN
+    CALL key_idx2ids(ndim,sigloc(i),nbas,key,Psi)
     IF (ALL(Psi .GE. 0)) THEN
       WRITE(*,str3_fmt) Psi,sigval(i) 
     END IF

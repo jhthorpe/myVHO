@@ -8,6 +8,7 @@ MODULE H_HO
   USE fcon
   USE basis
   USE ints_HO
+  USE key
   USE memory
   USE evec
 
@@ -213,8 +214,7 @@ SUBROUTINE H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   N = PRODUCT(nbas)
 
   !generate keys
-  CALL ints_HO_key(ndim,nbas,key,error)
-  IF (error .NE. 0) RETURN
+  CALL key_generate(ndim,nbas,key)
 
   !Generate normalization constants
   WRITE(*,*) "Calculating Normalization Constants..."
@@ -242,13 +242,11 @@ SUBROUTINE H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   DO j=0,N-1
 
     !generate quantum number of R
-    CALL ints_HO_qnum(ndim,j,nbas,key,PsiR,error)
-    IF (error .NE. 0) RETURN
+    CALL key_idx2ids(ndim,j,nbas,key,PsiR)
 
     !lower triangular
     DO i=j,N-1
-      CALL ints_HO_qnum(ndim,i,nbas,key,PsiL,error)
-      IF (error .NE. 0) RETURN
+      CALL key_idx2ids(ndim,i,nbas,key,PsiL)
      
       !Construct each part of the integral
       !Potential + Kinetic precalculated
@@ -329,9 +327,10 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Q1int,Q2int,Q3int,Q4int,&
                                                P2int
-  INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,key
-  INTEGER :: N,mbas
-  INTEGER :: i,j,k
+  INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,keyR,keyL,numL
+  REAL(KIND=8) :: val
+  INTEGER :: N,M,mbas,il,ir
+  INTEGER :: i,j,k,a
 
   error = 0
   N = PRODUCT(nbas)
@@ -359,18 +358,41 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   CALL ints_HO_P2calc(ndim,nbas,P2int,error)
   IF (error .NE. 0) RETURN 
 
-  CALL ints_HO_key(ndim,nbas,key,error)
-
   WRITE(*,*) "Filling the Hamiltonian..."
+  CALL key_generate(ndim,nbas,keyR) !loop over all for ket
   DO j=0,N-1
-    CALL ints_HO_qnum(ndim,j,nbas,key,PsiR,error)
-    DO i=j,N-1
-      CALL ints_HO_qnum(ndim,i,nbas,key,PsiL,error)
+    CALL key_idx2ids(ndim,j,nbas,keyR,PsiR)
+
+    numL = MIN(nbas - PsiR,5) !only elements +/- 4 contribute
+    M = PRODUCT(numL) ! number of elements in bra loop 
+    CALL key_generate(ndim,numL,keyL)
+
+    DO k=0,M-1
+      CALL key_idx2ids(ndim,k,numL,keyL,PsiL)
+      PsiL = PsiR + PsiL
+
+      !evaluate force constants
+      !get new index and write 
       CALL ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
                            nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
-                           Q3int,Q4int,P2int,Hij(i,j),error)       
+                           Q3int,Q4int,P2int,val,error)       
+
+      !swap the indices and fill in
+      CALL key_ids2idx(ndim,nbas,keyR,PsiL,i) 
+      Hij(i,j) = val 
+      DO a=0,ndim-1
+        IF (PsiL(a) .NE. PsiR(a)) THEN
+          il = i - (PsiL(a)-PsiR(a))*keyR(a)
+          ir = j + (PsiL(a)-PsiR(a))*keyR(a) 
+          IF (il .GT. ir) THEN
+            Hij(il,ir) = val
+          END IF 
+        END IF
+      END DO
+
     END DO 
   END DO 
+  WRITE(*,*)
 
   DEALLOCATE(Q1int)
   DEALLOCATE(Q2int)

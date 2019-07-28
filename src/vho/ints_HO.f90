@@ -480,6 +480,13 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   cubival = 0.0D0
   quarval = 0.0D0
   momeval = 0.0D0
+
+  !we have a guarenteed orthogonality condition
+  !IF (ANY(PsiL .GT. PsiR+4)) THEN
+  !  Hij = 0.0D0
+  !  RETURN
+  !END IF 
+
   !phi_ij (quadratic) terms
   DO i=0,nQ2-1
     CALL ints_HO_quadeval(ndim,PsiL,PsiR,qQ2(i),Q2(i),&
@@ -490,6 +497,12 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   DO i=0,nQ3-1
     CALL ints_HO_cubieval(ndim,PsiL,PsiR,qQ3(3*i:3*i+2),&
                           Q3(i),Q1int,Q2int,Q3int,cubival)
+  END DO
+
+  !phi_ijkl (quartic terms)
+  DO i=0,nQ4-1
+    CALL ints_HO_quareval(ndim,PsiL,PsiR,qQ4(4*i:4*i+3),&
+                          Q4(i),Q1int,Q2int,Q3int,Q4int,quarval)
   END DO
 
   !p^2 (momentum) terms
@@ -669,6 +682,186 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
   END IF
 
 END SUBROUTINE ints_HO_cubieval
+
+!------------------------------------------------------------
+! ints_HO_quareval
+!       - evaluates contribution of a quadratic force constant
+!         to the potential energy in harmonic oscillator 
+!         basis
+!------------------------------------------------------------
+! ndim          : int, nubmer of dimensions
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers
+! qPhi          : 1D int, quartic fc dimension ids
+! Phi           : real*8, quartic fc 
+! Q1int         : 2D real*8, <i|q|i'> integrals   
+! Q2int         : 2D real*8, <i|q^2|i'> integrals   
+! Q3int         : 2D real*8, <i|q^3|i'> integrals   
+! Q4int         : 2D real*8, <i|q^4|i'> integrals   
+! quarval       : real*8, value to iterate
+
+SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
+                          Phi,Q1int,Q2int,Q3int,Q4int,quarval)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int,Q3int,Q4int
+  REAL(KIND=8), INTENT(INOUT) :: quarval
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,qPhi
+  REAL(KIND=8), INTENT(IN) :: Phi
+  INTEGER, INTENT(IN) :: ndim
+  INTEGER :: i,j,k,l,m,n,o,p
+  i = qPhi(0)
+  j = qPhi(1)
+  k = qPhi(2)
+  l = qPhi(3)
+  !for testing
+  m = -1
+  n = -1
+  o = -1
+  p = -1
+  !Check orthogonality of noninvolved terms
+  IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
+      ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
+      ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
+      ANY(PsiL(k+1:l-1) .NE. PsiR(k+1:l-1)) .OR. &
+      ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) RETURN
+
+  !type 1 : i i i i
+  IF (i .EQ. j .AND. j .EQ. k .AND. k .EQ. l) THEN
+    !i, i
+    IF (PsiL(i) .EQ. PsiR(i)) THEN
+      m = PsiR(i)    
+      quarval = quarval + Phi/24.0D0*Q4int(3*m,i)
+    !i+2, i
+    ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
+      m = PsiR(i)    
+      quarval = quarval + Phi/24.0D0*Q4int(3*m+1,i)
+    !i+4,i
+    ELSE IF (PsiL(i) .EQ. PsiR(i)+4) THEN
+      m = PsiR(i)    
+      quarval = quarval + Phi/24.0D0*Q4int(3*m+2,i)
+    END IF
+
+  !type 2 : i i i l 
+  ELSE IF (i .EQ. j .AND. j .EQ. k .AND. k .NE. l) THEN
+    ! l+1,l
+    IF (PsiL(l) .EQ. PsiR(l)+1) THEN
+      !i+1,i
+      IF (PsiL(i) .EQ. PsiR(i)+1) THEN
+        m = PsiR(i)
+        p = PsiR(l)
+        quarval = quarval + Phi/24.0D0*Q3int(2*m,i)*Q1int(p,l)
+      !i+3,i
+      ELSE IF (PsiL(i) .EQ. PsiR(i)+3) THEN
+        m = PsiR(i)
+        p = PsiR(l)
+        quarval = quarval + Phi/24.0D0*Q3int(2*m+1,i)*Q1int(p,l)
+      END IF
+    END IF
+
+  !type 3 : i j j j
+  ELSE IF (i .NE. j .AND. j .EQ. k .AND. k .EQ. l) THEN
+    !i+1,i
+    IF (PsiL(i) .EQ. PsiR(i)+1) THEN
+      !j+1,j
+      IF (PsiL(j) .EQ. PsiR(j)+1) THEN
+        m = PsiR(i)
+        n = PsiR(j)
+        quarval = quarval + Phi/24.0D0*Q1int(m,i)*Q3int(2*n,j)
+      !j+3,j
+      ELSE IF (PsiL(j) .EQ. PsiR(j)+3) THEN
+        m = PsiR(i)
+        n = PsiR(j)
+        quarval = quarval + Phi/24.0D0*Q1int(m,i)*Q3int(2*n+1,j)
+      END IF
+    END IF
+
+  !type 4 : i i k k
+  ELSE IF (i .EQ. j .AND. j .NE. k .AND. k .EQ. l) THEN
+    !i,i
+    IF (PsiL(i) .EQ. PsiR(i)) THEN
+      !k,k
+      IF (PsiL(k) .EQ. PsiR(k)) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        quarval = quarval + Phi/24.0D0*Q2int(2*m,i)*Q2int(2*o,k)
+      !k+2,k
+      ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        quarval = quarval + Phi/24.0D0*Q2int(2*m,i)*Q2int(2*o+1,k)
+      END IF
+    !i+2,i
+    ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
+      !k,k
+      IF (PsiL(k) .EQ. PsiR(k)) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        quarval = quarval + Phi/24.0D0*Q2int(2*m+1,i)*Q2int(2*o,k)
+      !k+2,k
+      ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        quarval = quarval + Phi/24.0D0*Q2int(2*m+1,i)*Q2int(2*o+1,k)
+      END IF
+    END IF
+
+  !type 5 : i i k l
+  ELSE IF (i .EQ. j .AND. j .NE. k .AND. k .NE. l) THEN
+    !k+1,k l+1,l
+    IF (PsiL(k) .EQ. PsiR(k)+1 .AND. PsiL(l) .EQ. PsiR(l)+1) THEN
+      !i,i
+      IF (PsiL(i) .EQ. PsiR(i)) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        p = PsiR(l)
+        quarval = quarval + Phi/24.0D0*Q2int(2*m,i)*&
+                            Q1int(o,k)*Q1int(p,l)
+      !i+2,i
+      ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        p = PsiR(l)
+        quarval = quarval + Phi/24.0D0*Q2int(2*m+1,i)*&
+                            Q1int(o,k)*Q1int(p,l)
+      END IF
+    END IF
+
+  !type 6 : i j k k
+  ELSE IF (i .NE. j .AND. j .NE. k .AND. k .EQ. l) THEN
+    !i,i+1  j,j+1
+    IF (PsiL(i) .EQ. PsiR(i)+1 .AND. PsiL(j) .EQ. PsiR(j)+1) THEN
+      !k,k
+      IF (PsiL(k) .EQ. PsiR(k)) THEN
+        m = PsiR(i) 
+        n = PsiR(j)
+        o = PsiR(k)
+        quarval = quarval + Phi/24.0D0*Q1int(m,i)*&
+                            Q1int(n,j)*Q2int(2*o,k)
+      !k+2,k
+      ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
+        m = PsiR(i) 
+        n = PsiR(j)
+        o = PsiR(k)
+        quarval = quarval + Phi/24.0D0*Q1int(m,i)*&
+                            Q1int(n,j)*Q2int(2*o+1,k)
+       END IF
+    END IF
+
+  !type 7 : i j k l
+  ELSE
+    !i+1,i  j+1,j  k+1,k  l+1,l
+    IF (PsiL(i) .EQ. PsiR(i)+1 .AND. PsiL(j) .EQ. PsiR(j)+1 &
+        .AND. PsiL(k) .EQ. PsiR(k)+1 .AND. PsiL(l) .EQ. PsiR(l)+1) THEN
+      m = PsiR(i)
+      n = PsiR(j)
+      o = PsiR(k)
+      p = PsiR(l)
+      quarval = quarval + Phi/24.0D0*Q1int(m,i)*Q1int(n,j)*&
+                          Q1int(o,k)*Q1int(p,l)
+    END IF   
+  END IF
+END SUBROUTINE ints_HO_quareval
+
 !------------------------------------------------------------
 END MODULE ints_HO
 !------------------------------------------------------------
