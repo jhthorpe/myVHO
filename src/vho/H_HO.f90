@@ -328,13 +328,15 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Q1int,Q2int,Q3int,Q4int,&
                                                P2int
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,keyR,keyL,numL
+  INTEGER, DIMENSION(0:ndim-2) :: dumL,dumR,two,keyI
   REAL(KIND=8) :: val
   INTEGER :: N,M,mbas,il,ir
-  INTEGER :: i,j,k,a
+  INTEGER :: i,j,k,l,a
 
   error = 0
   N = PRODUCT(nbas)
   mbas = MAXVAL(nbas)
+  two = 2
   Hij = 0.0D0
 
   ALLOCATE(Q1int(0:mbas-1,0:ndim-1))
@@ -377,22 +379,28 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                            nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
                            Q3int,Q4int,P2int,val,error)       
 
-      !swap the indices and fill in
+      !fill in all permutations other than first index
+      !we ignore the first index because lower triangular
       CALL key_ids2idx(ndim,nbas,keyR,PsiL,i) 
-      Hij(i,j) = val 
-      DO a=0,ndim-1
-        IF (PsiL(a) .NE. PsiR(a)) THEN
-          il = i - (PsiL(a)-PsiR(a))*keyR(a)
-          ir = j + (PsiL(a)-PsiR(a))*keyR(a) 
-          IF (il .GT. ir) THEN
-            Hij(il,ir) = val
-          END IF 
-        END IF
+      DO l=0,2**(ndim-1)-1
+        il = i
+        ir = j
+        DO a=1,ndim-1
+          IF (MOD(l/2**(a-1),2) .EQ. 1) THEN
+            il = il - (PsiL(a)-PsiR(a))*keyR(a)
+            ir = ir + (PsiL(a)-PsiR(a))*keyR(a)
+          END IF    
+        END DO
+        Hij(il,ir) = val
       END DO
-
     END DO 
   END DO 
-  WRITE(*,*)
+
+
+  !WRITE(*,*)
+  !DO j=0,N-1
+  !  WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
+  !END DO
 
   DEALLOCATE(Q1int)
   DEALLOCATE(Q2int)

@@ -61,6 +61,8 @@ SUBROUTINE fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   IF (error .NE. 0) RETURN
   CALL fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
   IF (error .NE. 0) RETURN
+  !Q3 = Q3*6.0D0
+  !Q4 = Q4*24.0D0
 END SUBROUTINE fcon_get
 
 ! OLD CODE

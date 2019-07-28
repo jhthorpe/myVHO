@@ -7,55 +7,6 @@ MODULE ints_HO
   USE val
 
 CONTAINS
-!------------------------------------------------------------
-! ints_HO_key
-!       - generate the proper key for determining quantum
-!         numbers
-!------------------------------------------------------------
-! ndim          : int, number of dimensions
-! nbas          : 1D int, nubmer of basis functions per d
-! key           : 1D int, key
-! error         : int, exit code
-
-SUBROUTINE ints_HO_key(ndim,nbas,key,error)
-  IMPLICIT NONE
-  INTEGER, DIMENSION(0:), INTENT(INOUT) :: key
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
-  INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim
-  INTEGER :: i
-  error = 0
-  key(ndim-1) = 1
-  DO i=ndim-2,0,-1
-    key(i) = key(i+1)*nbas(i+1)
-  END DO
-END SUBROUTINE ints_HO_key
-
-!------------------------------------------------------------
-! ints_HO_qnum
-!       - returns quantum number array given the proper key 
-!       - this assumes the product array has the final index
-!         as the inner most loop
-!------------------------------------------------------------
-! ndim          : int, number of dimensions
-! it            : int, location in 1D product array
-! nbas          : 1D int, basis functons per dimension
-! key           : 1D int, key vector
-! qnum          : 1D int, quantum number vector
-! error         : int, exti code
-
-SUBROUTINE ints_HO_qnum(ndim,it,nbas,key,qnum,error)
-  IMPLICIT NONE
-  INTEGER, DIMENSION(0:), INTENT(INOUT) :: qnum
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,key
-  INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,it
-  INTEGER :: i
-  error = 0
-  DO i=0,ndim-1
-    qnum(i) = MOD((it)/key(i),nbas(i))
-  END DO 
-END SUBROUTINE ints_HO_qnum
 
 !------------------------------------------------------------
 ! ints_HO_Norm
@@ -288,7 +239,7 @@ SUBROUTINE ints_HO_Q1calc(ndim,nbas,Q1int,error)
   WRITE(*,*) "<i|q|i'> type integrals"
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
-      Q1int(i,j) = SQRT(0.5D0*(i+1.0D0))
+      Q1int(i,j) = SQRT(0.5D0*(1.0D0*i+1.0D0))
     END DO
   END DO
 END SUBROUTINE ints_HO_Q1calc
@@ -615,11 +566,19 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
   j = qPhi(1)
   k = qPhi(2)
 
+ ! WRITE(*,*) "qPHI is", qPhi
+ ! WRITE(*,*) "PsiL", PsiL
+ ! WRITE(*,*) "PsiR", PsiR
   !check orthogonality of univolved dimensions
   IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
       ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
       ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
       ANY(PsiL(k+1:ndim-1) .NE. PsiR(k+1:ndim-1)) &
+ ! ) THEN
+ !   WRITE(*,*) "Skipping"
+ !   ELSE
+ !   WRITE(*,*) "Calculating"
+ ! END IF 
   ) RETURN 
 
   !type 1, q^3
@@ -674,10 +633,11 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
     IF (PsiL(i) .EQ. PsiR(i)+1 .AND. &
         PsiL(j) .EQ. PsiR(j)+1 .AND. &
         PsiL(k) .EQ. PsiR(k)+1 ) THEN
-      n = PsiL(i)
-      m = PsiL(j)
-      o = PsiL(k) 
+      n = PsiR(i)
+      m = PsiR(j)
+      o = PsiR(k) 
       cubival = cubival + Phi/6.0D0*Q1int(n,i)*Q1int(m,j)*Q1int(o,k)
+      !cubival = cubival + Phi*Q1int(n,i)*Q1int(m,j)*Q1int(o,k)
     END IF
   END IF
 
