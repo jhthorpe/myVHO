@@ -97,9 +97,9 @@ SUBROUTINE input_check(job,bas,ndim,nbas,enum,mem,error)
   IF (job .NE. -2 .AND. job .NE. 1 .AND. job .NE. 2) THEN
     WRITE(*,*) "vho.in line #1"
     WRITE(*,*) "Jobtype", job," is not supported. Options are..."
-    WRITE(*,*) "-2 : print points for V gaussian quadrature"
+    WRITE(*,*) "-2 : print points for V diagonal gaussian quadrature"
     WRITE(*,*) " 1 : V from force constants up to 4th order" 
-    WRITE(*,*) " 2 : V seperable from gaussian quadrature" 
+    WRITE(*,*) " 2 : V diagonal from gaussian quadrature" 
     error = 1
   END IF
   IF (bas .NE. 1) THEN
@@ -260,6 +260,7 @@ SUBROUTINE input_QUAD_natoms(natoms,error)
   CLOSE(unit=fid)
 
   WRITE(*,*) "Number of atoms: ", natoms
+  WRITE(*,*)
 
 END SUBROUTINE input_QUAD_natoms
 

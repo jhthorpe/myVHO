@@ -61,38 +61,7 @@ SUBROUTINE fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   IF (error .NE. 0) RETURN
   CALL fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
   IF (error .NE. 0) RETURN
-  !Q3 = Q3*6.0D0
-  !Q4 = Q4*24.0D0
 END SUBROUTINE fcon_get
-
-! OLD CODE
-!SUBROUTINE fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-!                 nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,nQP,qQP,QP,&
-!                 nPQ,qPQ,PQ,error)
-!  IMPLICIT NONE
-!  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q1,Q2,Q3,Q4,&
-!                                                            P1,P2,QP,PQ
-!  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ1,qQ2,qQ3,qQ4,&
-!                                                       qP1,qP2,qQP,qPQ
-!  INTEGER, INTENT(INOUT) :: nQ1,nQ2,nQ3,nQ4,nP1,nP2,nQP,nPQ
-!  INTEGER, INTENT(INOUT) :: error
-!  CALL fcon_read_Q1(ndim,nQ1,qQ1,Q1,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_Q2(ndim,nQ2,qQ2,Q2,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_Q3(ndim,nQ3,qQ3,Q3,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_Q4(ndim,nQ4,qQ4,Q4,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_P1(ndim,nP1,qP1,P1,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_P2(ndim,nP2,qP2,P2,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_QP(ndim,nQP,qQP,QP,error)
-!  IF (error .NE. 0) RETURN
-!  CALL fcon_read_PQ(ndim,nPQ,qPQ,PQ,error)
-!  IF (error .NE. 0) RETURN
-!END SUBROUTINE fcon_get
 
 !------------------------------------------------------------
 ! fcon_read_Q1

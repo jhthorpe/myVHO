@@ -16,47 +16,46 @@ CONTAINS
 !------------------------------------------------------------
 ! job           : int, job type
 ! ndim          : int, number of dimensions
-! nabs          : int, number of abscissa
-! q             : 1D real*8, abscissa        
+! nabs          : 1D int, number of abscissa
 ! Vij           : 2D real*8, potential energy [abscissa,dimension]
 ! error         : int, exit code          
 
-SUBROUTINE V_get(job,ndim,nabs,q,Vij,error)
+SUBROUTINE V_get(job,ndim,nabs,Vij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij
-  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: q
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: job,ndim,nabs
+  INTEGER, INTENT(IN) :: job,ndim
 
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vtemp,qtemp
   INTEGER, DIMENSION(0:ndim-1) :: npot
   INTEGER :: i,j
 
   error = 0
   !read in potential energies
-  CALL V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
+  CALL V_read(job,ndim,nabs,Vij,error)
   IF (error .NE. 0) RETURN 
-  IF (job .EQ. 0) THEN
-    Vij = Vtemp
-    q = qtemp(:,0)
-  END IF
   
-  IF (job .EQ. 1) THEN
-    CALL V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
-    IF (error .NE. 0) THEN
-      RETURN
-    END IF 
-  END IF
+ ! IF (job .EQ. 1) THEN
+ !   CALL V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
+ !   IF (error .NE. 0) THEN
+ !     RETURN
+ !   END IF 
+ ! END IF
  
   !adjust potentials to be zero
   DO j=0,ndim-1
-    Vij(0:nabs-1,j) = Vij(0:nabs-1,j) - MINVAL(Vij(0:nabs-1,j))
+    Vij(0:nabs(j)-1,j) = Vij(0:nabs(j)-1,j) - MINVAL(Vij(0:nabs(j)-1,j))
   END DO
 
   Vij = Vij*219474.63 !convert hartrees to cm-1
-
-  IF(ALLOCATED(Vtemp)) DEALLOCATE(Vtemp)
-  IF(ALLOCATED(qtemp)) DEALLOCATE(qtemp)
+  !WRITE(*,*) "TESTING TESTING TESTING"
+  !DO i=0,ndim-1
+  !  WRITE(*,*) "Dimension", i
+  !  WRITE(*,*) "------------------------"
+  !  DO j=0,nabs(i)-1
+  !    WRITE(*,*) j,Vij(j,i)
+  !  END DO
+  !END DO
 
 END SUBROUTINE V_get
 
@@ -72,43 +71,38 @@ END SUBROUTINE V_get
 ! qtemp         : 2D real*8, normco at points [normco, dimension]
 ! error         : int, error code
 
-SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
+SUBROUTINE V_read(job,ndim,nabs,Vij,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Vtemp,qtemp
-  INTEGER, DIMENSION(0:), INTENT(INOUT) :: npot
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,job,nabs
+  INTEGER, INTENT(IN) :: ndim,job
 
   CHARACTER(LEN=1024) :: fname
-  REAL(KIND=8) :: val1,val2
+  REAL(KIND=8) :: val1
   INTEGER :: foff,fid,dummy 
   INTEGER :: i,j
 
   error = 0
   foff = 200
-  IF (job .EQ. 1 .OR. job .EQ. 0) THEN  !if we are not already in abscissa form
-    !check files exist and get the number of lines
-    DO i=0,ndim-1
-      CALL fname_Vin(i+1,fname,error)
-      IF (error .NE. 0) RETURN
-      CALL input_fline(npot(i),fname,error) 
-      IF (error .NE. 0) RETURN
-    END DO
-
-    ALLOCATE(Vtemp(0:MAXVAL(npot)-1,0:ndim-1))
-    ALLOCATE(qtemp(0:MAXVAL(npot)-1,0:ndim-1))
+  IF (job .EQ. 2) THEN
 
     DO j=0,ndim-1
       fid = foff + j
       CALL fname_Vin(j+1,fname,error)
       IF (error .NE. 0) RETURN
       OPEN(file=TRIM(fname),unit=fid,status='old')
-      DO i=0,npot(j)-1
-        READ(fid,*) dummy, val1, val2
+      DO i=0,nabs(j)-1
+        READ(fid,*) dummy, val1
+        IF (dummy .LT. 1 .OR. dummy .GT. nabs(j)) THEN
+          WRITE(*,*) "V_read  : error"
+          WRITE(*,*) "Line :",i,"of file",TRIM(fname)
+          WRITE(*,*) "Input is outside of range [1:nabs(j)]"
+          error = 1
+          RETURN
+        END IF
         dummy = dummy - 1
-        qtemp(dummy,j) = val1
-        Vtemp(dummy,j) = val2
-        !READ(fid,*) dummy, qtemp(i,j),Vtemp(i,j)
+        Vij(dummy,j) = val1
       END DO
       CLOSE(unit=fid)
     END DO
@@ -119,21 +113,6 @@ SUBROUTINE V_read(job,ndim,nabs,npot,qtemp,Vtemp,error)
     error = 1
     RETURN
   END IF
-
-  IF (job .EQ. 0) THEN
-    IF (ANY(npot .NE. nabs)) THEN
-      WRITE(*,*) "V_read  : ERROR"
-      WRITE(*,*) "Incorrect number of abscissa provided"
-    END IF
-  END IF
-
-  !WRITE(*,*) "TESTING TESTING TESTING"
-  !DO i=0,ndim-1
-  !  WRITE(*,*) "------------------------"
-  !  DO j=0,npot(i)-1
-  !    WRITE(*,*) j,qtemp(j,i),Vtemp(j,i)
-  !  END DO
-  !END DO
 
 END SUBROUTINE V_read
 

@@ -28,17 +28,18 @@ CONTAINS
 
 SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   IMPLICIT NONE
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER(KIND=8), INTENT(IN) :: mem
   INTEGER, INTENT(INOUT) :: memstat,error
-  INTEGER, INTENT(IN) :: job,N,ndim,nabs
+  INTEGER, INTENT(IN) :: job,N,ndim
   REAL(KIND=8) :: minmem,premem,inmem,basemem,qw2mb,qmem
-  INTEGER :: mbas
+  INTEGER :: mbas,mabs
 
   error = 0
   qw2mb = 8.0D0/1000000.0D0
   qmem = mem/qw2mb
   mbas = MAXVAL(nbas)
+  mabs = MAXVAL(nabs)
   WRITE(*,*) "Hamiltonian Memory Analysis"
   CALL val_check(qmem,error)
   IF (error .NE. 0) THEN
@@ -65,14 +66,14 @@ SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
     WRITE(*,*) "Memory analysis for jobtype 2 is probably wrong"
     WRITE(*,*)
     
-    minmem = N + 3*nabs + 5*ndim + MAXVAL(nbas)*nabs + &
+    minmem = N + 3*mabs + 5*ndim + MAXVAL(nbas)*mabs + &
              MAXVAL(nbas)*ndim + MAXVAL(nbas) + &
              MAXVAL(nbas)*ndim + basemem
-    premem = N + 2*nabs + 5*ndim + nabs*ndim + &
-                MAXVAL(nbas)*nabs + MAXVAL(nbas)**2.0D0*ndim &
+    premem = N + 2*mabs + 5*ndim + mabs*ndim + &
+                MAXVAL(nbas)*mabs + MAXVAL(nbas)**2.0D0*ndim &
                 + MAXVAL(nbas) + 6*MAXVAL(nbas)*ndim + basemem
-    inmem = N**2.0D0 + 2*nabs + 5*ndim + nabs*ndim + &
-                MAXVAL(nbas)*nabs + MAXVAL(nbas)**2.0D0*ndim &
+    inmem = N**2.0D0 + 2*mabs + 5*ndim + mabs*ndim + &
+                MAXVAL(nbas)*mabs + MAXVAL(nbas)**2.0D0*ndim &
                 + MAXVAL(nbas) + 6*MAXVAL(nbas)*ndim + basemem
   ELSE IF (job .EQ. 1) THEN
     ! terms are [minmem], [premem], [inmem]

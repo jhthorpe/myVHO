@@ -22,19 +22,19 @@ CONTAINS
 ! ndim          : int, number of normal coords
 ! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
-! nabs          : int, number of abscissa
-! q             : 1D real*8, list of abscissa
-! W             : 1D real*8, list of weights
+! nabs          : 1D int, number of abscissa
+! q             : 2D real*8, list of abscissa
+! W             : 2D real*8, list of weights
 ! Hij           : 2D real*8, hamiltonian
 ! error         : int, error code
 
 SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: Hij
-  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: q,W
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER(KIND=8), INTENT(IN) :: mem
-  INTEGER, INTENT(IN) :: job,ndim,nabs
+  INTEGER, INTENT(IN) :: job,ndim
   INTEGER, INTENT(INOUT) :: error
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij, Herm
@@ -59,7 +59,7 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IF (memstat .EQ. 2) THEN
     ALLOCATE(Hij(0:N-1,0:N-1))
   ELSE 
-    WRITE(*,*) "Sorry, only incore memory coded"
+    WRITE(*,*) "Only incore memory coded"
     error = 1
     RETURN
   END IF
@@ -71,28 +71,26 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
     IF (error .NE. 0) RETURN
 
     !Get potential energies at abscissa 
-    ALLOCATE(Vij(0:nabs-1,0:ndim-1))
-    CALL V_get(job,ndim,nabs,q,Vij,error)
+    ALLOCATE(Vij(0:MAXVAL(nabs)-1,0:ndim-1))
+    CALL V_get(job,ndim,nabs,Vij,error)
     IF (error .NE. 0) RETURN
 
-    !Generate Hermite Polynomials
-    IF (memstat .EQ. 2) THEN
-      ALLOCATE(Herm(0:MAXVAL(nbas)-1,0:nabs-1))
-      CALL H_HO_Hermite_incore(nabs,nbas,q,Herm,error)
-    END IF
-    IF (error .NE. 0) RETURN
   END IF
+  
 
-  !Read in force constant data 
-  !CALL fcon_get(ndim,nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-  !                 nQ4,qQ4,Q4,nP1,qP1,P1,nP2,qP2,P2,nQP,qQP,QP,&
-  !                 nPQ,qPQ,PQ,error)
   CALL fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,nQ4,qQ4,Q4,error)
   IF (error .NE. 0) RETURN
 
   IF (job .EQ. 1) THEN
-    CALL H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-                                nQ4,qQ4,Q4,Hij,error)
+    IF (memstat .EQ. 2) THEN
+      CALL H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
+                                  nQ4,qQ4,Q4,Hij,error)
+    END IF
+  ELSE IF (job .EQ. 2) THEN
+    IF (memstat .EQ. 2) THEN
+      CALL H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ3,qQ3,Q3,nQ4,qQ4,Q4,&
+                                  Vij,Hij,error)
+    END IF
   END IF
 
 
@@ -119,6 +117,55 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   WRITE(*,*)
 
 END SUBROUTINE H_HO_build
+
+!------------------------------------------------------------
+! H_HO_Hermcalc
+!       - calculates needed hermite polynomials
+!       - stored [abscissa,basis qn, dimension]
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nbas          : 1D int, number of basis functions
+! nabs          : 1D int, number of abscissa
+! q             : 2D real*8, abscissa [abscissa, dimension]
+! Herm          : 3D real*8, hermite poly [abcs,basis qn,dimension]
+! error         : int, exit code
+
+SUBROUTINE H_HO_Hermcalc(ndim,nbas,nabs,q,Herm,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(INOUT) :: Herm
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  REAL(KIND=8) :: qval
+  INTEGER :: i,j,k
+  error = 0
+  Herm = 0.0D0
+  DO k=0,ndim-1
+    DO j=0,nbas(k)-1
+      IF (j .EQ. 0) THEN
+        Herm(0:nabs(k)-1,0,k) = 1.0D0
+      ELSE IF (j .EQ. 1) THEN
+        Herm(0:nabs(k)-1,1,k) = 2.0D0*q(0:nabs(k)-1,k)
+      ELSE
+        Herm(0:nabs(k)-1,j,k) = 2.0D0*q(0:nabs(k)-1,k)*Herm(0:nabs(k)-1,j-1,k)&
+                                -  2.0D0*(j-1)*Herm(0:nabs(k)-1,j-2,k)
+      END IF
+    END DO
+  END DO
+
+  !WRITE(*,*) "TESTING TESTING TESTING"
+  !WRITE(*,*) "qi is",q(0,0)
+  !DO i=0,nbas(0)-1
+  !  WRITE(*,*) "v=",i+1,"Hi(qi)",Herm(0,i,0)
+  !END DO
+  !WRITE(*,*) "TESTING TESTING TESTING"
+  !WRITE(*,*) "qi is",q(1,1)
+  !DO i=0,nbas(1)-1
+  !  WRITE(*,*) "v=",i+1,"Hi(qi)",Herm(1,i,1)
+  !END DO
+
+END SUBROUTINE H_HO_Hermcalc
 
 !------------------------------------------------------------
 ! H_HO_Hermite_incore
@@ -173,6 +220,7 @@ END SUBROUTINE H_HO_Hermite_incore
 !       - X = Q,P,QP,PQ
 !       - Y = 1,2,3,4, order. 
 !       - example: nQ4 -> number of Q^4 type force constants 
+!       OUTDATED
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
 ! nbas          : 1D int, number of basis functions
@@ -187,6 +235,7 @@ END SUBROUTINE H_HO_Hermite_incore
 ! Herm          : 2D real*8, hermite polynomials [order,abscissa]
 ! Hij           : 2D real*8, product basis hamiltonian
 ! error         : int, exit code
+!
 !------------------------------------------------------------
 SUBROUTINE H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
                      nQ1,qQ1,Q1,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
@@ -212,19 +261,21 @@ SUBROUTINE H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   error = 0
   Hij = 0.0D0
   N = PRODUCT(nbas)
+  WRITE(*,*) "This function no longer supported"
+  STOP
 
   !generate keys
-  CALL key_generate(ndim,nbas,key)
+ ! CALL key_generate(ndim,nbas,key)
 
   !Generate normalization constants
-  WRITE(*,*) "Calculating Normalization Constants..."
-  ALLOCATE(norm(0:MAXVAL(nbas)-1))
-  CALL ints_HO_normcalc(nabs,nbas,W,Herm,norm,error)
+  !WRITE(*,*) "Calculating Normalization Constants..."
+  !ALLOCATE(norm(0:MAXVAL(nbas)-1))
+  !CALL ints_HO_normcalc(nabs,nbas,W,Herm,norm,error)
 
   !Generate V integrals
-  WRITE(*,*) "Calculating Potential Integrals..."
-  ALLOCATE(VTint(0:MAXVAL(nbas)-1,0:MAXVAL(nbas)-1,0:ndim-1))
-  CALL ints_HO_VTcalc(ndim,nabs,nbas,q,W,basK,norm,Herm,Vij,VTint,error)
+  !WRITE(*,*) "Calculating Potential Integrals..."
+  !ALLOCATE(VTint(0:MAXVAL(nbas)-1,0:MAXVAL(nbas)-1,0:ndim-1))
+  !CALL ints_HO_VTcalc(ndim,nabs,nbas,q,W,basK,norm,Herm,Vij,VTint,error)
 
   !Generate Q1 integrals
   !WRITE(*,*) "Calculating Q1 integrals"
@@ -238,39 +289,39 @@ SUBROUTINE H_HO_build_incore(ndim,nbas,nabs,q,W,Vij,basK,&
   !Perhaps this can be reversed? Loop over dimensions, and then
   ! over i,j ?
   !Go through vector by vector
-  WRITE(*,*) "Filling in Hamiltonian..."
-  DO j=0,N-1
+  !WRITE(*,*) "Filling in Hamiltonian..."
+  !DO j=0,N-1
 
-    !generate quantum number of R
-    CALL key_idx2ids(ndim,j,nbas,key,PsiR)
-
-    !lower triangular
-    DO i=j,N-1
-      CALL key_idx2ids(ndim,i,nbas,key,PsiL)
-     
-      !Construct each part of the integral
-      !Potential + Kinetic precalculated
-      CALL ints_HO_VTput(ndim,PsiL,PsiR,VTint,Hij(i,j),error)
-   
-      !force constants
-      !CALL ints_Q1put(nabs,PsiL,PsiR,Q1int,Hij(i,j),error)
-
-      !check the value
-      CALL val_check(Hij(i,j),error) 
-      IF (error .NE. 0) THEN
-        WRITE(*,*) "H_HO_build_incore  : ERROR"
-        WRITE(*,*) "This integral had a bad value",N
-        WRITE(*,*) "PsiL",PsiL
-        WRITE(*,*) "PsiR",PsiR
-      END IF
+  !  !generate quantum number of R
+  !  CALL key_idx2ids(ndim,j,nbas,key,PsiR)
+!
+!    !lower triangular
+ !   DO i=j,N-1
+ !     CALL key_idx2ids(ndim,i,nbas,key,PsiL)
+ !    
+ !     !Construct each part of the integral
+ !     !Potential + Kinetic precalculated
+ !     CALL ints_HO_VTput(ndim,PsiL,PsiR,VTint,Hij(i,j),error)
+ !   
+ !     !force constants
+ !     !CALL ints_Q1put(nabs,PsiL,PsiR,Q1int,Hij(i,j),error)
+!
+!      !check the value
+!      CALL val_check(Hij(i,j),error) 
+!      IF (error .NE. 0) THEN
+!        WRITE(*,*) "H_HO_build_incore  : ERROR"
+!        WRITE(*,*) "This integral had a bad value",N
+!        WRITE(*,*) "PsiL",PsiL
+!        WRITE(*,*) "PsiR",PsiR
+!      END IF
+!  
+!    END DO
   
-    END DO
-  
-  END DO
+ ! END DO
 
   WRITE(*,*)
-  DEALLOCATE(norm)
-  DEALLOCATE(VTint)
+!  DEALLOCATE(norm)
+!  DEALLOCATE(VTint)
 
 END SUBROUTINE H_HO_build_incore
 
@@ -328,15 +379,12 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Q1int,Q2int,Q3int,Q4int,&
                                                P2int
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,keyR,keyL,numL
-  INTEGER, DIMENSION(0:ndim-2) :: dumL,dumR,two,keyI
   REAL(KIND=8) :: val
   INTEGER :: N,M,mbas,il,ir
   INTEGER :: i,j,k,l,a
 
   error = 0
-  N = PRODUCT(nbas)
   mbas = MAXVAL(nbas)
-  two = 2
   Hij = 0.0D0
 
   ALLOCATE(Q1int(0:mbas-1,0:ndim-1))
@@ -361,11 +409,21 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   IF (error .NE. 0) RETURN 
 
   WRITE(*,*) "Filling the Hamiltonian..."
-  CALL key_generate(ndim,nbas,keyR) !loop over all for ket
+  ! the combination of key_generate and key_idx2ids
+  ! allows us to transform what could be coded as a 
+  ! recursive call into two unrolled loops
+  ! The ket loop needs to go over all states
+  !   to be lower triangular
+  CALL key_generate(ndim,nbas,keyR) 
+  N = PRODUCT(nbas)
   DO j=0,N-1
     CALL key_idx2ids(ndim,j,nbas,keyR,PsiR)
 
-    numL = MIN(nbas - PsiR,5) !only elements +/- 4 contribute
+    !This is a fun little bit of code. It ensures that all
+    ! indices on LHS are >= their partners on the RHS. 
+    ! Additionally, for this polynomial case, only 
+    ! elements within +/- 4 of the RHS can contribute. 
+    numL = MIN(nbas - PsiR,5) 
     M = PRODUCT(numL) ! number of elements in bra loop 
     CALL key_generate(ndim,numL,keyL)
 
@@ -374,7 +432,6 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
       PsiL = PsiR + PsiL
 
       !evaluate force constants
-      !get new index and write 
       CALL ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
                            nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
                            Q3int,Q4int,P2int,val,error)       
@@ -395,7 +452,7 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
       END DO
     END DO 
   END DO 
-
+  WRITE(*,*)
 
   !WRITE(*,*)
   !DO j=0,N-1
@@ -409,6 +466,148 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   DEALLOCATE(P2int)
 
 END SUBROUTINE H_HO_build_poly_incore
+
+!------------------------------------------------------------
+! H_HO_build_quad_incore
+!       - constructs hamiltonian where diagonal potential 
+!         terms are calcualted via gaussian quadrature, 
+!         and cubic/quartic force constants are calcualted 
+!         via Harmonic oscillator integrals
+!       - all memory is contained incore
+!
+!       PsiL and PsiR are the quantum nubmers of the left/right
+!            wavefunctions
+!
+!       Integrals are stored like:
+!       VT((j-i)+(keyI(i,k),k) -> <j|Vk + Tk|i>
+!       Q3(2*i,k) -> <i+1|Qk^3|i>  , Q3(2*i+1,k) -> <i+3|Qk^3|i>
+!       Q4(3*i,k) -> <i|Qk^4|i>    , Q4(3*i+1,k) -> <i+2|Qk^4|i>
+!                                  , Q4(3*i+2,k) -> <i+4|Qk^4|i>
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nbas          : 1D int, number of basis functions per dimension
+! nabs          : 1D int, number of abscissa per dimensions
+! q             : 2D real*8, abscissa   [abscissa,dimension]
+! W             : 2D real*8, weights    [abscissa,dimension]
+! basK          : 1D real*8, basis function frequencies
+! nQ3           : int, number of cubic force constants
+! qQ3           : 1D int, QNs of cubic force constants
+! Q3            : 1D real*8, cubic force constants
+! nQ4           : int, number of quartic force constants
+! qQ4           : 1D int, QNs of quartic force constants
+! Q4            : 1D real*8, quartic force constants 
+! Vij           : 2D real*8, potential energy   [abscissa,dimension]
+! Hij           : 2D real*8, hamiltonian
+! error         : int, exit code
+
+SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ3,qQ3,Q3,nQ4,qQ4,Q4,&
+                                  Vij,Hij,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Vij,q,W
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: basK,Q3,Q4
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,qQ3,qQ4
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,nQ3,nQ4
+
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: Herm
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: norm,VTint,Q3int,Q4int
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: keyI
+  INTEGER, DIMENSION(0:ndim-1) :: keyL,keyR,PsiL,PsiR
+  INTEGER :: N,M,mbas,mabs
+  INTEGER :: i,j,k,l 
+
+  error = 0
+  Hij = 0.0D0
+  mbas = MAXVAL(nbas)
+  mabs = MAXVAL(nabs)
+
+  WRITE(*,*) "WARNING "
+  WRITE(*,*) "There is a good chance the normalization integrals"
+  WRITE(*,*) "  need to be calculated with more abscissa"
+
+  !generate key for intermediates
+  ALLOCATE(keyI(0:mbas-1,0:ndim-1))
+  DO k=0,ndim-1
+    keyI(0,k) = 0
+    DO j=1,nbas(k)-1
+      keyI(j,k) = keyI(j-1,k) + nbas(k) - (j-1)
+    END DO
+  END DO 
+  WRITE(*,*) "key0 is", keyI(0:nbas(0)-1,0)
+
+  !precalculate integrals
+  ! hermite polynomials, normalization, potential and kinetic terms
+  ALLOCATE(Herm(0:mabs-1,0:mbas-1,0:ndim-1))
+  ALLOCATE(VTint(0:(mbas*mbas+1)/2-1,0:ndim-1))
+  ALLOCATE(norm(0:mbas-1,0:ndim-1))
+  CALL H_HO_Hermcalc(ndim,nbas,nabs,q,Herm,error)
+  IF (error .NE. 0) RETURN 
+  CALL ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
+  IF (error .NE. 0) RETURN 
+  CALL ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,VTint,error)
+  IF (error .NE. 0) RETURN 
+  DEALLOCATE(norm)
+  DEALLOCATE(Herm)
+  !force constant integrals
+  ALLOCATE(Q3int(0:2*mbas-1,0:ndim-1))
+  ALLOCATE(Q4int(0:3*mbas-1,0:ndim-1))
+  CALL ints_HO_Q4calc(ndim,nbas,Q4int,error)
+  IF (error .NE. 0) RETURN 
+  CALL ints_HO_P2calc(ndim,nbas,P2int,error)
+  IF (error .NE. 0) RETURN 
+
+  !Fill in the diagonal potential integrals ???
+
+  !Fill in the force constant integrals
+  WRITE(*,*) "Filling the Hamiltonian..."
+  ! the combination of key_generate and key_idx2ids
+  ! allows us to transform what could be coded as a 
+  ! recursive call into two unrolled loops
+  ! The ket loop needs to go over all states
+  !   to be lower triangular
+  CALL key_generate(ndim,nbas,keyR) 
+  N = PRODUCT(nbas)
+  DO j=0,N-1
+    CALL key_idx2ids(ndim,j,nbas,keyR,PsiR)
+
+    !This is a fun little bit of code. It ensures that all
+    ! indices on LHS are >= their partners on the RHS. 
+    numL = MIN(nbas - PsiR,5)
+    M = PRODUCT(numL) ! number of elements in bra loop 
+    CALL key_generate(ndim,numL,keyL)
+
+    DO k=0,M-1
+      CALL key_idx2ids(ndim,k,numL,keyL,PsiL)
+      PsiL = PsiR + PsiL
+
+      !evaluate force constants
+
+
+      !fill in all permutations other than first index
+      !we ignore the first index because lower triangular
+      CALL key_ids2idx(ndim,nbas,keyR,PsiL,i) 
+      DO l=0,2**(ndim-1)-1
+        il = i
+        ir = j
+        DO a=1,ndim-1
+          IF (MOD(l/2**(a-1),2) .EQ. 1) THEN
+            il = il - (PsiL(a)-PsiR(a))*keyR(a)
+            ir = ir + (PsiL(a)-PsiR(a))*keyR(a)
+          END IF    
+        END DO
+        Hij(il,ir) = val
+      END DO
+    END DO 
+  END DO 
+  WRITE(*,*)
+
+  IF(ALLOCATED(keyI)) DEALLOCATE(keyI)
+  IF(ALLOCATED(VTint)) DEALLOCATE(VTint)
+  IF(ALLOCATED(Q3int)) DEALLOCATE(Q3int)
+  IF(ALLOCATED(Q4int)) DEALLOCATE(Q4int)
+
+END SUBROUTINE H_HO_build_quad_incore
 !------------------------------------------------------------
 ! H_HO_diag
 !       - diagonalizes the hamiltonian in the HO basis

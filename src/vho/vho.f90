@@ -21,12 +21,12 @@ PROGRAM vho
   USE H_HO
 
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: q,W,eval
-  INTEGER, DIMENSION(:), ALLOCATABLE :: nbas
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hij,Cij,q,W
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: eval
+  INTEGER, DIMENSION(:), ALLOCATABLE :: nbas,nabs
   INTEGER(KIND=8) :: mem
   REAL(KIND=8) :: ti,tf
-  INTEGER :: ndim,job,bas,error,nabs,enum
+  INTEGER :: ndim,job,bas,error,enum
   
   CALL CPU_TIME(ti)
   error = 0
@@ -40,13 +40,17 @@ PROGRAM vho
     STOP 1
   END IF
 
-  IF (ABS(job) .EQ. 2) THEN
-    CALL gauss_generate(job,bas,ndim,nbas,mem,nabs,q,W,error)
-    IF (error .NE. 0) THEN
-      CALL CPU_TIME(tf)
-      CALL vho_endmsg(ti,tf,error)
-      STOP 1
-    END IF
+  !generate abscissa if needed
+  IF (job .EQ. 2) THEN
+    CALL gauss_read(job,ndim,nabs,error)
+    CALL gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
+  ELSE IF (job .EQ. -2) THEN
+    CALL gauss_generate(job,bas,ndim,mem,nbas,q,W,error)
+  END IF
+  IF (error .NE. 0) THEN
+    CALL CPU_TIME(tf)
+    CALL vho_endmsg(ti,tf,error)
+    STOP 1
   END IF
 
   IF (job .LT. 0) THEN

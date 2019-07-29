@@ -14,38 +14,40 @@ CONTAINS
 ! job           : int, job type
 ! bas           : int, basis type
 ! ndim          : int, number of normal coords
-! nbas          : 1D int, number of basis functions in each dim 
 ! mem           : int*8, memory in MB
 ! error         : int, error code
-! nabs          : int, number of abscissa 
-! q             : 1D real*8, list of abscissa
-! W             : 1D real*8, list of weights 
+! nabs          : 1D int, number of abscissa in a dimension 
+! q             : 2D real*8, list of abscissa per dimension [abscissa,dim]
+! W             : 2D real*8, list of weights per dimension  [abscissa,dim]
 
-SUBROUTINE gauss_generate(job,bas,ndim,nbas,mem,nabs,q,W,error)
+SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: q,W
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: q,W
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER(KIND=8), INTENT(IN) :: mem
-  INTEGER, INTENT(INOUT) :: error,nabs
+  INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,bas,ndim
 
   REAL(KINd=8), DIMENSION(0:ndim-1) :: line
-  INTEGER ::i
+  INTEGER :: i,j
 
   error = 0
   IF (bas .EQ. 1) THEN
     WRITE(*,*) "Generating Gauss-Hermite abscissa and weights"
     WRITE(*,*) 
-    nabs = MAXVAL(nbas)+10
 
-    WRITE(*,*) "Number of abscissa to be used", nabs
-    ALLOCATE(q(0:nabs-1))
-    ALLOCATE(W(0:nabs-1))
+    WRITE(*,*) "The following number of abscissa will be used:"
+    WRITE(*,'(1x,999(I4,2x))')  nabs
+    WRITE(*,*)
+    ALLOCATE(q(0:MAXVAL(nabs)-1,0:ndim-1))
+    ALLOCATE(W(0:MAXVAL(nabs)-1,0:ndim-1))
     q = 0.0D0
     W = 0.0D0
 
-    CALL gauss_hermite(nabs,q,W,error)  
-    IF (error .NE. 0) RETURN
+    DO i=0,ndim-1
+      CALL gauss_hermite(nabs(i),q(0:nabs(i)-1,i),W(0:nabs(i)-1,i),error)  
+      IF (error .NE. 0) RETURN
+    END DO
     IF (job .EQ. -2) THEN
       CALL gauss_2_xyz(ndim,nabs,q,error)
     END IF
@@ -57,13 +59,19 @@ SUBROUTINE gauss_generate(job,bas,ndim,nbas,mem,nabs,q,W,error)
     RETURN
   END IF
 
-  WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
-  WRITE(*,*) 
-  OPEN(file='abscissa.dat',unit=101,status='replace')
-  DO i=0,nabs-1
-    WRITE(101,*) i+1,q(i),W(i)
-  END DO
-  CLOSE(unit=101)
+  IF (job .EQ. -2) THEN
+    WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
+    WRITE(*,*) 
+    OPEN(file='abscissa.dat',unit=101,status='replace')
+    DO j=0,ndim-1
+      WRITE(101,*) "Dimension :", j+1
+      DO i=0,nabs(j)-1
+        WRITE(101,*) i+1,q(i,j),W(i,j)
+      END DO
+      WRITE(101,*) "----------------------------------------------"
+    END DO
+    CLOSE(unit=101)
+  END IF
   WRITE(*,*) "----------------------------------------------"
   WRITE(*,*)
 
@@ -147,21 +155,50 @@ SUBROUTINE gauss_hermite(n,x,w,error)
 END SUBROUTINE gauss_hermite
 
 !---------------------------------------------------------------------
+! gauss_read
+!       - reads in how many abscissa will be needed per dimension
+!---------------------------------------------------------------------
+! job           : int, jobtype
+! ndim          : int, number of dimensions
+! nabs          : 1D int, abscissa per dimension 
+! error         : int, error code
+
+SUBROUTINE gauss_read(job,ndim,nabs,error)
+  IMPLICIT NONE
+  INTEGER, DIMENSION(:), ALLOCATABLE :: nabs
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,job
+  CHARACTER(LEN=1024) :: fname
+  INTEGER :: fline
+  INTEGER :: i
+  error = 0
+  IF (job .NE. 2) RETURN
+  ALLOCATE(nabs(0:ndim-1))
+  DO i=0,ndim-1
+    CALL fname_Vin(i+1,fname,error)
+    CALL input_fline(fline,fname,error)
+    IF (error .NE. 0) RETURN
+    nabs(i) = fline
+  END DO
+END SUBROUTINE gauss_read
+
+!---------------------------------------------------------------------
 ! gauss_2_xyz
 !       - converts gaussian quadrature to xyz coordinates
 !       - reads QUADRATURE file from CFOUR
 !---------------------------------------------------------------------
 ! ndim          : int, number of dimensions
-! nabs          : int, number of abscissa
-! q             : 1D real*8, abscsissa
+! nabs          : 1D int, number of abscissa per dimension
+! q             : 2D real*8, abscsissa per dimensions [abscissa,dim]
 ! error         : int, exit code
 
 SUBROUTINE gauss_2_xyz(ndim,nabs,q,error)
   IMPLICIT NONE
   
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,nabs
+  INTEGER, INTENT(IN) :: ndim
 
   REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: qmat
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: q0,xyz
@@ -210,8 +247,8 @@ SUBROUTINE gauss_2_xyz(ndim,nabs,q,error)
     fid = 500 + j
     CALL fname_pointstxt(j+1,fname,error)
     OPEN(file=TRIM(fname),unit=fid,status='replace')
-    DO i=0,nabs-1 
-      xyz = q0 + q(i)*qmat(0:natoms-1,0:2,j)
+    DO i=0,nabs(j)-1 
+      xyz = q0 + q(i,j)*qmat(0:natoms-1,0:2,j)
       !This is just hilariously bad code, but who cares
       WRITE(fid,*) TRANSPOSE(xyz)
     END DO

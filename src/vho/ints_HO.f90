@@ -11,6 +11,7 @@ CONTAINS
 !------------------------------------------------------------
 ! ints_HO_Norm
 !       - calculates normalization integrals
+!       - outdated
 !------------------------------------------------------------
 ! nabs          : int, number of abscissa
 ! q             : 1D real*8, abscissa
@@ -37,6 +38,7 @@ END SUBROUTINE ints_HO_norm
 !------------------------------------------------------------
 ! ints_HO_normalize
 !       - normalize an integral 
+!       - outdated
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
 ! PsiL          : 1D int, left hand quantum numbers
@@ -63,34 +65,33 @@ END SUBROUTINE ints_HO_normalize
 ! ints_HO_normcalc
 !       - precalculates all needed normalization constants
 !------------------------------------------------------------
-! nabs          : int, nubmer of abscissa
-! nbas          : 1D int, number of basis functions
-! W             : 1D real*8, weights
-! Herm          : 2D real*8, hermite polynomials
-! norm          : 1D real*8, normalization constants
+! ndim          : int, number of dimensions
+! nbas          : 1D int, nubmer of basis funcitons
+! nabs          : 1D int, number of abscissa
+! W             : 2D real*8, weights
+! Herm          : 3D real*8, hermite polynomials [abcs,bas qn,dim]
+! norm          : 2D real*8, normalization constants [bas qn,dim]
 ! error         : int, exit code
 
-SUBROUTINE ints_HO_normcalc(nabs,nbas,W,Herm,norm,error)
+SUBROUTINE ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Herm
-  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: norm
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: W
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: Herm
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: norm
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: W
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: nabs
-  REAL(KIND=8), DIMENSION(0:nabs-1) :: HR
-  INTEGER :: i
+  INTEGER, INTENT(IN) :: ndim
+  REAL(KIND=8) :: val
+  INTEGER :: i,j,k
   error = 0
-  DO i=0,MAXVAL(nbas)-1
-    HR = Herm(i,0:nabs-1)
-    CALL ints_HO_norm(nabs,W,HR,norm(i),error)
-    IF (error .NE. 0) RETURN
-    CALL val_check(norm(i),error)
-    IF (error .NE. 0) THEN
-      WRITE(*,*) "ints_HO_normcalc  : ERROR"
-      WRITE(*,*) "This normalization constant had a bad value", i
-      RETURN
-    END IF
+  DO k=0,ndim-1
+    DO j=0,nbas(k)-1
+      val = 0.0D0
+      DO i=0,nabs(k)-1
+        val = val + W(i,k)*Herm(i,j,k)*Herm(i,j,k) 
+      END DO 
+      norm(j,k) = SQRT(1.0D0/val)
+    END DO
   END DO
 END SUBROUTINE ints_HO_normcalc
 !------------------------------------------------------------
@@ -98,60 +99,92 @@ END SUBROUTINE ints_HO_normcalc
 !       - precalculates all needed potential/kinetic 
 !         integrals from the V.in files
 !       - integrals are stored as:
-!           VTint(i,j,k), where k is the dimension, and 
-!                         i,j are the LHS and RHS quantum num
+!       VTint(j-i+keyI(i,k),k) -> <j|Vi + Ti|i>
+!
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
-! nabs          : int, number of abscissa
 ! nbas          : 1D int, number of basis functions
-! q             : 1D real*8, abscissa
-! W             : 1D real*8, weights
+! nabs          : 1D int, number of abscissa
+! q             : 2D real*8, abscissa
+! W             : 2D real*8, weights
 ! basK          : 1D real*8, basis function force constants
 ! norm          : 1D real*8, normalization constants
-! Herm          : 2D real*8, hermite polynomials [order,abscissa] 
+! Herm          : 3D real*8, Herm poly [abscissa,basis qn,dimension]
+! keyI          : 2D real*8, intermediate array [#1
 ! Vij           : 2D real*8, potential energy [abscissa,dimension]
-! VTint         : 3D real*8, precalcualted integrals
+! VTint         : 2D real*8, precalcualted integrals
 ! error         : int, exit code
 
-SUBROUTINE ints_HO_VTcalc(ndim,nabs,nbas,q,W,basK,norm,Herm,Vij,&
+SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
                        VTint,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(INOUT) :: VTint
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Herm,Vij
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: q,W,basK,norm
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: Herm
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: VTint
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Vij,q,W,norm
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: basK
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: keyI
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,nabs
-
-  REAL(KIND=8), DIMENSION(0:nabs-1) :: HR,HL
-  INTEGER :: i,j,k
+  INTEGER, INTENT(IN) :: ndim
+  REAL(KIND=8) :: val
+  INTEGER :: i,j,k,a
+  WRITE(*,*) "ints_HO_VTcalc -- not ready yet"
+  error = 1
+  RETURN 
   error = 0
   VTint = 0.0D0
   DO k=0,ndim-1
     DO j=0,nbas(k)-1
-      HR = Herm(j,0:nabs-1)
       DO i=j,nbas(k)-1
-        HL = Herm(i,0:nabs-1)
+        val = 0.0D0
+        !potential - harmonic 
+        DO a=0,nabs(k)-1
+          val = val + W(a,k)*Herm(a,i,k)*Herm(a,j,k)*Vij(a,k) &
+                - (0.5D0*basK(k)*q(a,k)**2.0D0)
+        END DO
+        val = val*norm(i,k)*norm(j,k)
+      
+        !kinetic energy part
+        IF (i .EQ. j) val = val + bask(k)*(1.0D0*i+0.5D0)
+       
+        VTint(i-j+keyI(j,k),k) = val
 
-        !potential - HO integral
-        CALL ints_HO_VTint(nabs,q,W,HL,HR,basK(k),Vij(:,k),VTint(i,j,k),error)
-        IF (error .NE. 0) RETURN
-        VTint(i,j,k) = VTint(i,j,k)*norm(i)*norm(j)
-
-        ! + HO value (this is the kinetic term)  
-        IF (i .EQ. j) VTint(i,j,k) = VTint(i,j,k) &
-                      + basK(k)*(1.0D0*i+0.5D0)
-
-        CALL val_check(VTint(i,j,k),error)
+        CALL val_check(val,error)
         IF (error .NE. 0) THEN
           WRITE(*,*) "ints_HO_VTcalc  : ERROR"
-          WRITE(*,*) "Bad potential at i,j,k",i,j,k
+          WRITE(*,*) "Bad VT integral at i,j,k",i,j,k
           RETURN
-        END IF
-
+        END IF 
       END DO
     END DO
   END DO
+ 
+
+  !DO k=0,ndim-1
+  !  DO j=0,nbas(k)-1
+  !    HR = Herm(j,0:nabs-1)
+  !    DO i=j,nbas(k)-1
+  !      HL = Herm(i,0:nabs-1)
+  !
+  !      !potential - HO integral
+  !      CALL ints_HO_VTint(nabs,q,W,HL,HR,basK(k),Vij(:,k),VTint(i,j,k),error)
+  !      IF (error .NE. 0) RETURN
+  !      VTint(i,j,k) = VTint(i,j,k)*norm(i)*norm(j)
+  !
+  !      ! + HO value (this is the kinetic term)  
+  !      IF (i .EQ. j) VTint(i,j,k) = VTint(i,j,k) &
+  !                    + basK(k)*(1.0D0*i+0.5D0)
+  !
+  !      CALL val_check(VTint(i,j,k),error)
+  !      IF (error .NE. 0) THEN
+  !        WRITE(*,*) "ints_HO_VTcalc  : ERROR"
+  !        WRITE(*,*) "Bad potential at i,j,k",i,j,k
+  !        RETURN
+  !      END IF
+
+  !    END DO
+  !  END DO
+  !END DO
 
 END SUBROUTINE ints_HO_VTcalc
 !------------------------------------------------------------
@@ -566,19 +599,11 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
   j = qPhi(1)
   k = qPhi(2)
 
- ! WRITE(*,*) "qPHI is", qPhi
- ! WRITE(*,*) "PsiL", PsiL
- ! WRITE(*,*) "PsiR", PsiR
   !check orthogonality of univolved dimensions
   IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
       ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
       ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
       ANY(PsiL(k+1:ndim-1) .NE. PsiR(k+1:ndim-1)) &
- ! ) THEN
- !   WRITE(*,*) "Skipping"
- !   ELSE
- !   WRITE(*,*) "Calculating"
- ! END IF 
   ) RETURN 
 
   !type 1, q^3
@@ -672,11 +697,6 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
   j = qPhi(1)
   k = qPhi(2)
   l = qPhi(3)
-  !for testing
-  m = -1
-  n = -1
-  o = -1
-  p = -1
   !Check orthogonality of noninvolved terms
   IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
       ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
