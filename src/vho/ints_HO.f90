@@ -601,12 +601,12 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
       IF (PsiL(j) .EQ. PsiR(j)) THEN
         n = PsiR(i)
         m = PsiR(j)
-        cubival = cubival + Phi/6.0D0*Q1int(n,i)*Q2int(2*m,j) 
+        cubival = cubival + Phi/2.0D0*Q1int(n,i)*Q2int(2*m,j) 
       !j+2,j
       ELSE IF (PsiL(j) .EQ. PsiR(j)+2) THEN
         n = PsiR(i)
         m = PsiR(j)
-        cubival = cubival + Phi/6.0D0*Q1int(n,i)*Q2int(2*m+1,j) 
+        cubival = cubival + Phi/2.0D0*Q1int(n,i)*Q2int(2*m+1,j) 
       END IF
     END IF
     
@@ -618,12 +618,12 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
       IF (PsiL(i) .EQ. PsiR(i)) THEN
         n = PsiR(i)
         m = PsiR(k)
-        cubival = cubival + Phi/6.0D0*Q2int(2*n,i)*Q1int(m,k)
+        cubival = cubival + Phi/2.0D0*Q2int(2*n,i)*Q1int(m,k)
       !i+2,i
       ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
         n = PsiR(i)
         m = PsiR(k)
-        cubival = cubival + Phi/6.0D0*Q2int(2*n+1,i)*Q1int(m,k)
+        cubival = cubival + Phi/2.0D0*Q2int(2*n+1,i)*Q1int(m,k)
       END IF
     END IF
    
@@ -636,8 +636,7 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
       n = PsiR(i)
       m = PsiR(j)
       o = PsiR(k) 
-      cubival = cubival + Phi/6.0D0*Q1int(n,i)*Q1int(m,j)*Q1int(o,k)
-      !cubival = cubival + Phi*Q1int(n,i)*Q1int(m,j)*Q1int(o,k)
+      cubival = cubival + Phi*Q1int(n,i)*Q1int(m,j)*Q1int(o,k)
     END IF
   END IF
 
@@ -709,12 +708,12 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
       IF (PsiL(i) .EQ. PsiR(i)+1) THEN
         m = PsiR(i)
         p = PsiR(l)
-        quarval = quarval + Phi/24.0D0*Q3int(2*m,i)*Q1int(p,l)
+        quarval = quarval + Phi/6.0D0*Q3int(2*m,i)*Q1int(p,l)
       !i+3,i
       ELSE IF (PsiL(i) .EQ. PsiR(i)+3) THEN
         m = PsiR(i)
         p = PsiR(l)
-        quarval = quarval + Phi/24.0D0*Q3int(2*m+1,i)*Q1int(p,l)
+        quarval = quarval + Phi/6.0D0*Q3int(2*m+1,i)*Q1int(p,l)
       END IF
     END IF
 
@@ -726,12 +725,12 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
       IF (PsiL(j) .EQ. PsiR(j)+1) THEN
         m = PsiR(i)
         n = PsiR(j)
-        quarval = quarval + Phi/24.0D0*Q1int(m,i)*Q3int(2*n,j)
+        quarval = quarval + Phi/6.0D0*Q1int(m,i)*Q3int(2*n,j)
       !j+3,j
       ELSE IF (PsiL(j) .EQ. PsiR(j)+3) THEN
         m = PsiR(i)
         n = PsiR(j)
-        quarval = quarval + Phi/24.0D0*Q1int(m,i)*Q3int(2*n+1,j)
+        quarval = quarval + Phi/6.0D0*Q1int(m,i)*Q3int(2*n+1,j)
       END IF
     END IF
 
@@ -743,12 +742,12 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
       IF (PsiL(k) .EQ. PsiR(k)) THEN
         m = PsiR(i)
         o = PsiR(k)
-        quarval = quarval + Phi/24.0D0*Q2int(2*m,i)*Q2int(2*o,k)
+        quarval = quarval + Phi/4.0D0*Q2int(2*m,i)*Q2int(2*o,k)
       !k+2,k
       ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
         m = PsiR(i)
         o = PsiR(k)
-        quarval = quarval + Phi/24.0D0*Q2int(2*m,i)*Q2int(2*o+1,k)
+        quarval = quarval + Phi/4.0D0*Q2int(2*m,i)*Q2int(2*o+1,k)
       END IF
     !i+2,i
     ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
@@ -756,12 +755,12 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
       IF (PsiL(k) .EQ. PsiR(k)) THEN
         m = PsiR(i)
         o = PsiR(k)
-        quarval = quarval + Phi/24.0D0*Q2int(2*m+1,i)*Q2int(2*o,k)
+        quarval = quarval + Phi/4.0D0*Q2int(2*m+1,i)*Q2int(2*o,k)
       !k+2,k
       ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
         m = PsiR(i)
         o = PsiR(k)
-        quarval = quarval + Phi/24.0D0*Q2int(2*m+1,i)*Q2int(2*o+1,k)
+        quarval = quarval + Phi/4.0D0*Q2int(2*m+1,i)*Q2int(2*o+1,k)
       END IF
     END IF
 
@@ -774,14 +773,14 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
         m = PsiR(i)
         o = PsiR(k)
         p = PsiR(l)
-        quarval = quarval + Phi/24.0D0*Q2int(2*m,i)*&
+        quarval = quarval + Phi/2.0D0*Q2int(2*m,i)*&
                             Q1int(o,k)*Q1int(p,l)
       !i+2,i
       ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
         m = PsiR(i)
         o = PsiR(k)
         p = PsiR(l)
-        quarval = quarval + Phi/24.0D0*Q2int(2*m+1,i)*&
+        quarval = quarval + Phi/2.0D0*Q2int(2*m+1,i)*&
                             Q1int(o,k)*Q1int(p,l)
       END IF
     END IF
@@ -795,14 +794,14 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
         m = PsiR(i) 
         n = PsiR(j)
         o = PsiR(k)
-        quarval = quarval + Phi/24.0D0*Q1int(m,i)*&
+        quarval = quarval + Phi/2.0D0*Q1int(m,i)*&
                             Q1int(n,j)*Q2int(2*o,k)
       !k+2,k
       ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
         m = PsiR(i) 
         n = PsiR(j)
         o = PsiR(k)
-        quarval = quarval + Phi/24.0D0*Q1int(m,i)*&
+        quarval = quarval + Phi/2.0D0*Q1int(m,i)*&
                             Q1int(n,j)*Q2int(2*o+1,k)
        END IF
     END IF
@@ -816,7 +815,7 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
       n = PsiR(j)
       o = PsiR(k)
       p = PsiR(l)
-      quarval = quarval + Phi/24.0D0*Q1int(m,i)*Q1int(n,j)*&
+      quarval = quarval + Phi*Q1int(m,i)*Q1int(n,j)*&
                           Q1int(o,k)*Q1int(p,l)
     END IF   
   END IF
