@@ -5,6 +5,7 @@
 !------------------------------------------------------------
 MODULE ints_HO
   USE val
+  USE gauss
 
 CONTAINS
 
@@ -64,6 +65,8 @@ END SUBROUTINE ints_HO_normalize
 !------------------------------------------------------------
 ! ints_HO_normcalc
 !       - precalculates all needed normalization constants
+!       - this function uses either MAXVAL(100,nbas+10) 
+!         abscissa to calculate the normalization constants 
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
 ! nbas          : 1D int, nubmer of basis funcitons
@@ -81,19 +84,60 @@ SUBROUTINE ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hin
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: qin,Win
   REAL(KIND=8) :: val
-  INTEGER :: i,j,k
+  INTEGER :: i,j,k,n,mbas
   error = 0
+  mbas = MAXVAL(nbas)
+  n = MAX(mbas+10,100) 
+  ALLOCATE(qin(0:n-1))
+  ALLOCATE(Win(0:n-1))
+  ALLOCATE(Hin(0:n-1,0:mbas-1))
+
+  !generate internal gaussian quadrature
+  CALL gauss_hermite(n,qin,Win,error)
+  IF (error .NE. 0) RETURN
+
+  ! generate internal hermite polynomials
+  DO j=0,mbas-1
+    IF (j .EQ. 0) THEN
+      Hin(0:n-1,0) = 1.0D0
+    ELSE IF (j .EQ. 1) THEN
+      Hin(0:n-1,1) = 2.0D0*qin(0:n-1)
+    ELSE 
+      Hin(0:n-1,j) = 2.0D0*qin(0:n-1)*Hin(0:n-1,j-1) &
+                     - 2.0D0*(j-1)*Hin(0:n-1,j-2)
+    END IF
+  END DO
+  
+  ! Generate internal normalization
   DO k=0,ndim-1
     DO j=0,nbas(k)-1
       val = 0.0D0
-      DO i=0,nabs(k)-1
-        val = val + W(i,k)*Herm(i,j,k)*Herm(i,j,k) 
+      DO i=0,n-1
+        val = val + Win(i)*Hin(i,j)*Hin(i,j) 
       END DO 
       norm(j,k) = SQRT(1.0D0/val)
     END DO
   END DO
+  
+  DEALLOCATE(qin)
+  DEALLOCATE(Win)
+  DEALLOCATE(Hin)
+  
+ ! OLD CODE
+ ! DO k=0,ndim-1
+ !   DO j=0,nbas(k)-1
+ !     val = 0.0D0
+ !     DO i=0,nabs(k)-1
+ !       val = val + W(i,k)*Herm(i,j,k)*Herm(i,j,k) 
+ !     END DO 
+ !     norm(j,k) = SQRT(1.0D0/val)
+ !   END DO
+ ! END DO
 END SUBROUTINE ints_HO_normcalc
+
 !------------------------------------------------------------
 ! ints_HO_VTcalc
 !       - precalculates all needed potential/kinetic 
@@ -128,25 +172,23 @@ SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
   INTEGER, INTENT(IN) :: ndim
   REAL(KIND=8) :: val
   INTEGER :: i,j,k,a
-  WRITE(*,*) "ints_HO_VTcalc -- not ready yet"
-  error = 1
-  RETURN 
   error = 0
   VTint = 0.0D0
   DO k=0,ndim-1
+    !WRITE(*,*) "dimension :",k
     DO j=0,nbas(k)-1
       DO i=j,nbas(k)-1
         val = 0.0D0
         !potential - harmonic 
         DO a=0,nabs(k)-1
-          val = val + W(a,k)*Herm(a,i,k)*Herm(a,j,k)*Vij(a,k) &
-                - (0.5D0*basK(k)*q(a,k)**2.0D0)
+          val = val + W(a,k)*Herm(a,i,k)*Herm(a,j,k)*(Vij(a,k) &
+                - (0.5D0*basK(k)*q(a,k)**2.0D0))
         END DO
         val = val*norm(i,k)*norm(j,k)
       
         !kinetic energy part
         IF (i .EQ. j) val = val + bask(k)*(1.0D0*i+0.5D0)
-       
+        !WRITE(*,*) i,j,i-j,keyI(j,k),i-j+keyI(j,k) 
         VTint(i-j+keyI(j,k),k) = val
 
         CALL val_check(val,error)
@@ -157,6 +199,7 @@ SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
         END IF 
       END DO
     END DO
+    !WRITE(*,*) '------------'
   END DO
  
 
@@ -458,18 +501,14 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   INTEGER, INTENT(IN) :: nQ2,nQ3,nQ4
   INTEGER, INTENT(IN) :: ndim
   REAL(KIND=8) :: quadval,cubival,quarval,momeval
+  LOGICAL :: diag
   INTEGER :: i,j
   error = 0
   quadval = 0.0D0
   cubival = 0.0D0
   quarval = 0.0D0
   momeval = 0.0D0
-
-  !we have a guarenteed orthogonality condition
-  !IF (ANY(PsiL .GT. PsiR+4)) THEN
-  !  Hij = 0.0D0
-  !  RETURN
-  !END IF 
+  diag = .TRUE.
 
   !phi_ij (quadratic) terms
   DO i=0,nQ2-1
@@ -479,13 +518,13 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
 
   !phi_ijk (cubic terms)
   DO i=0,nQ3-1
-    CALL ints_HO_cubieval(ndim,PsiL,PsiR,qQ3(3*i:3*i+2),&
+    CALL ints_HO_cubieval(diag,ndim,PsiL,PsiR,qQ3(3*i:3*i+2),&
                           Q3(i),Q1int,Q2int,Q3int,cubival)
   END DO
 
   !phi_ijkl (quartic terms)
   DO i=0,nQ4-1
-    CALL ints_HO_quareval(ndim,PsiL,PsiR,qQ4(4*i:4*i+3),&
+    CALL ints_HO_quareval(diag,ndim,PsiL,PsiR,qQ4(4*i:4*i+3),&
                           Q4(i),Q1int,Q2int,Q3int,Q4int,quarval)
   END DO
 
@@ -498,6 +537,83 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   Hij = quadval + cubival + quarval + momeval
 
 END SUBROUTINE ints_HO_polyput
+
+!------------------------------------------------------------
+! ints_HO_quadput
+!       - calculates the contributions of the various 
+!         force constants to the Hamiltonian in the HO basis
+!
+!       Integrals are stored like:
+!       Q1(i,k) -> <i+1|Qk|i>
+!       Q2(2*i,k) -> <i|Qk^2|i>    , Q2(2*i+1,k) -> <i+2|Qk^2|i>
+!       Q3(2*i,k) -> <i+1|Qk^3|i>  , Q3(2*i+1,k) -> <i+3|Qk^3|i>
+!       Q4(3*i,k) -> <i|Qk^4|i>    , Q4(3*i+1,k) -> <i+2|Qk^4|i>
+!                                  , Q4(3*i+2,k) -> <i+4|Qk^4|i>
+!       Where i indicates the i'th quantum number of the 
+!         k'th dimension
+!
+!       The integral
+!          < i0 j0 k0 | Φ_122 | i1 j0 k0 >
+!       Is then
+!           1/6 * Φ_122 * <i1|Qi|i0> * <j0|Qj^2|j0> * <k0|k0>
+
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers
+! nQ2           : int, number of cubic FC
+! qQ2           : 1D int, cubic FC quantum numbers
+! Q2            : 1D real*8, cubic FC values
+! nQ3           : int, number of cubic FC
+! qQ3           : 1D int, cubic FC quantum numbers
+! Q3            : 1D real*8, cubic FC values
+! nQ4           : int, number of quartic FC
+! qQ4           : 1D int, quartic FC quantum numbers
+! Q4            : 1D real*8, quartic FC values
+! Q1int         : 2D real*8, <i|q|i'> type integrals 
+! Q2int         : 2D real*8, <i|q^2|i'> type integrals 
+! Q3int         : 2D real*8, <i|q^3|i'> type integrals 
+! Q4int         : 2D real*8, <i|q^4|i'> type integrals 
+! Hij           : real*8, value of this hamiltonian element
+! error         : int, error code
+
+SUBROUTINE ints_HO_quadput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
+                           nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
+                           Q3int,Q4int,Hij,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int,Q3int,&
+                                                Q4int
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Q2,Q3,Q4
+  INTEGER, DIMENSION(0:), INTENT(IN) :: qQ2,qQ3,qQ4
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: Hij
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: nQ2,nQ3,nQ4
+  INTEGER, INTENT(IN) :: ndim
+  REAL(KIND=8) :: cubival,quarval
+  LOGICAL :: diag
+  INTEGER :: i,j
+  error = 0
+  cubival = 0.0D0
+  quarval = 0.0D0
+  diag = .FALSE.
+
+  !phi_ijk (cubic terms)
+  DO i=0,nQ3-1
+    CALL ints_HO_cubieval(diag,ndim,PsiL,PsiR,qQ3(3*i:3*i+2),&
+                          Q3(i),Q1int,Q2int,Q3int,cubival)
+  END DO
+
+  !phi_ijkl (quartic terms)
+  DO i=0,nQ4-1
+    CALL ints_HO_quareval(diag,ndim,PsiL,PsiR,qQ4(4*i:4*i+3),&
+                          Q4(i),Q1int,Q2int,Q3int,Q4int,quarval)
+  END DO
+
+  
+  Hij = cubival + quarval 
+
+END SUBROUTINE ints_HO_quadput
 
 !------------------------------------------------------------
 ! ints_HO_Q2eval
@@ -576,6 +692,7 @@ END SUBROUTINE ints_HO_momeval
 !         to the potential energy in harmonic oscillator 
 !         basis
 !------------------------------------------------------------
+! diag          : bool, if true, compute diagonal terms
 ! ndim          : int, nubmer of dimensions
 ! PsiL          : 1D int, LHS quantum numbers
 ! PsiR          : 1D int, RHS quantum numbers
@@ -586,13 +703,14 @@ END SUBROUTINE ints_HO_momeval
 ! Q3int         : 2D real*8, <i|q^3|i'> integrals   
 ! cubival       : real*8, value to iterate
 
-SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
+SUBROUTINE ints_HO_cubieval(diag,ndim,PsiL,PsiR,qPhi,&
                           Phi,Q1int,Q2int,Q3int,cubival)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int,Q3int
   REAL(KIND=8), INTENT(INOUT) :: cubival
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,qPhi
   REAL(KIND=8), INTENT(IN) :: Phi
+  LOGICAL, INTENT(IN) :: diag
   INTEGER, INTENT(IN) :: ndim
   INTEGER :: i,j,k,n,m,o
   i = qPhi(0)
@@ -607,7 +725,7 @@ SUBROUTINE ints_HO_cubieval(ndim,PsiL,PsiR,qPhi,&
   ) RETURN 
 
   !type 1, q^3
-  IF (i .EQ. j .AND. j .EQ. k) THEN
+  IF (i .EQ. j .AND. j .EQ. k .AND. diag) THEN
     !v+1, v
     IF (PsiL(i) .EQ. PsiR(i)+1) THEN
       n = PsiR(i)
@@ -673,6 +791,7 @@ END SUBROUTINE ints_HO_cubieval
 !         to the potential energy in harmonic oscillator 
 !         basis
 !------------------------------------------------------------
+! diag          : bool, if true, compute diagonal terms
 ! ndim          : int, nubmer of dimensions
 ! PsiL          : 1D int, LHS quantum numbers
 ! PsiR          : 1D int, RHS quantum numbers
@@ -684,13 +803,14 @@ END SUBROUTINE ints_HO_cubieval
 ! Q4int         : 2D real*8, <i|q^4|i'> integrals   
 ! quarval       : real*8, value to iterate
 
-SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
+SUBROUTINE ints_HO_quareval(diag,ndim,PsiL,PsiR,qPhi,&
                           Phi,Q1int,Q2int,Q3int,Q4int,quarval)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Q1int,Q2int,Q3int,Q4int
   REAL(KIND=8), INTENT(INOUT) :: quarval
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,qPhi
   REAL(KIND=8), INTENT(IN) :: Phi
+  LOGICAL, INTENT(IN) :: diag
   INTEGER, INTENT(IN) :: ndim
   INTEGER :: i,j,k,l,m,n,o,p
   i = qPhi(0)
@@ -705,7 +825,7 @@ SUBROUTINE ints_HO_quareval(ndim,PsiL,PsiR,qPhi,&
       ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) RETURN
 
   !type 1 : i i i i
-  IF (i .EQ. j .AND. j .EQ. k .AND. k .EQ. l) THEN
+  IF (i .EQ. j .AND. j .EQ. k .AND. k .EQ. l .AND. diag) THEN
     !i, i
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       m = PsiR(i)    

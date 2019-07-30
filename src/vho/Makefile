@@ -33,11 +33,11 @@ sort.o : sort.f90
 fcon.o : fcon.f90 sort.o
 	$(FC) $(FFLAGS) -c fcon.f90 sort.o
 
-ints_HO.o : ints_HO.f90 val.o
-	$(FC) $(FFLAGS) -c ints_HO.f90 val.o 
-
 evec.o	: evec.f90 key.o
 	$(FC) $(FFALGS) -c evec.f90 key.o
+
+ints_HO.o : ints_HO.f90 val.o gauss.o
+	$(FC) $(FFLAGS) -c ints_HO.f90 val.o  gauss.o
 
 gauss.o : gauss.f90 input.o fname.o
 	$(FC) $(FFLAGS) -c gauss.f90 input.o fname.o

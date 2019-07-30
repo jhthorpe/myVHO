@@ -53,13 +53,13 @@ SUBROUTINE fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   WRITE(*,*) "Numbering offset is:", voff
   WRITE(*,*)
  
-  IF (job .EQ. 1) THEN
+ ! IF (job .EQ. 1) THEN
     CALL fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
     IF (error .NE. 0) RETURN
-  END IF
-  CALL fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
+ ! END IF
+  CALL fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
   IF (error .NE. 0) RETURN
-  CALL fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
+  CALL fcon_read_Q4(job,ndim,voff,nQ4,qQ4,Q4,error)
   IF (error .NE. 0) RETURN
 END SUBROUTINE fcon_get
 
@@ -211,7 +211,10 @@ END SUBROUTINE fcon_read_Q2
 !------------------------------------------------------------
 ! fcon_read_Q3
 !       - read info for force constants of type q^3
+!       - if the jobtype is 2, diagonal terms will be
+!         neglected
 !------------------------------------------------------------
+! job           : int, jobtype
 ! ndim          : int, number of dimensions
 ! voff          : int, numbering offset
 ! nQ3           : int, number of q^3 force con
@@ -219,12 +222,12 @@ END SUBROUTINE fcon_read_Q2
 ! Q3            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
+SUBROUTINE fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q3
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ3
   INTEGER, INTENT(INOUT) :: nQ3,error
-  INTEGER, INTENT(IN) :: ndim,voff
+  INTEGER, INTENT(IN) :: job,ndim,voff
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: Itemp
   INTEGER, DIMENSION(0:2) :: idx
@@ -253,6 +256,9 @@ SUBROUTINE fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
       !read and sort
       READ(fid,*) idx,val
       idx = idx - voff
+      !skip diagonal terms for jobtype 2
+      !IF (job .EQ. 2 .AND. idx(0) .EQ. idx(1) .AND.  &
+      !    idx(1) .EQ. idx(2)) CYCLE 
       CALL sort_int_ijk(idx)
       IF (ANY(idx .LT. 1) .OR. ANY(idx .GT. ndim)) THEN
         WRITE(*,*) "fcon_read_Q3  : ERROR"
@@ -268,8 +274,8 @@ SUBROUTINE fcon_read_Q3(ndim,voff,nQ3,qQ3,Q3,error)
       END DO
       IF (.NOT. match) THEN 
         nQ3 = nQ3 + 1
-        Itemp(0:2,i) = idx-1
-        Rtemp(i) = val
+        Itemp(0:2,nQ3-1) = idx-1
+        Rtemp(nQ3-1) = val
       END IF
 
     END DO
@@ -302,7 +308,9 @@ END SUBROUTINE fcon_read_Q3
 !------------------------------------------------------------
 ! fcon_read_Q4
 !       - read info for force constants of type q^4
+!       - if jobtype = 2, skip diagonal terms
 !------------------------------------------------------------
+! job           : int, jobtype
 ! ndim          : int, number of dimensions
 ! voff          : int, numbering offset
 ! nQ4           : int, number of q^4 force con
@@ -310,12 +318,12 @@ END SUBROUTINE fcon_read_Q3
 ! Q4            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
+SUBROUTINE fcon_read_Q4(job,ndim,voff,nQ4,qQ4,Q4,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q4
   INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ4
   INTEGER, INTENT(INOUT) :: nQ4,error
-  INTEGER, INTENT(IN) :: ndim,voff
+  INTEGER, INTENT(IN) :: job,ndim,voff
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: Itemp
   INTEGER, DIMENSION(0:3) :: idx
@@ -344,6 +352,9 @@ SUBROUTINE fcon_read_Q4(ndim,voff,nQ4,qQ4,Q4,error)
       !read and sort
       READ(fid,*) idx,val
       idx = idx - voff
+      !skip diagonal terms for jobtype 2
+      !IF (job .EQ. 2 .AND. idx(0) .EQ. idx(1) .AND.  &
+      !    idx(1) .EQ. idx(2) .AND. idx(2) .EQ. idx(3)) CYCLE 
       CALL sort_int_ijkl(idx)
       IF (ANY(idx .LT. 1) .OR. ANY(idx .GT. ndim)) THEN
         WRITE(*,*) "fcon_read  : ERROR"
