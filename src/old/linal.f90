@@ -98,7 +98,7 @@ SUBROUTINE diag(N,units,vmax,Hij,Ei,error)
     WRITE(*,*) "Eigenvalues written to eigs.dat"
     OPEN(unit=103,file='eigs.dat',status='replace')
     DO j=0,MIN(vmax+1,N)-1
-      WRITE(*,*) j, Ei(j)
+      WRITE(*,*) j, Ei(j),Ei(j)-Ei(0)
       WRITE(103,*) j, Ei(j)
     END DO 
     DO j=MIN(vmax+1,N)+1,N-1

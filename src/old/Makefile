@@ -11,7 +11,7 @@ export MKL = /apps/compilers/intel/2018/1.163/compilers_and_libraries_2018.1.163
 export LINAL = -L$(MKL) -Wl,-R$(MKL) -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lm
 
 #both
-export bindir = ../bin
+export bindir = ./bin
 
 objects = input.o vho.o ints_HO.o proc.o linal.o fcs.o tdp.o conv.o scat.o nints.o fit.o val.o
 

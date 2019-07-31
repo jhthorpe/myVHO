@@ -86,6 +86,7 @@ SUBROUTINE ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
   INTEGER, INTENT(IN) :: ndim
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Hin
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: qin,Win
+  CHARACTER(LEN=20) :: fname
   REAL(KIND=8) :: val
   INTEGER :: i,j,k,n,mbas
   error = 0
@@ -110,7 +111,7 @@ SUBROUTINE ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
                      - 2.0D0*(j-1)*Hin(0:n-1,j-2)
     END IF
   END DO
-  
+
   ! Generate internal normalization
   DO k=0,ndim-1
     DO j=0,nbas(k)-1
@@ -177,14 +178,18 @@ SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
   DO k=0,ndim-1
     !WRITE(*,*) "dimension :",k
     DO j=0,nbas(k)-1
+  !    WRITE(*,*) "j=",j
       DO i=j,nbas(k)-1
+ !       WRITE(*,*) "i=",i
         val = 0.0D0
         !potential - harmonic 
         DO a=0,nabs(k)-1
           val = val + W(a,k)*Herm(a,i,k)*Herm(a,j,k)*(Vij(a,k) &
                 - (0.5D0*basK(k)*q(a,k)**2.0D0))
+   !       WRITE(*,*) "a,val",a,val
         END DO
         val = val*norm(i,k)*norm(j,k)
+   !     WRITE(*,*) "Normalied val:",val
       
         !kinetic energy part
         IF (i .EQ. j) val = val + bask(k)*(1.0D0*i+0.5D0)
@@ -199,7 +204,7 @@ SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
         END IF 
       END DO
     END DO
-    !WRITE(*,*) '------------'
+!    WRITE(*,*) '------------'
   END DO
  
 
@@ -725,7 +730,8 @@ SUBROUTINE ints_HO_cubieval(diag,ndim,PsiL,PsiR,qPhi,&
   ) RETURN 
 
   !type 1, q^3
-  IF (i .EQ. j .AND. j .EQ. k .AND. diag) THEN
+  IF (i .EQ. j .AND. j .EQ. k) THEN
+    IF (.NOT. diag) RETURN
     !v+1, v
     IF (PsiL(i) .EQ. PsiR(i)+1) THEN
       n = PsiR(i)
@@ -825,7 +831,8 @@ SUBROUTINE ints_HO_quareval(diag,ndim,PsiL,PsiR,qPhi,&
       ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) RETURN
 
   !type 1 : i i i i
-  IF (i .EQ. j .AND. j .EQ. k .AND. k .EQ. l .AND. diag) THEN
+  IF (i .EQ. j .AND. j .EQ. k .AND. k .EQ. l) THEN
+    IF (.NOT. diag) RETURN
     !i, i
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       m = PsiR(i)    
@@ -946,8 +953,64 @@ SUBROUTINE ints_HO_quareval(diag,ndim,PsiL,PsiR,qPhi,&
        END IF
     END IF
 
-  !type 7 : i j k l
-  ELSE
+  !type 7 : i i k l 
+  ELSE IF (i .EQ. j .AND. j .NE. k .AND. k .NE. l) THEN
+    !k,k+1  l,l+1
+    IF (PsiL(k) .EQ. PsiR(k)+1 .AND. PsiL(l) .EQ. PsiR(l)+1) THEN
+      !i,i
+      IF (PsiL(i) .EQ. PsiR(i)) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        p = PsiR(l)
+        quarval = quarval + Phi/2.0D0*Q2int(2*m,i)*Q1int(o,k)*Q1int(p,l)
+      !i,i+2
+      ELSE IF (PsiL(i) .EQ. PsiR(i)+2) THEN
+        m = PsiR(i)
+        o = PsiR(k)
+        p = PsiR(l)
+        quarval = quarval + Phi/2.0D0*Q2int(2*m+1,i)*Q1int(o,k)*Q1int(p,l)
+      END IF
+    END IF
+
+  !type 8 : i j j l
+  ELSE IF (i .NE. j .AND. j .EQ. k .AND. k .NE. l) THEN
+    !i,i+1  l,l+1
+    IF (PsiL(i) .EQ. PsiR(i)+1 .AND. PsiL(l) .EQ. PsiR(l)+1) THEN
+      !j,j
+      IF (PsiL(j) .EQ. PsiR(j)) THEN
+        m = PsiR(i)
+        n = PsiR(j)
+        p = PsiR(l)
+        quarval = quarval + Phi/2.0D0*Q1int(m,i)*Q2int(2*n,j)*Q1int(p,l)
+      !j,j+2
+      ELSE IF (PsiL(j) .EQ. PsiR(j)+2) THEN
+        m = PsiR(i)
+        n = PsiR(j)
+        p = PsiR(l)
+        quarval = quarval + Phi/2.0D0*Q1int(m,i)*Q2int(2*n+1,j)*Q1int(p,l)
+      END IF
+    END IF
+
+  !type 9 : i j k k 
+  ELSE IF (i .NE. j .AND. j .NE. k .AND. k .EQ. l) THEN
+    !i,i+1 j,j+1
+    IF (PsiL(i) .EQ. PsiR(i)+1 .AND. PsiL(j) .EQ. PsiR(j)+1) THEN
+      !k,k
+      IF (PsiL(k) .EQ. PsiR(k)) THEN
+        m = PsiR(i)
+        n = PsiR(j)
+        o = PsiR(k)
+        quarval = quarval + Phi/2.0D0*Q1int(m,i)*Q1int(n,j)*Q2int(2*o,k)
+      ELSE IF (PsiL(k) .EQ. PsiR(k)+2) THEN
+        m = PsiR(i)
+        n = PsiR(j)
+        o = PsiR(k)
+        quarval = quarval + Phi/2.0D0*Q1int(m,i)*Q1int(n,j)*Q2int(2*o+1,k)
+      END IF
+    END IF
+
+  !type 10 : i j k l
+  ELSE IF (i .NE. j .AND. j .NE. k .AND. k .NE. l) THEN
     !i+1,i  j+1,j  k+1,k  l+1,l
     IF (PsiL(i) .EQ. PsiR(i)+1 .AND. PsiL(j) .EQ. PsiR(j)+1 &
         .AND. PsiL(k) .EQ. PsiR(k)+1 .AND. PsiL(l) .EQ. PsiR(l)+1) THEN
@@ -958,6 +1021,11 @@ SUBROUTINE ints_HO_quareval(diag,ndim,PsiL,PsiR,qPhi,&
       quarval = quarval + Phi*Q1int(m,i)*Q1int(n,j)*&
                           Q1int(o,k)*Q1int(p,l)
     END IF   
+  ELSE
+    WRITE(*,*) "ints_HO_quareval  : ERROR"
+    WRITE(*,*) "James, you missed a case!"
+    WRITE(*,*) qPhi
+    WRITE(*,*) PsiL,PsiR
   END IF
 END SUBROUTINE ints_HO_quareval
 

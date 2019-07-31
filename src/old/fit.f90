@@ -188,6 +188,8 @@ SUBROUTINE spline_fit(Fx,x,np,a,m,nb,qeq,error)
   WRITE(*,*) 
 
   na = nb+10 !probably an overestimation?
+  na = 13
+  WRITE(*,*) "FIXED ABSCISSA AT ",na
   !na = 50 !probably an overestimation?
   !na = 10
   !na = 2

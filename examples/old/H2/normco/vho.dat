@@ -1,5 +1,5 @@
-nbasis 100
-vmax 3
+nbasis 10
+vmax 2
 qeq 0.0 
 mass 1.0  %this is the sqrt of the reduced mass in atomic units 
 units 2

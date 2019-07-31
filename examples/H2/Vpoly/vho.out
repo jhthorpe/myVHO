@@ -1,0 +1,124 @@
+ xvho : called
+
+ =======================================================
+ Starting xvho
+
+ Reading input from vho.in
+
+1    	!job type
+1	!basis type
+1    	!# dimensions
+50	!# basis functions in each dimension
+3	!# eigenvalues to compute
+1000	!memory in MB
+
+ job     : 1 -> V from force constants up to 4th order
+ bas     : 1 -> Harmonic Oscillator basis
+ ndim    :           1
+ nbas    :          50
+ enum    :           3
+ mem     :                 1000
+ input_jobinfo : completed with status            0
+ =======================================================
+ Beginning Construction of HO Hamiltonian
+ Dimension of Hamiltonian          50
+
+ Hamiltonian Memory Analysis
+ Available memory        1000.00
+ Minimum memory             0.01
+ Precalc memory             0.01
+ Incore memory              0.03
+ Values are in MB
+
+ HO Hamiltonian will be built with incore memory
+
+ Reading force constants
+ Numbering offset is:           5
+
+ quadratic terms
+   1        4405.656579999999849
+
+ cubic terms
+   1    1    1         -3512.728643648400066
+
+ quartic terms
+   1    1    1    1          2714.290064648900170
+
+ Calculating Integrals...
+ <i|q|i'> type integrals
+ <i|q^2|i'> type integrals
+ <i|q^3|i'> type integrals
+ <i|q^4|i'> type integrals
+ <i|p^2|i'> type integrals
+ Filling the Hamiltonian...
+
+
+ H_HO_build  : finished with s 0 in    0.0 s
+
+ Diagonalization Memory Analysis
+ Available memory        1000.00
+ Minimum memory             0.03
+ Incore memory              0.04
+ Values are in MB
+
+ Hamiltonian will be built with incore memory
+
+ Diagonalizing the Hamiltonian
+  Vibrational level      0
+  Energy           2195.02 cm-1
+  v0 ->               0.00 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     0.99140
+     1     0.12682
+     3     0.03082
+     2     0.00736
+     4     0.00562
+     5    -0.00190
+     6     0.00101
+     8    -0.00038
+     7     0.00017
+    10     0.00004
+ ------------------------------------------------
+
+  Vibrational level      1
+  Energy           6500.21 cm-1
+  v0 ->            4305.19 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     1     0.93655
+     2     0.31886
+     0    -0.12396
+     4     0.05494
+     3     0.04875
+     5     0.02070
+     6    -0.00207
+     9    -0.00083
+     8     0.00053
+     7     0.00042
+ ------------------------------------------------
+
+  Vibrational level      2
+  Energy          10870.26 cm-1
+  v0 ->            8675.25 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     2     0.80088
+     3     0.49449
+     1    -0.30456
+     4     0.11613
+     5     0.07664
+     6     0.04068
+     0     0.01708
+     8    -0.00219
+    10    -0.00129
+    11    -0.00073
+ ------------------------------------------------
+
+
+ xvho finished with status  0 in    0.0 s
+ =======================================================
+

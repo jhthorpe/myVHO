@@ -380,6 +380,7 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
                                                P2int
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,keyR,keyL,numL
   REAL(KIND=8) :: val
+  LOGICAL :: ex
   INTEGER :: N,M,mbas,il,ir
   INTEGER :: i,j,k,l,a
 
@@ -455,10 +456,14 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   END DO 
   WRITE(*,*)
 
-  !WRITE(*,*)
-  !DO j=0,N-1
-  !  WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
-  !END DO
+  
+  INQUIRE(file='print',EXIST=ex) 
+  IF (ex) THEN
+    WRITE(*,*)
+    DO j=0,N-1
+      WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
+    END DO
+  END IF
 
   DEALLOCATE(Q1int)
   DEALLOCATE(Q2int)
@@ -522,6 +527,7 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
   INTEGER, DIMENSION(0:ndim-1) :: keyL,keyR,PsiL,PsiR,numL
   INTEGER, DIMENSION(0:ndim-2) :: keyX,PsiX,nelm
   REAL(KIND=8) :: val
+  LOGICAL :: ex
   INTEGER :: N,M,mbas,mabs
   INTEGER :: i,j,k,l,a,il,ir
 
@@ -529,10 +535,6 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
   Hij = 0.0D0
   mbas = MAXVAL(nbas)
   mabs = MAXVAL(nabs)
-
-  WRITE(*,*) "WARNING "
-  WRITE(*,*) "There is a good chance the normalization integrals"
-  WRITE(*,*) "  need to be calculated with more abscissa"
 
   !force constant integrals
   WRITE(*,*) "Calculating coupling integrals"
@@ -559,6 +561,7 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
   WRITE(*,*) "Filling coupling integrals"
   CALL key_generate(ndim,nbas,keyR)
   N = PRODUCT(nbas)
+  !DO j=0,-1
   DO j=0,N-1
     CALL key_idx2ids(ndim,j,nbas,keyR,PsiR)
 
@@ -571,8 +574,6 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
     DO k=0,M-1
       CALL key_idx2ids(ndim,k,numL,keyL,PsiL)
       PsiL = PsiR + PsiL
- !     WRITE(*,*) "PsiR",PsiR
- !     WRITE(*,*) "PsiL",PsiL
    
      !IF (ALL(PsiL .EQ. PsiR)) CYCLE
 
@@ -585,6 +586,7 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
       !fill in all permutations other than first index
       !we ignore the first index because lower triangular
       CALL key_ids2idx(ndim,nbas,keyR,PsiL,i) 
+      CALL key_idx2ids(ndim,i,nbas,keyR,PsiL)
       DO l=0,2**(ndim-1)-1
         il = i
         ir = j
@@ -598,12 +600,18 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
         IF (il .GE. ir) Hij(il,ir) = val
       END DO
     END DO 
-    !WRITE(*,*) "-----------------"
   END DO 
   DEALLOCATE(Q1int)
   DEALLOCATE(Q2int)
   DEALLOCATE(Q3int)
   DEALLOCATE(Q4int)
+  INQUIRE(file='print',EXIST=ex) 
+  IF (ex) THEN
+    WRITE(*,*)
+    DO j=0,N-1
+      WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
+    END DO
+  END IF
 
   !generate key for intermediates
   ALLOCATE(keyI(0:mbas-1,0:ndim-1))
@@ -631,60 +639,77 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,nQ2,qQ2,Q2,nQ3,qQ3,Q3,
 
   WRITE(*,*) "Filling the diagonal V and all T..."
   !Place the VT integrals 
-  !The only nonzero terms are <x...k..z|Vk|x..k'...z>
-  !where k and k' are the only ones allowed to differ
-  CALL key_generate(ndim,nbas,keyR)
-  N = PRODUCT(nbas)
-  ! loop over all dimesions
-  DO k=0,ndim-1
-  !DO k=0,-1
-    !WRITE(*,*) "Dimension :", k
-    nelm(0:k-1) = nbas(0:k-1)
-    nelm(k:ndim-2) = nbas(k+1:ndim-1) 
-    CALL key_generate(ndim-1,nelm,keyX)
-    M = PRODUCT(nelm)
-
-    !Loop over all <x...z|x...z>
-    !x>z ???
-    DO a=0,M-1
-      CALL key_idx2ids(ndim-1,a,nelm,keyX,PsiX)
-      !WRITE(*,*) "PsiX",PsiX
-
-      !loop over |k'>
-      DO j=0,nbas(k)-1
-        PsiR(0:k-1) = PsiX(0:k-1)
-        PsiR(k) = j
-        PsiR(k+1:ndim-1) = PsiX(k:ndim-2) 
-        CALL key_ids2idx(ndim,nbas,keyR,PsiR,ir)
-       ! WRITE(*,*) "PsiR: ", PsiR
-
-        !loop over <k|
-        DO i=j,nbas(k)-1
-          PsiL(0:k-1) = PsiR(0:k-1)
-          PsiL(k) = i
-          PsiL(k+1:ndim-1) = PsiR(k+1:ndim-1)
-          CALL key_ids2idx(ndim,nbas,keyR,PsiL,il)
-        !  WRITE(*,*) "PsiL: ", PsiL
-          
-          val = VTint(i-j+keyI(j,k),k)
-          Hij(il,ir) = Hij(il,ir) + val
-          IF (i .NE. j .AND. k .NE. 0) THEN
-          !  il = il - (i-j)*keyR(k)
-          !  ir = ir + (i-j)*keyR(k)
-            Hij(il,ir) = Hij(il-(i-j)*keyR(k),ir+(i-j)*keyR(k)) + val
-          END IF
-          !fill in other permuations of x<->z??
-        END DO
-        !WRITE(*,*) "=========="
+  
+  !Special case for 1 dimension
+  IF (ndim .EQ. 1) THEN
+    N = PRODUCT(nbas)
+    DO j=0,N-1
+      DO i=j,N-1
+        Hij(i,j) = Hij(i,j) + VTint(i-j+keyI(j,0),0)
       END DO
     END DO
-  END DO
-  
+  ELSE 
+    !The only nonzero terms are <x...k..z|Vk|x..k'...z>
+    !where k and k' are the only ones allowed to differ
+    CALL key_generate(ndim,nbas,keyR)
+    N = PRODUCT(nbas)
+    ! loop over all dimesions
+    DO k=0,ndim-1
+    !DO k=0,-1
+      !WRITE(*,*) "Dimension :", k
+      nelm(0:k-1) = nbas(0:k-1)
+      nelm(k:ndim-2) = nbas(k+1:ndim-1) 
+      CALL key_generate(ndim-1,nelm,keyX)
+      M = PRODUCT(nelm)
+
+      !Loop over all <x...z|x...z>
+      !x>z ???
+      DO a=0,M-1
+        CALL key_idx2ids(ndim-1,a,nelm,keyX,PsiX)
+        !WRITE(*,*) "PsiX",PsiX
+
+        !loop over |k'>
+        DO j=0,nbas(k)-1
+          PsiR(0:k-1) = PsiX(0:k-1)
+          PsiR(k) = j
+          PsiR(k+1:ndim-1) = PsiX(k:ndim-2) 
+          CALL key_ids2idx(ndim,nbas,keyR,PsiR,ir)
+         ! WRITE(*,*) "PsiR: ", PsiR
+
+          !loop over <k|
+          DO i=j,nbas(k)-1
+            PsiL(0:k-1) = PsiR(0:k-1)
+            PsiL(k) = i
+            PsiL(k+1:ndim-1) = PsiR(k+1:ndim-1)
+            CALL key_ids2idx(ndim,nbas,keyR,PsiL,il)
+          !  WRITE(*,*) "PsiL: ", PsiL
+            
+            val = VTint(i-j+keyI(j,k),k)
+            Hij(il,ir) = Hij(il,ir) + val
+            !WRITE(*,*) "il,ir",il,ir
+            IF (i .NE. j .AND. k .NE. 0) THEN
+              !WRITE(*,*) "ir",ir
+              !WRITE(*,*) "il",il
+            !  il = il - (i-j)*keyR(k)
+            !  ir = ir + (i-j)*keyR(k)
+              Hij(il-(i-j)*keyR(k),ir+(i-j)*keyR(k)) = Hij(il-(i-j)*keyR(k),ir+(i-j)*keyR(k)) + val
+            END IF
+            !fill in other permuations of x<->z??
+          END DO
+          !WRITE(*,*) "=========="
+        END DO
+      END DO
+    END DO
+  END IF
+
   DEALLOCATE(VTint)
-  !WRITE(*,*)
-  !DO j=0,N-1
-  !  WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
-  !END DO
+  INQUIRE(file='print',EXIST=ex) 
+  IF (ex) THEN
+    WRITE(*,*)
+    DO j=0,N-1
+      WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
+    END DO
+  END IF
 
   WRITE(*,*)
 

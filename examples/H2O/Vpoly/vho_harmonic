@@ -1,0 +1,204 @@
+ xvho : called
+
+ =======================================================
+ Starting xvho
+
+ Reading input from vho.in
+
+1    	!job type
+1	!basis type
+3    	!# dimensions
+10 10 10	!# basis functions in each dimension
+15	!# eigenvalues to compute
+1000	!memory in MB
+
+ job     : 1 -> V from force constants up to 4th order
+ bas     : 1 -> Harmonic Oscillator basis
+ ndim    :           3
+ nbas    :          10          10          10
+ enum    :          15
+ mem     :                 1000
+ input_jobinfo : completed with status            0
+ =======================================================
+ Beginning Construction of HO Hamiltonian
+ Dimension of Hamiltonian        1000
+
+ Hamiltonian Memory Analysis
+ Available memory        1000.00
+ Minimum memory             0.02
+ Precalc memory             0.02
+ Incore memory              8.01
+ Values are in MB
+
+ HO Hamiltonian will be built with incore memory
+
+ Reading force constants
+ Numbering offset is:           6
+
+ quadratic terms
+   1        1658.196290000000090
+   2        3835.791150000000016
+   3        3947.681340000000091
+
+ cubic terms
+
+ quartic terms
+
+ Calculating Integrals...
+ <i|q|i'> type integrals
+ <i|q^2|i'> type integrals
+ <i|q^3|i'> type integrals
+ <i|q^4|i'> type integrals
+ <i|p^2|i'> type integrals
+ Filling the Hamiltonian...
+
+ H_HO_build  : finished with s 0 in    0.0 s
+
+ Diagonalization Memory Analysis
+ Available memory        1000.00
+ Minimum memory             8.06
+ Incore memory              8.36
+ Values are in MB
+
+ Hamiltonian will be built with incore memory
+
+ Diagonalizing the Hamiltonian
+  Vibrational level      0
+  Energy           4720.83 cm-1
+  v0 ->               0.00 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     0     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      1
+  Energy           6379.03 cm-1
+  v0 ->            1658.20 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     1     0     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      2
+  Energy           8037.23 cm-1
+  v0 ->            3316.39 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     2     0     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      3
+  Energy           8556.63 cm-1
+  v0 ->            3835.79 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     1     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      4
+  Energy           8668.52 cm-1
+  v0 ->            3947.68 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     0     1     1.00000
+ ------------------------------------------------
+
+  Vibrational level      5
+  Energy           9695.42 cm-1
+  v0 ->            4974.59 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     3     0     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      6
+  Energy          10214.82 cm-1
+  v0 ->            5493.99 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     1     1     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      7
+  Energy          10326.71 cm-1
+  v0 ->            5605.88 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     1     0     1     1.00000
+ ------------------------------------------------
+
+  Vibrational level      8
+  Energy          11353.62 cm-1
+  v0 ->            6632.79 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     4     0     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level      9
+  Energy          11873.02 cm-1
+  v0 ->            7152.18 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     2     1     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level     10
+  Energy          11984.91 cm-1
+  v0 ->            7264.07 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     2     0     1     1.00000
+ ------------------------------------------------
+
+  Vibrational level     11
+  Energy          12392.42 cm-1
+  v0 ->            7671.58 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     2     0     1.00000
+ ------------------------------------------------
+
+  Vibrational level     12
+  Energy          12504.31 cm-1
+  v0 ->            7783.47 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     1     1     1.00000
+ ------------------------------------------------
+
+  Vibrational level     13
+  Energy          12616.20 cm-1
+  v0 ->            7895.36 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     0     0     2     1.00000
+ ------------------------------------------------
+
+  Vibrational level     14
+  Energy          13011.82 cm-1
+  v0 ->            8290.98 cm-1
+ --------------------------------
+ v's, Coef
+ ------------------------------------------------
+     5     0     0     1.00000
+ ------------------------------------------------
+
+
+ xvho finished with status  0 in    0.2 s
+ =======================================================
+

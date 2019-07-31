@@ -39,6 +39,7 @@ SUBROUTINE HO1D_integrals(func,units,N,Vq,q,qmin,qmax,qeq,np,&
   LOGICAL, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: N, np, func, units
 
+  LOGICAL :: ex
   INTEGER :: i
   error = .FALSE.
   
@@ -81,6 +82,13 @@ SUBROUTINE HO1D_integrals(func,units,N,Vq,q,qmin,qmax,qeq,np,&
   END IF
 
   CALL HO_harmonic(units,Hij,N,k,m,error) !this is the same no matter what
+
+  INQUIRE(file='print',exist=ex)
+  IF (ex) THEN
+    DO i=0,N-1
+      WRITE(*,'(1x,999(F28.16,1x))') Hij(i,0:N-1)
+    END DO
+  END IF
  
 END SUBROUTINE HO1D_integrals
 

@@ -1,0 +1,66 @@
+ xvho : called
+
+ =======================================================
+ Starting xvho
+
+ Reading input from vho.in
+
+-2    	!job type
+1	!basis type
+3    	!# dimensions
+30 30 30	!# basis functions in each dimension
+10	!# eigenvalues to compute
+1000	!memory in MB
+
+ job     : -2 -> print points for V gaussian quadrature 
+ bas     : 1 -> Harmonic Oscillator basis
+ ndim    :           3
+ nbas    :          30          30          30
+ enum    :          10
+ mem     :                 1000
+ input_jobinfo : completed with status            0
+ =======================================================
+ Generating Gauss-Hermite abscissa and weights
+
+ The following number of abscissa will be used:
+   30    30    30
+
+ dummy,line-0.00.00
+ dummy,line0.000.11
+ dummy,line0.00-0.1
+ dummy,line%   freq
+ Number of atoms:            3
+
+ Undisplaced coordinates
+   0.0000000000    0.0000000000    0.1251018983
+  -0.0000000000   -1.4295680710   -0.9927289529
+  -0.0000000000    1.4295680710   -0.9927289529
+
+ Writing basis force constants to basis.in
+ The following normal coordinates were read
+
+ Frequency :  1658.1962872063
+  -0.0000000000    0.0000000000    0.0183111879
+   0.0000000000    0.1106702597   -0.1453059198
+   0.0000000000   -0.1106702597   -0.1453059198
+
+ Frequency :  3835.7911472440
+   0.0000000000   -0.0000000000    0.0086413567
+  -0.0000000000   -0.1013786497   -0.0685723006
+  -0.0000000000    0.1013786497   -0.0685723006
+
+ Frequency :  3947.6813396544
+   0.0000000000    0.0117601137    0.0000000000
+  -0.0000000000   -0.0933207691   -0.0729708755
+  -0.0000000000   -0.0933207691    0.0729708755
+
+ Writing points to 'pointsX.txt'
+ Format is atom1_x,atom1_y,atom1_z,atom2_x,....
+ Writting abscissa and weights to abscissa.dat
+
+ ----------------------------------------------
+
+
+ xvho finished with status  0 in    0.0 s
+ =======================================================
+

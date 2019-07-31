@@ -25,7 +25,11 @@ SUBROUTINE key_generate(ndim,nelem,key)
   INTEGER, DIMENSION(0:), INTENT(IN) :: nelem
   INTEGER, INTENT(IN) :: ndim
   INTEGER :: i
-  key(ndim-1) = 1
+  IF (ndim .GT. 0) THEN
+    key(ndim-1) = 1
+  ELSE
+    key(0) = 1
+  END IF
   DO i=ndim-2,0,-1
     key(i) = key(i+1)*nelem(i+1)
   END DO
