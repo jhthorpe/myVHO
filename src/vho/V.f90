@@ -8,6 +8,7 @@ MODULE V
   USE input
   USE fit
   USE val
+  USE key
 
 CONTAINS
 !------------------------------------------------------------
@@ -18,36 +19,37 @@ CONTAINS
 ! ndim          : int, number of dimensions
 ! nabs          : 1D int, number of abscissa
 ! Vij           : 2D real*8, potential energy [abscissa,dimension]
+! Vq            : 1D real*8, potential at abscissa [abscissa]
 ! error         : int, exit code          
 
-SUBROUTINE V_get(job,ndim,nabs,Vij,error)
+SUBROUTINE V_get(job,ndim,nabs,Vij,Vq,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij
+  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: Vq
   INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,ndim
 
   INTEGER, DIMENSION(0:ndim-1) :: npot
-  INTEGER :: i,j
+  INTEGER :: i,j,N
 
   error = 0
+  N = PRODUCT(nabs)
   !read in potential energies
-  CALL V_read(job,ndim,nabs,Vij,error)
+  CALL V_read(job,ndim,nabs,Vij,Vq,error)
   IF (error .NE. 0) RETURN 
   
- ! IF (job .EQ. 1) THEN
- !   CALL V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
- !   IF (error .NE. 0) THEN
- !     RETURN
- !   END IF 
- ! END IF
- 
   !adjust potentials to be zero
-  DO j=0,ndim-1
-    Vij(0:nabs(j)-1,j) = Vij(0:nabs(j)-1,j) - MINVAL(Vij(0:nabs(j)-1,j))
-  END DO
+  IF (job .EQ. 2) THEN 
+    DO j=0,ndim-1
+      Vij(0:nabs(j)-1,j) = Vij(0:nabs(j)-1,j) - MINVAL(Vij(0:nabs(j)-1,j))
+    END DO
+    Vij = Vij*219474.63 !convert hartrees to cm-1
+  ELSE
+    Vq(0:N-1) = Vq(0:N-1) - MINVAL(Vq(0:N-1))
+    Vq(0:N-1) = Vq(0:N-1)*219474.63
+  END IF
 
-  Vij = Vij*219474.63 !convert hartrees to cm-1
   !WRITE(*,*) "TESTING TESTING TESTING"
   !DO i=0,ndim-1
   !  WRITE(*,*) "Dimension", i
@@ -67,21 +69,24 @@ END SUBROUTINE V_get
 ! ndim          : int, number of dimensions
 ! nabs          : int, number of abscissa
 ! npot          : 1D int, number of points per dimension
-! Vtemp         : 2D real*8, potentials at points [potential, dimension]
-! qtemp         : 2D real*8, normco at points [normco, dimension]
+! Vij           : 2D real*8, potentials at points [potential, dimension]
+! Vq            : 1D real*8, potentials at abscissa [potential]
 ! error         : int, error code
 
-SUBROUTINE V_read(job,ndim,nabs,Vij,error)
+SUBROUTINE V_read(job,ndim,nabs,Vij,Vq,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Vij
+  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: Vq
   INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim,job
 
+  INTEGER, DIMENSION(0:ndim-1) :: key,ids
   CHARACTER(LEN=1024) :: fname
   REAL(KIND=8) :: val1
   INTEGER :: foff,fid,dummy 
-  INTEGER :: i,j
+  LOGICAL :: ex
+  INTEGER :: i,j,N
 
   error = 0
   foff = 200
@@ -99,13 +104,37 @@ SUBROUTINE V_read(job,ndim,nabs,Vij,error)
           WRITE(*,*) "Line :",i,"of file",TRIM(fname)
           WRITE(*,*) "Input is outside of range [1:nabs(j)]"
           error = 1
-          RETURN
+          EXIT 
         END IF
         dummy = dummy - 1
         Vij(dummy,j) = val1
       END DO
       CLOSE(unit=fid)
     END DO
+
+  ELSE IF (job .EQ. 3) THEN
+    N = PRODUCT(nabs)
+    INQUIRE(file='V.in',exist=ex)
+    IF (.NOT. ex) THEN
+      WRITE(*,*) "V_read  : ERROR"
+      WRITE(*,*) "You need to create the file V.in" 
+      error = 1
+      RETURN
+    END IF
+    OPEN(file='V.in',unit=300,status='old')
+    DO i=0,N-1
+      READ(300,*) dummy,val1
+      IF (dummy .LT. 1 .OR. dummy .GT. N) THEN
+        WRITE(*,*) "V_read  : error"
+        WRITE(*,*) "Line :",i,"of file 'V.in'"
+        WRITE(*,*) "Input is outside of range [1:N]"
+        error = 1
+        EXIT 
+      END IF
+      dummy = dummy-1
+      Vq(dummy) = val1 
+    END DO 
+    CLOSE(unit=300) 
 
   ELSE !we are in some other form 
     WRITE(*,*) "V_read  : ERROR"

@@ -94,12 +94,15 @@ SUBROUTINE input_check(job,bas,ndim,nbas,enum,mem,error)
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(INOUT) :: job,bas,ndim,enum
   error = 0
-  IF (job .NE. -2 .AND. job .NE. 1 .AND. job .NE. 2) THEN
+  IF (job .NE. -3 .AND. job .NE. -2 .AND. &
+      job .NE. 1 .AND. job .NE. 2 .AND. job .NE. 3) THEN
     WRITE(*,*) "vho.in line #1"
     WRITE(*,*) "Jobtype", job," is not supported. Options are..."
+    WRITE(*,*) "-3 : print points for V from gaussian quadrature"
     WRITE(*,*) "-2 : print points for V diagonal gaussian quadrature"
     WRITE(*,*) " 1 : V from force constants up to 4th order" 
     WRITE(*,*) " 2 : V diagonal from gaussian quadrature" 
+    WRITE(*,*) " 3 : V from gaussian quadrature"
     error = 1
   END IF
   IF (bas .NE. 1) THEN
@@ -154,12 +157,16 @@ SUBROUTINE input_write(job,bas,ndim,nbas,enum,mem,error)
   INTEGER, INTENT(IN) :: job,bas,ndim,enum
   error = 0
   CALL EXECUTE_COMMAND_LINE('cat vho.in')
-  IF (job .EQ. -2) THEN
-    WRITE(*,*) "job     : -2 -> print points for V gaussian quadrature "
+  IF (job .EQ. -3) THEN 
+    WRITE(*,*) "job     : -3 -> print points for V quadrature"
+  ELSE IF (job .EQ. -2) THEN
+    WRITE(*,*) "job     : -2 -> print points for V diagonal quadrature "
   ELSE IF (job .EQ. 1) THEN
     WRITE(*,*) "job     : 1 -> V from force constants up to 4th order"
   ELSE IF (job .EQ. 2) THEN
-    WRITE(*,*) "job     : 2 -> V seperable from gaussian quadrature" 
+    WRITE(*,*) "job     : 2 -> V diagonal from quadrature" 
+  ELSE IF (job .EQ. 3) THEN
+    WRITE(*,*) "job     : 3 -> V from quadrature"
   END IF
   IF (bas .EQ. 1) THEN
     WRITE(*,*) "bas     : 1 -> Harmonic Oscillator basis"

@@ -41,10 +41,10 @@ PROGRAM vho
   END IF
 
   !generate abscissa if needed
-  IF (job .EQ. 2) THEN
+  IF (job .EQ. 2 .OR. job .EQ. 3) THEN
     CALL gauss_read(job,ndim,nabs,error)
     CALL gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
-  ELSE IF (job .EQ. -2) THEN
+  ELSE IF (job .LT. 0) THEN
     CALL gauss_generate(job,bas,ndim,mem,nbas,q,W,error)
   END IF
   IF (error .NE. 0) THEN

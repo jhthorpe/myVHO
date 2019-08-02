@@ -36,11 +36,11 @@ fcon.o : fcon.f90 sort.o
 evec.o	: evec.f90 key.o
 	$(FC) $(FFALGS) -c evec.f90 key.o
 
-ints_HO.o : ints_HO.f90 val.o gauss.o
-	$(FC) $(FFLAGS) -c ints_HO.f90 val.o  gauss.o
+ints_HO.o : ints_HO.f90 val.o gauss.o key.o
+	$(FC) $(FFLAGS) -c ints_HO.f90 val.o gauss.o key.o
 
-gauss.o : gauss.f90 input.o fname.o
-	$(FC) $(FFLAGS) -c gauss.f90 input.o fname.o
+gauss.o : gauss.f90 input.o fname.o key.o
+	$(FC) $(FFLAGS) -c gauss.f90 input.o fname.o key.o
 
 memory.o : memory.f90 val.o linal.o
 	$(FC) $(FFLAGS) -c memory.f90 val.o linal.o
@@ -48,8 +48,8 @@ memory.o : memory.f90 val.o linal.o
 basis.o : basis.f90 input.o
 	$(FC) $(FFLAGS) -c basis.f90 input.o
 
-V.o : V.f90 fname.o input.o fit.o val.o
-	$(FC) $(FFLAGS) -c V.f90 fname.o input.o fit.o val.o
+V.o : V.f90 fname.o input.o fit.o val.o key.o
+	$(FC) $(FFLAGS) -c V.f90 fname.o input.o fit.o val.o key.o
 
 H_HO.o : H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o key.o
 	$(FC) $(FFLAGS) -c H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o key.o

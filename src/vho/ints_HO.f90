@@ -6,6 +6,7 @@
 MODULE ints_HO
   USE val
   USE gauss
+  USE key
 
 CONTAINS
 
@@ -544,7 +545,7 @@ SUBROUTINE ints_HO_polyput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
 END SUBROUTINE ints_HO_polyput
 
 !------------------------------------------------------------
-! ints_HO_quadput
+! ints_HO_diagput
 !       - calculates the contributions of the various 
 !         force constants to the Hamiltonian in the HO basis
 !
@@ -582,7 +583,7 @@ END SUBROUTINE ints_HO_polyput
 ! Hij           : real*8, value of this hamiltonian element
 ! error         : int, error code
 
-SUBROUTINE ints_HO_quadput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
+SUBROUTINE ints_HO_diagput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
                            nQ3,qQ3,Q3,nQ4,qQ4,Q4,Q1int,Q2int,&
                            Q3int,Q4int,Hij,error)
   IMPLICIT NONE
@@ -618,8 +619,119 @@ SUBROUTINE ints_HO_quadput(ndim,PsiL,PsiR,nQ2,qQ2,Q2,&
   
   Hij = cubival + quarval 
 
-END SUBROUTINE ints_HO_quadput
+END SUBROUTINE ints_HO_diagput
 
+!------------------------------------------------------------
+! ints_HO_quadput
+!       - calculates the value of a Hamiltonian element 
+!         using gaussian quadrature for all the dimensions
+!       
+!       - note that the hermite polynomials and norm const are 
+!         assumed to be already arranged so that we don't
+!         need to access by quantum number. The LHS
+!         values are accessed (2*i) and the RHS are (2*i+1)
+!
+!       - Vq is already in order       
+!
+!       - the code is pretty complicated, in order to maximize
+!         memory locality
+!
+! #times abscissa is repeated : M/nabs(k)
+! #repeats in a row           : key(k)
+! #repeat cycles              : M/nabs(k)/key(k) 
+! #length of repeat cycle     : nabs(k)*key(k) 
+!
+! Example
+! nabs = 3,2
+!  0  0
+!  0  1  <- this is the first repeat cycle for 2nd dim
+!  1  0
+!  1  1  <- this is first repeat cycle for 1st dim, and 2nd for 2nd dim
+!  2  0
+!  2  1
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nabs          : 1D int, number of dimensions
+! q             : 2D real*8, abscissa    [abscissa,dimension]
+! W             : 2D real*8, weights     [weight,dimension]
+! basK          : 1D real*8, basis frequencies
+! Norm          : 1D real*8, normalization constants
+! Heff          : 2D real*8, hermite poly
+! PsiL          : 1D int, LHS quantum numbers 
+! PsiR          : 1D int, RHS quantum numbers 
+! Vq            : 1D int, potentials at abscissa
+! Hij           : real*8, value to fill
+! error         : int, error code
+
+SUBROUTINE ints_HO_quadput(ndim,nabs,q,W,basK,Norm,Heff,PsiL,PsiR,Vq,Hij,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W,Heff
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: basK,Norm,Vq
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs,PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: Hij
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  REAL(KIND=8), DIMENSION(0:PRODUCT(nabs)-1) :: val
+  INTEGER, DIMENSION(0:ndim-1) :: key,ids
+  INTEGER :: lo,hi,l0,h0
+  INTEGER :: i,j,k,M
+  error = 0
+  M = PRODUCT(nabs)
+  Hij = 0.0D0 
+
+  CALL key_generate(ndim,nabs,key)
+  val = Vq
+
+  !Harmonic potential part
+  DO k=0,ndim-1
+    DO j=0,nabs(k)-1  !loop through unique abscissa
+      l0 = j*key(k)
+      h0 = l0 + key(k) - 1 
+      DO i=0,(M/nabs(k))/key(k)-1 !loop through repeat cycles
+        lo = i*key(k)*nabs(k)  + l0 
+        hi = i*key(k)*nabs(k)  + h0 
+        val(lo:hi) = val(lo:hi) - 0.5D0*basK(k)*q(j,k)**2.0D0
+      END DO
+    END DO
+  END DO
+
+  !Real Potential energy part
+  DO k=0,ndim-1
+    DO j=0,nabs(k)-1
+      l0 = j*key(k)
+      h0 = l0 + key(k) - 1 
+      DO i=0,(M/nabs(k))/key(k)-1 !loop through repeat cycles
+        lo = i*key(k)*nabs(k)  + l0 
+        hi = i*key(k)*nabs(k)  + h0 
+        val(lo:hi) = val(lo:hi)*Heff(j,2*k)*Heff(j,2*k+1)*&
+                                     W(j,k)
+      END DO
+    END DO
+  END DO
+
+  !sum it up and normalize
+  Hij = SUM(val(0:M-1))
+  DO j=0,ndim-1
+    Hij = Hij * Norm(2*j) 
+    Hij = Hij * Norm(2*j+1)
+  END DO
+
+  !Kinetic energy part
+  IF (ALL(PsiL .EQ. PsiR)) THEN
+    DO k=0,ndim-1
+      Hij = Hij + basK(k)*(1.0D0*PsiL(k)+0.5D0)
+    END DO
+  END IF
+
+  CALL val_check(Hij,error)
+  IF (error .NE. 0) THEN
+    WRITE(*,*) "ints_HO_quadput  : ERROR"
+    WRITE(*,*) "There is a bad value at this Matrix Element:"
+    WRITE(*,*) "PsiL", PsiL
+    WRITE(*,*) "PsiR", PsiR
+  END IF
+
+END SUBROUTINE ints_HO_quadput
 !------------------------------------------------------------
 ! ints_HO_Q2eval
 !       - evaluates quadratic force constant's contribution
@@ -777,7 +889,7 @@ SUBROUTINE ints_HO_cubieval(diag,ndim,PsiL,PsiR,qPhi,&
     END IF
    
   !type 4, qi,qj,qk
-  ELSE 
+  ELSE IF (i .NE. j .AND. j .NE. k) THEN
     !i+1,i  j+1,j    k+1,k
     IF (PsiL(i) .EQ. PsiR(i)+1 .AND. &
         PsiL(j) .EQ. PsiR(j)+1 .AND. &
@@ -787,6 +899,10 @@ SUBROUTINE ints_HO_cubieval(diag,ndim,PsiL,PsiR,qPhi,&
       o = PsiR(k) 
       cubival = cubival + Phi*Q1int(n,i)*Q1int(m,j)*Q1int(o,k)
     END IF
+  ELSE 
+    WRITE(*,*) "ints_HO_cubieval  : ERROR"
+    WRITE(*,*) "There is a cubic force constant type "
+    WRITE(*,*) "  that has not been coded correctly"
   END IF
 
 END SUBROUTINE ints_HO_cubieval

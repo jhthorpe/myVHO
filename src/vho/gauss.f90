@@ -5,6 +5,7 @@
 MODULE gauss
   USE input
   USE fname
+  USE key
 
 CONTAINS
 !---------------------------------------------------------------------
@@ -28,8 +29,9 @@ SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: job,bas,ndim
 
-  REAL(KINd=8), DIMENSION(0:ndim-1) :: line
-  INTEGER :: i,j
+  REAL(KIND=8), DIMENSION(0:ndim-1) :: line
+  INTEGER, DIMENSION(0:ndim-1) :: ids,key
+  INTEGER :: i,j,k
 
   error = 0
   IF (bas .EQ. 1) THEN
@@ -48,9 +50,10 @@ SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
       CALL gauss_hermite(nabs(i),q(0:nabs(i)-1,i),W(0:nabs(i)-1,i),error)  
       IF (error .NE. 0) RETURN
     END DO
-    IF (job .EQ. -2) THEN
-      CALL gauss_2_xyz(ndim,nabs,q,error)
+    IF (job .EQ. -2 .OR. job .EQ. -3) THEN
+      CALL gauss_2_xyz(job,ndim,nabs,q,error)
     END IF
+    CALL gauss_print(job,ndim,nabs,q,W,error)
 
   ELSE
     WRITE(*,*) "gauss_generate  : ERROR"
@@ -59,19 +62,6 @@ SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
     RETURN
   END IF
 
-  IF (job .EQ. -2) THEN
-    WRITE(*,*) "Writting abscissa and weights to abscissa.dat"
-    WRITE(*,*) 
-    OPEN(file='abscissa.dat',unit=101,status='replace')
-    DO j=0,ndim-1
-      WRITE(101,*) "Dimension :", j+1
-      DO i=0,nabs(j)-1
-        WRITE(101,*) i+1,q(i,j),W(i,j)
-      END DO
-      WRITE(101,*) "----------------------------------------------"
-    END DO
-    CLOSE(unit=101)
-  END IF
   WRITE(*,*) "----------------------------------------------"
   WRITE(*,*)
 
@@ -165,21 +155,48 @@ END SUBROUTINE gauss_hermite
 
 SUBROUTINE gauss_read(job,ndim,nabs,error)
   IMPLICIT NONE
-  INTEGER, DIMENSION(:), ALLOCATABLE :: nabs
+  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: nabs
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim,job
   CHARACTER(LEN=1024) :: fname
+  LOGICAL :: ex
   INTEGER :: fline
   INTEGER :: i
   error = 0
-  IF (job .NE. 2) RETURN
-  ALLOCATE(nabs(0:ndim-1))
-  DO i=0,ndim-1
-    CALL fname_Vin(i+1,fname,error)
-    CALL input_fline(fline,fname,error)
-    IF (error .NE. 0) RETURN
-    nabs(i) = fline
-  END DO
+  INQUIRE(file='gauss.in',exist=ex)
+  IF (.NOT. ex) THEN
+    error = 1
+    WRITE(*,*) 'gauss_read  : ERROR'
+    WRITE(*,*) "You need to generate the input file 'gauss.dat'"
+    RETURN 
+  ELSE
+    IF (job .EQ. 2) THEN
+      ALLOCATE(nabs(0:ndim-1))
+      DO i=0,ndim-1
+        CALL fname_Vin(i+1,fname,error)
+        CALL input_fline(fline,fname,error)
+        IF (error .NE. 0) RETURN
+        nabs(i) = fline
+      END DO
+    ELSE IF (job .EQ. 3) THEN
+      OPEN(file='gauss.in',unit=100,status='old')
+       READ(100,*) i
+       IF (i .NE. ndim) THEN
+         WRITE(*,*) "gauss_read  : ERROR"
+         WRITE(*,*) "gauss.in contains a different ndim than vho.in"
+         error = 1
+       ELSE
+         ALLOCATE(nabs(0:ndim-1))
+         READ(100,*) nabs
+       END IF  
+      CLOSE(unit=100)
+    ELSE
+      error = 1
+      WRITE(*,*) "gauss_read  : ERROR"
+      WRITE(*,*) "This jobtype not coded yet",job
+      RETURN
+    END IF 
+  END IF
 END SUBROUTINE gauss_read
 
 !---------------------------------------------------------------------
@@ -187,25 +204,27 @@ END SUBROUTINE gauss_read
 !       - converts gaussian quadrature to xyz coordinates
 !       - reads QUADRATURE file from CFOUR
 !---------------------------------------------------------------------
+! job           : int, jobtype
 ! ndim          : int, number of dimensions
 ! nabs          : 1D int, number of abscissa per dimension
 ! q             : 2D real*8, abscsissa per dimensions [abscissa,dim]
 ! error         : int, exit code
 
-SUBROUTINE gauss_2_xyz(ndim,nabs,q,error)
+SUBROUTINE gauss_2_xyz(job,ndim,nabs,q,error)
   IMPLICIT NONE
   
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q
   INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
   INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(IN) :: ndim,job
 
   REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: qmat
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: q0,xyz
   REAL(KIND=8), DIMENSION(0:ndim-1) :: basK
+  INTEGER, DIMENSION(0:ndim-1) :: key,ids
   CHARACTER(LEN=1024) :: fname
   LOGICAL :: ex
-  INTEGER :: natoms,fid,i,j,k
+  INTEGER :: natoms,fid,i,j,k,N
   
   error = 0
   natoms = -1
@@ -241,21 +260,107 @@ SUBROUTINE gauss_2_xyz(ndim,nabs,q,error)
   END DO
   WRITE(*,*) 
 
-  WRITE(*,*) "Writing points to 'pointsX.txt'"
-  WRITE(*,*) "Format is atom1_x,atom1_y,atom1_z,atom2_x,...."
-  DO j=0,ndim-1
-    fid = 500 + j
-    CALL fname_pointstxt(j+1,fname,error)
-    OPEN(file=TRIM(fname),unit=fid,status='replace')
-    DO i=0,nabs(j)-1 
-      xyz = q0 + q(i,j)*qmat(0:natoms-1,0:2,j)
-      !This is just hilariously bad code, but who cares
+  IF (job .EQ. -2) THEN
+    WRITE(*,*) "Writing points to 'pointsX.txt'"
+    WRITE(*,*) "Format is atom1_x,atom1_y,atom1_z,atom2_x,...."
+    DO j=0,ndim-1
+      fid = 500 + j
+      CALL fname_pointstxt(j+1,fname,error)
+      OPEN(file=TRIM(fname),unit=fid,status='replace')
+      DO i=0,nabs(j)-1 
+        xyz = q0 + q(i,j)*qmat(0:natoms-1,0:2,j)
+        !This is just hilariously bad code, but who cares
+        WRITE(fid,*) TRANSPOSE(xyz)
+      END DO
+      CLOSE(unit=fid)
+    END DO
+  ELSE IF (job .EQ. -3) THEN
+    WRITE(*,*) "Writing points to points.txt" 
+    WRITE(*,*)
+    fid = 500
+    OPEN(file='points.txt',unit=fid,status='replace')
+    CALL key_generate(ndim,nabs,key)
+    N = PRODUCT(nabs)
+    DO k=0,N-1
+      CALL key_idx2ids(ndim,k,nabs,key,ids)
+      xyz = q0
+      DO j=0,ndim-1
+        xyz = xyz + q(ids(j),j)*qmat(0:natoms-1,0:2,j)
+      END DO 
       WRITE(fid,*) TRANSPOSE(xyz)
     END DO
     CLOSE(unit=fid)
-  END DO
+    
+  END IF
 
 END SUBROUTINE gauss_2_xyz
+
+!---------------------------------------------------------------------
+! gauss_print
+!       - prints abscissa and weights that need to be used
+!---------------------------------------------------------------------
+! job           : int, jobtype
+! ndim          : int, number of dimensions
+! nabs          : 1D int, number of abscissa in each dimension
+! q             : 2D real*8, abscissa
+! W             : 2D real*8, weights
+! error         : int, exit code
+
+SUBROUTINE gauss_print(job,ndim,nabs,q,W,error)
+  IMPLICIT NONE
+  
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,w
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nabs
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: job,ndim
+  REAL(KIND=8), DIMENSION(0:ndim-1) :: valq,valW
+  INTEGER, DIMENSION(0:ndim-1) :: key,ids
+  INTEGER :: i,j,k,N
+  error = 0
+
+  WRITE(*,*) "Saving gaussian quadrature info in 'gauss.in'"
+  OPEN(file='gauss.in',unit=100,status='replace')
+  WRITE(100,*) ndim
+  WRITE(100,*) nabs
+  CLOSE(unit=100)
+  IF (job .EQ. -2) THEN
+    WRITE(*,*) "Writting abscissa to abscissa.dat"
+    WRITE(*,*) "Writting weights to weights.dat"
+    WRITE(*,*) 
+    OPEN(file='abscissa.dat',unit=101,status='replace')
+    OPEN(file='weights.dat',unit=102,status='replace')
+    DO j=0,ndim-1
+      WRITE(101,*) "Dimension :", j+1
+      WRITE(102,*) "Dimension :", j+1
+      DO i=0,nabs(j)-1
+        WRITE(101,*) i+1,q(i,j)
+        WRITE(102,*) i+1,W(i,j)
+      END DO
+      WRITE(101,*) "----------------------------------------------"
+    END DO
+    CLOSE(unit=101)
+    CLOSE(unit=102)
+  ELSE IF (job .EQ. -3) THEN
+    WRITE(*,*) "Writting abscissa to abscissa.dat"
+    WRITE(*,*) "Writting weights to weights.dat"
+    WRITE(*,*)
+    OPEN(file='abscissa.dat',unit=101,status='replace')
+    OPEN(file='weights.dat',unit=102,status='replace')
+    CALL key_generate(ndim,nabs,key)
+    N = PRODUCT(nabs)
+    DO k=0,N-1
+      CALL key_idx2ids(ndim,k,nabs,key,ids)
+      DO j=0,ndim-1
+        valq(j) = q(ids(j),j) 
+        valW(j) = W(ids(j),j) 
+      END DO
+      WRITE(101,'(1x,I6,1x,999(F18.13))') k+1,valq
+      WRITE(102,'(1x,I6,1x,999(F18.13))') k+1,valW
+    END DO
+    CLOSE(unit=101)
+    CLOSE(unit=102)
+  END IF
+END SUBROUTINE gauss_print
 
 !---------------------------------------------------------------------
 END MODULE gauss
