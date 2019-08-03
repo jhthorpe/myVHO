@@ -33,17 +33,18 @@ SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   INTEGER, INTENT(INOUT) :: memstat,error
   INTEGER, INTENT(IN) :: job,N,ndim
   REAL(KIND=8) :: minmem,premem,inmem,basemem,qw2mb,qmem
-  INTEGER :: mbas,mabs
+  INTEGER :: mbas,mabs,M
 
   error = 0
   qw2mb = 8.0D0/1000000.0D0
   qmem = mem/qw2mb
   mbas = MAXVAL(nbas)
   mabs = MAXVAL(nabs)
+  M = PRODUCT(nabs)
   WRITE(*,*) "Hamiltonian Memory Analysis"
   CALL val_check(qmem,error)
   IF (error .NE. 0) THEN
-    WRITE(*,*) "memory_Hbuild  : ERROR"
+    WRITE(*,*) "memory_HObuild  : ERROR"
     WRITE(*,*) "qmem was too large to be analysed"
     error = 1
     RETURN
@@ -89,6 +90,23 @@ SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
              + 2*mbas*ndim + 3*mbas*ndim + 2*mbas*ndim
     inmem = basemem + N**2 + 5*ndim + mbas*ndim  + 2*mbas*ndim &
              + 2*mbas*ndim + 3*mbas*ndim + 2*mbas*ndim
+  ELSE IF (job .EQ. 3) THEN
+    !terms are [minmem], [premem], [inmem]
+    ! N = product(nbas), M = product(nabs)
+    ! hamiltonian : N, N, N^2
+    ! Vq          : M, M, M
+    ! Hermite     : mbas*mabs*ndim
+    ! Heff        : mabs*2*ndim
+    ! Norm        : mbas
+    minmem = basemem + N + M + mbas*mabs*ndim + mbas
+    premem = basemem + N + M + mbas*mabs*ndim + mbas
+    inmem = basemem + N**2.0D0 + M + mbas*mabs*ndim + mbas 
+  ELSE 
+    
+    error = 1
+    WRITE(*,*) "memory_HO_build  : ERROR"
+    WRITE(*,*) "This jobtype is not supported :", job
+    RETURN
   END IF
 
   WRITE(*,'(A20,F12.2)') "Available memory   ", qmem*qw2mb
@@ -191,11 +209,11 @@ SUBROUTINE memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
     memstat = -1
     RETURN
   ELSE IF (qmem .LT. inmem .AND. qmem .GE. minmem) THEN
-    WRITE(*,*) "Hamiltonian will be built with minimal memory"
+    WRITE(*,*) "Hamiltonian will be diagonalized with minimal memory"
     memstat = 0
 
   ELSE IF (qmem .GE. inmem) THEN
-    WRITE(*,*) "Hamiltonian will be built with incore memory"
+    WRITE(*,*) "Hamiltonian will be diagonalized with incore memory"
     memstat = 2
   ELSE
     WRITE(*,*) "memory_Hdiag  : ERROR"
