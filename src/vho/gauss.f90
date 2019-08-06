@@ -62,8 +62,8 @@ SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
     RETURN
   END IF
 
-  WRITE(*,*) "----------------------------------------------"
   WRITE(*,*)
+  WRITE(*,*) "-----------------------------------------------------"
 
 END SUBROUTINE gauss_generate
 

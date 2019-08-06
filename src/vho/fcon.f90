@@ -15,32 +15,33 @@ CONTAINS
 !             number, nothing -> actual values
 !       - X = Q,P,QP,PQ
 !       - Y = 1,2,3,4, order. 
-!       - example: nQ4 -> number of Q^4 type force constants 
+!       - example: nquar -> number of Q^4 type force constants 
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
-! nQ2           : int, number of quadratic force constants
-! qQ2           : 1D int, QN of quadratic force constants
-! Q2            : 1D real*8, quadratic force constants
-! nQ3           : int, number of cubic force constants
-! qQ3           : 1D int, QN of cubic force constants
-! Q3            : 1D real*8, cubic force constants
-! nQ4           : int, number of quartic force constants
-! qQ4           : 1D int, QN of quartic force constants
-! Q4            : 1D real*8, quartic force constants
+! nquad           : int, number of quadratic force constants
+! qquad           : 1D int, QN of quadratic force constants
+! quad            : 1D real*8, quadratic force constants
+! ncubi           : int, number of cubic force constants
+! qcubi           : 1D int, QN of cubic force constants
+! cubi            : 1D real*8, cubic force constants
+! nquar           : int, number of quartic force constants
+! qquar           : 1D int, QN of quartic force constants
+! quar            : 1D real*8, quartic force constants
 ! error         : int, exit code
 !
 
-SUBROUTINE fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
-                 nQ4,qQ4,Q4,error)
+SUBROUTINE fcon_get(job,ndim,nquad,qquad,quad,ncubi,qcubi,cubi,&
+                 nquar,qquar,quar,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q2,Q3,Q4
-  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ2,qQ3,qQ4
-  INTEGER, INTENT(INOUT) :: nQ2,nQ3,nQ4
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: quad,cubi,quar
+  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qquad,qcubi,qquar
+  INTEGER, INTENT(INOUT) :: nquad,ncubi,nquar
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim,job
   INTEGER :: voff
   LOGICAL :: ex
   error = 0
+  IF (job .NE. 1 .AND. job .NE. 2 .AND. job .NE. 3) RETURN
   WRITE(*,*) "Reading force constants"
   INQUIRE(file='voff.in',EXIST=ex)
   IF (ex) THEN
@@ -53,13 +54,11 @@ SUBROUTINE fcon_get(job,ndim,nQ2,qQ2,Q2,nQ3,qQ3,Q3,&
   WRITE(*,*) "Numbering offset is:", voff
   WRITE(*,*)
  
- ! IF (job .EQ. 1) THEN
-    CALL fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
-    IF (error .NE. 0) RETURN
- ! END IF
-  CALL fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
+  CALL fcon_read_quad(ndim,voff,nquad,qquad,quad,error)
   IF (error .NE. 0) RETURN
-  CALL fcon_read_Q4(job,ndim,voff,nQ4,qQ4,Q4,error)
+  CALL fcon_read_cubi(job,ndim,voff,ncubi,qcubi,cubi,error)
+  IF (error .NE. 0) RETURN
+  CALL fcon_read_quar(job,ndim,voff,nquar,qquar,quar,error)
   IF (error .NE. 0) RETURN
 END SUBROUTINE fcon_get
 
@@ -116,7 +115,7 @@ SUBROUTINE fcon_read_Q1(ndim,voff,nQ1,qQ1,Q1,error)
 END SUBROUTINE fcon_read_Q1
 
 !------------------------------------------------------------
-! fcon_read_Q2
+! fcon_read_quad
 !       - read quadratic force constants from cfour 
 !         'quadratic' file
 !       - note that quadratic terms are diagonal in normal
@@ -124,16 +123,16 @@ END SUBROUTINE fcon_read_Q1
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
 ! voff          : int, numbering offset
-! nQ2           : int, number of q^2 force con
-! qQ2           : 1D int, quantum numbers
-! Q2            : 1D real*8, force con
+! nquad           : int, number of q^2 force con
+! qquad           : 1D int, quantum numbers
+! quad            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
+SUBROUTINE fcon_read_quad(ndim,voff,nquad,qquad,quad,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q2
-  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ2
-  INTEGER, INTENT(INOUT) :: nQ2,error
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: quad
+  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qquad
+  INTEGER, INTENT(INOUT) :: nquad,error
   INTEGER, INTENT(IN) :: ndim,voff
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
   INTEGER, DIMENSION(:), ALLOCATABLE :: Itemp
@@ -150,14 +149,14 @@ SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
 
     CALL input_fline(fline,fname,error)
     IF (error .NE. 0) THEN
-      WRITE(*,*) "fcon_read_Q2  : ERROR"
+      WRITE(*,*) "fcon_read_quad  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
     ALLOCATE(Itemp(0:fline-1))
     ALLOCATE(Rtemp(0:fline-1))
     Itemp = -1
     Rtemp = 0.0D0 
-    nQ2 = 0
+    nquad = 0
 
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,fline-1
@@ -170,46 +169,46 @@ SUBROUTINE fcon_read_Q2(ndim,voff,nQ2,qQ2,Q2,error)
         WRITE(*,*) "In quadratic, input",i,", is outside range [1:ndim]" 
         WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
-      ELSE IF (ALL(j .NE. Itemp(0:nQ2-1))) THEN
-        nQ2 = nQ2 + 1
-        Itemp(nQ2-1) = j-1
-        Rtemp(nQ2-1) = val
+      ELSE IF (ALL(j-1 .NE. Itemp(0:nquad-1))) THEN
+        nquad = nquad + 1
+        Itemp(nquad-1) = j-1
+        Rtemp(nquad-1) = val
       END IF
     END DO
     CLOSE(unit=fid)
     
     !now, put them all in efficient order
-    ALLOCATE(qQ2(0:nQ2-1))
-    ALLOCATE(Q2(0:nQ2-1))
-    DO i=0,nQ2-1
-      qQ2(i) = Itemp(i)
-      Q2(i) = Rtemp(i)
+    ALLOCATE(qquad(0:nquad-1))
+    ALLOCATE(quad(0:nquad-1))
+    DO i=0,nquad-1
+      qquad(i) = Itemp(i)
+      quad(i) = Rtemp(i)
     END DO
 
   ELSE
-    nQ2 = 0
+    nquad = 0
   END IF
 
-  WRITE(*,*) "quadratic terms"
-  DO i=0,nQ2-1
-    WRITE(*,'(1x,I3,4x,F24.15)') qQ2(i)+1,Q2(i)
+  WRITE(*,*) "Quadratic force constants"
+  DO i=0,nquad-1
+    WRITE(*,'(1x,I3,4x,F24.15)') qquad(i)+1,quad(i)
   END DO
   WRITE(*,*)
 
   IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
   IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
-  IF (ndim .NE. nQ2) THEN
-    WRITE(*,*) "fcon_read_Q2  : ERROR"
+  IF (ndim .NE. nquad) THEN
+    WRITE(*,*) "fcon_read_quad  : ERROR"
     WRITE(*,*) "You seem to be missing some quadratic force constants"
     WRITE(*,*) "Number of dimensions :", ndim
-    WRITE(*,*) "Number of quadratic phi :", nQ2
+    WRITE(*,*) "Number of quadratic phi :", nquad
   END IF
 
-END SUBROUTINE fcon_read_Q2
+END SUBROUTINE fcon_read_quad
 
 !------------------------------------------------------------
-! fcon_read_Q3
+! fcon_read_cubi
 !       - read info for force constants of type q^3
 !       - if the jobtype is 2, diagonal terms will be
 !         neglected
@@ -217,16 +216,16 @@ END SUBROUTINE fcon_read_Q2
 ! job           : int, jobtype
 ! ndim          : int, number of dimensions
 ! voff          : int, numbering offset
-! nQ3           : int, number of q^3 force con
-! qQ3           : 1D int, quantum numbers
-! Q3            : 1D real*8, force con
+! ncubi           : int, number of q^3 force con
+! qcubi           : 1D int, quantum numbers
+! cubi            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
+SUBROUTINE fcon_read_cubi(job,ndim,voff,ncubi,qcubi,cubi,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q3
-  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ3
-  INTEGER, INTENT(INOUT) :: nQ3,error
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: cubi
+  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qcubi
+  INTEGER, INTENT(INOUT) :: ncubi,error
   INTEGER, INTENT(IN) :: job,ndim,voff
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: Itemp
@@ -239,16 +238,18 @@ SUBROUTINE fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
   fname = 'cubic'
   fid = 403 
   
+  IF (job .EQ. 3) RETURN
+  
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
     CALL input_fline(fline,fname,error)
     IF (error .NE. 0) THEN
-      WRITE(*,*) "fcon_read_Q3  : ERROR"
+      WRITE(*,*) "fcon_read_cubi  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
     ALLOCATE(Itemp(0:2,0:fline-1))
     ALLOCATE(Rtemp(0:fline-1))
-    nQ3 = 0
+    ncubi = 0
 
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,fline-1
@@ -261,7 +262,7 @@ SUBROUTINE fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
       !    idx(1) .EQ. idx(2)) CYCLE 
       CALL sort_int_ijk(idx)
       IF (ANY(idx .LT. 1) .OR. ANY(idx .GT. ndim)) THEN
-        WRITE(*,*) "fcon_read_Q3  : ERROR"
+        WRITE(*,*) "fcon_read_cubi  : ERROR"
         WRITE(*,*) "In cubic, input",i,", is outside range [1:ndim]" 
         WRITE(*,*) "Are you sure 'voff.in' is correct?"
         error = 1
@@ -269,60 +270,60 @@ SUBROUTINE fcon_read_Q3(job,ndim,voff,nQ3,qQ3,Q3,error)
 
       !check this is something we haven't seen before
       match = .FALSE.
-      DO j=0,nQ3-1
+      DO j=0,ncubi-1
         IF (ALL(idx-1 .EQ. Itemp(0:2,j))) match = .TRUE.
       END DO
       IF (.NOT. match) THEN 
-        nQ3 = nQ3 + 1
-        Itemp(0:2,nQ3-1) = idx-1
-        Rtemp(nQ3-1) = val
+        ncubi = ncubi + 1
+        Itemp(0:2,ncubi-1) = idx-1
+        Rtemp(ncubi-1) = val
       END IF
 
     END DO
     CLOSE(unit=fid)
 
     !put into order
-    ALLOCATE(qQ3(0:3*nQ3-1))
-    ALLOCATE(Q3(0:nQ3-1))
-    DO i=0,nQ3-1
-      qQ3(3*i) = Itemp(0,i)
-      qQ3(3*i+1) = Itemp(1,i)
-      qQ3(3*i+2) = Itemp(2,i)
-      Q3(i) = Rtemp(i)
+    ALLOCATE(qcubi(0:3*ncubi-1))
+    ALLOCATE(cubi(0:ncubi-1))
+    DO i=0,ncubi-1
+      qcubi(3*i) = Itemp(0,i)
+      qcubi(3*i+1) = Itemp(1,i)
+      qcubi(3*i+2) = Itemp(2,i)
+      cubi(i) = Rtemp(i)
     END DO
   ELSE
-    nQ3 = 0
+    ncubi = 0
   END IF
 
   WRITE(*,*) "cubic terms"
-  DO i=0,nQ3-1
-    WRITE(*,'(1x,3(I3,2x),4x,F24.15)') qQ3(3*i:3*i+2)+1,Q3(i)
+  DO i=0,ncubi-1
+    WRITE(*,'(1x,3(I3,2x),4x,F24.15)') qcubi(3*i:3*i+2)+1,cubi(i)
   END DO
   WRITE(*,*)
 
   IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
   IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
-END SUBROUTINE fcon_read_Q3
+END SUBROUTINE fcon_read_cubi
 
 !------------------------------------------------------------
-! fcon_read_Q4
+! fcon_read_quar
 !       - read info for force constants of type q^4
 !       - if jobtype = 2, skip diagonal terms
 !------------------------------------------------------------
 ! job           : int, jobtype
 ! ndim          : int, number of dimensions
 ! voff          : int, numbering offset
-! nQ4           : int, number of q^4 force con
-! qQ4           : 1D int, quantum numbers
-! Q4            : 1D real*8, force con
+! nquar           : int, number of q^4 force con
+! qquar           : 1D int, quantum numbers
+! quar            : 1D real*8, force con
 ! error         : exit code
 
-SUBROUTINE fcon_read_Q4(job,ndim,voff,nQ4,qQ4,Q4,error)
+SUBROUTINE fcon_read_quar(job,ndim,voff,nquar,qquar,quar,error)
   IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: Q4
-  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qQ4
-  INTEGER, INTENT(INOUT) :: nQ4,error
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: quar
+  INTEGER, DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: qquar
+  INTEGER, INTENT(INOUT) :: nquar,error
   INTEGER, INTENT(IN) :: job,ndim,voff
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Rtemp
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: Itemp
@@ -334,17 +335,18 @@ SUBROUTINE fcon_read_Q4(job,ndim,voff,nQ4,qQ4,Q4,error)
   error = 0
   fname = 'quartic'
   fid = 404 
+  IF (job .EQ. 3) RETURN
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
     CALL input_fline(fline,fname,error)
     IF (error .NE. 0) THEN
-      WRITE(*,*) "fcon_read_Q4  : ERROR"
+      WRITE(*,*) "fcon_read_quar  : ERROR"
       WRITE(*,*) "There is some problem in ",TRIM(fname)
     END IF
     ALLOCATE(Itemp(0:3,0:fline-1))
     ALLOCATE(Rtemp(0:fline-1))
-    nQ4 = 0
+    nquar = 0
 
     OPEN(file=TRIM(fname),unit=fid,status='old')
     DO i=0,fline-1
@@ -365,44 +367,43 @@ SUBROUTINE fcon_read_Q4(job,ndim,voff,nQ4,qQ4,Q4,error)
 
       !check this is something we haven't seen before
       match = .FALSE.
-      DO j=0,nQ4-1
+      DO j=0,nquar-1
         IF (ALL(idx-1 .EQ. Itemp(0:3,j))) match = .TRUE.
       END DO
       IF (.NOT. match) THEN 
-        nQ4 = nQ4 + 1
-        Itemp(0:3,nQ4-1) = idx-1
-        Rtemp(nQ4-1) = val
-      ELSE
+        nquar = nquar + 1
+        Itemp(0:3,nquar-1) = idx-1
+        Rtemp(nquar-1) = val
       END IF
 
     END DO
     CLOSE(unit=fid)
 
     !put into order
-    ALLOCATE(qQ4(0:4*nQ4-1))
-    ALLOCATE(Q4(0:nQ4-1))
-    DO i=0,nQ4-1
-      qQ4(4*i) = Itemp(0,i)
-      qQ4(4*i+1) = Itemp(1,i)
-      qQ4(4*i+2) = Itemp(2,i)
-      qQ4(4*i+3) = Itemp(3,i)
-      Q4(i) = Rtemp(i)
+    ALLOCATE(qquar(0:4*nquar-1))
+    ALLOCATE(quar(0:nquar-1))
+    DO i=0,nquar-1
+      qquar(4*i) = Itemp(0,i)
+      qquar(4*i+1) = Itemp(1,i)
+      qquar(4*i+2) = Itemp(2,i)
+      qquar(4*i+3) = Itemp(3,i)
+      quar(i) = Rtemp(i)
     END DO
     
   ELSE
-    nQ4 = 0
+    nquar = 0
   END IF
 
   WRITE(*,*) "quartic terms"
-  DO i=0,nQ4-1
-    WRITE(*,'(1x,4(I3,2x),4x,F24.15)') qQ4(4*i:4*i+3)+1,Q4(i)
+  DO i=0,nquar-1
+    WRITE(*,'(1x,4(I3,2x),4x,F24.15)') qquar(4*i:4*i+3)+1,quar(i)
   END DO
   WRITE(*,*)
 
   IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
   IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
-END SUBROUTINE fcon_read_Q4
+END SUBROUTINE fcon_read_quar
 
 !------------------------------------------------------------
 ! fcon_read_P1
@@ -426,6 +427,8 @@ SUBROUTINE fcon_read_P1(ndim,nP1,qP1,P1,error)
   error = 0
   fname = 'P1.in'
   fid = 405
+  
+  STOP 5
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
@@ -481,6 +484,8 @@ SUBROUTINE fcon_read_P2(ndim,nP2,qP2,P2,error)
   error = 0
   fname = 'P2.in'
   fid = 406 
+
+  STOP 6
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
@@ -537,6 +542,8 @@ SUBROUTINE fcon_read_QP(ndim,nQP,qQP,QP,error)
   error = 0
   fname = 'QP.in'
   fid = 407 
+
+  STOP 7
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
@@ -593,6 +600,8 @@ SUBROUTINE fcon_read_PQ(ndim,nPQ,qPQ,PQ,error)
   error = 0
   fname = 'PQ.in'
   fid = 408 
+
+  STOP 8
   
   INQUIRE(file=TRIM(fname),EXIST=ex)
   IF (ex) THEN
