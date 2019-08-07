@@ -13,6 +13,7 @@ MODULE H_HO
   USE evec
   USE rota
   USE cori
+  USE sort
 
 CONTAINS
 !------------------------------------------------------------
@@ -695,8 +696,9 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Norm,Heff,Q1int,Q2int,&
                                                P1int,P2int,QPint,PQint
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Neff
+  REAL(KIND=8), DIMENSION(0:ndim-1) :: omega
   INTEGER, DIMENSION(0:ndim-1) :: key,PsiR,PsiL
-  REAL(KIND=8) :: rval
+  REAL(KIND=8) :: rval,cval,vval
   LOGICAL :: ex
   INTEGER :: i,j,k,N,M,mbas,mabs
   
@@ -708,6 +710,9 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
   mbas = MAXVAL(nbas)
   mabs = MAXVAL(nabs)
   Hij = 0.0D0
+
+  !Sort the quadratic force constants
+  CALL sort_dirty_1Dint_1Dreal8(ndim,nquad,qquad,quad,omega,error)
 
   !Allocate Space for needed integrals
   ALLOCATE(Q1int(0:mbas-1,0:ndim-1))
@@ -760,13 +765,22 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
 
       !evaluate potential and kinetic terms
       CALL ints_HO_quadput(ndim,nabs,q,W,basK,Neff,Heff,PsiL,PsiR,&
-                           Vq,Hij(i,j),error)
+                           Vq,vval,error)
       IF (error .NE. 0) RETURN
+      Hij(i,j) = Hij(i,j) + vval
 
       !evalutate Coriolis terms
-
+      IF (ANY(PsiL .LT. PsiR-5) .OR. ANY(PsiL .GT. PsiR+5)) THEN
+        cval = 0.0D0
+      ELSE
+        CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
+                              Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + cval
+      END IF
+ 
       !evaluate rotational terms
-      Hij(i,j) = Hij(i,j) + rval
+      IF (i .EQ. j) Hij(i,j) = Hij(i,j) + rval
 
     END DO
   END DO

@@ -1,7 +1,7 @@
 3    	!job type
 1	!basis type
 3    	!# dimensions
-4 4 4	!# basis functions in each dimension
-1	!# eigenvalues to compute
+8 8 8	!# basis functions in each dimension
+10	!# eigenvalues to compute
 1000	!memory in MB
 

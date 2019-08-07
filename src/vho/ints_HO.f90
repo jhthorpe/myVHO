@@ -11,6 +11,7 @@ MODULE ints_HO
   USE cubi
   USE quar
   USE mome
+  USE cori
 
 CONTAINS
 
@@ -72,8 +73,11 @@ SUBROUTINE ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
         val = val + Win(i)*Hin(i,j)*Hin(i,j) 
       END DO 
       norm(j,k) = SQRT(1.0D0/val)
+      CALL val_check(norm(j,k),error)
+      IF (error .NE. 0) RETURN
     END DO
   END DO
+  
   
   DEALLOCATE(qin)
   DEALLOCATE(Win)
@@ -395,7 +399,7 @@ SUBROUTINE ints_HO_QPcalc(ndim,nbas,QPint,error)
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
       QPint(2*i,j) = -0.5D0
-      QPint(2*i+1,j) = -0.5D0*SQRT((1.0D0*i+2.0D0)*(1.0D0*i+1.0D0))
+      QPint(2*i+1,j) = 0.5D0*SQRT((1.0D0*i+2.0D0)*(1.0D0*i+1.0D0))
     END DO
   END DO
 END SUBROUTINE ints_HO_QPcalc
@@ -427,7 +431,7 @@ SUBROUTINE ints_HO_PQcalc(ndim,nbas,PQint,error)
   DO j=0,ndim-1
     DO i=0,nbas(j)-1
       PQint(2*i,j) = 0.5D0
-      PQint(2*i+1,j) = -0.5D0*SQRT((1.0D0*i+2.0D0)*(1.0D0*i+1.0D0))
+      PQint(2*i+1,j) = 0.5D0*SQRT((1.0D0*i+2.0D0)*(1.0D0*i+1.0D0))
     END DO
   END DO
 END SUBROUTINE ints_HO_PQcalc
@@ -734,6 +738,76 @@ SUBROUTINE ints_HO_quadput(ndim,nabs,q,W,basK,Norm,Heff,PsiL,PsiR,Vq,Hij,error)
   END IF
 
 END SUBROUTINE ints_HO_quadput
+
+!------------------------------------------------------------
+! ints_HO_coriolis
+!       - evalutes contributions of Q1,Q2,P1,P2,QP and PQ 
+!         integrals to the coriolis term
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nrota         : int, number of rotational terms
+! rota          : 1D real*8, rotational terms
+! omega         : 1D real*8, harmonic frequencies stored in
+!                            order omega[0] -> omega for dim 0 
+! ncori         : 1D int, number of coriolis interactions per
+!                         rotational mode
+! qcori         : 2D int, coriolis quantum numbers for 
+!                         each rotational mode
+! cori          : 2D real*8, coriolis zetas
+! Q1int         : 2D real*8, <i|q|i'> integrals
+! Q2int         : 2D real*8, <i|q^2|i'> integrals
+! P1int         : 2D real*8, <i|p|i'> integrals
+! P2int         : 2D real*8, <i|p^2|i'> integrals
+! QPint         : 2D real*8, <i|qp|i'> integrals
+! PQint         : 2D real*8, <i|pq|i'> integrals
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers
+! cval          : real*8, value to output
+! error         : int, error code
+
+SUBROUTINE ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
+                            Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: cori,Q1int,Q2int,P1int,&
+                                                P2int,QPint,PQint
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: rota,omega
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori
+  INTEGER, DIMENSION(0:), INTENT(IN) :: ncori,PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: cval
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,nrota
+  REAL(KIND=8) :: val
+  INTEGER :: b,c,a,i,j,k,l
+  !WRITE(*,*) "ncori is",ncori
+  error = 0
+  cval = 0.0D0
+  DO a=0,nrota-1
+    val = 0.0D0
+    DO b=0,ncori(a)-1
+      k = qcori(2*b,a)
+      l = qcori(2*b+1,a)
+      DO c=b,ncori(a)-1
+        i = qcori(2*c,a)
+        j = qcori(2*c+1,a)
+        !check orthogonality
+        IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
+            ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
+            ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
+            ANY(PsiL(k+1:l-1) .NE. PsiR(k+1:l-1)) .OR. &
+            ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) THEN
+         CYCLE
+        ELSE
+          CALL cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
+                         cori(c,a),cori(b,a),Q1int,Q2int,&
+                         P1int,P2int,QPint,PQint,val,error) 
+          IF (error .NE. 0) RETURN
+        END IF
+      END DO
+    END DO
+    cval = cval + rota(a)*val
+  END DO
+
+END SUBROUTINE
 
 !------------------------------------------------------------
 END MODULE ints_HO

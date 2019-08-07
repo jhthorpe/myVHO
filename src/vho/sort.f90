@@ -79,6 +79,56 @@ SUBROUTINE sort_int_ijkl(A)
   END IF
 END SUBROUTINE sort_int_ijkl
 !------------------------------------------------------------
+! sort_dirty_1Dint_1Dreal8
+!       - sorts a 1D real8 array into order based on a
+!         1D int array, and checks that it is the 
+!         appropriate length
+!       - we assume that this array is quite small, so that
+!         this algorithm doesn't impede performance too much
+!------------------------------------------------------------
+! n             : int, number of elements that should be found
+! m             : int, length of arrays passed in 
+! Ivec          : 1D int, integer vector
+! Rvec          : 1D real*8, real vector
+! Svec          : 1D real*8, real sorted vector
+! error         : int, error code
+SUBROUTINE sort_dirty_1Dint_1Dreal8(n,m,Ivec,Rvec,Svec,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:), INTENT(INOUT) :: Svec
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Rvec
+  INTEGER, DIMENSION(0:), INTENT(IN) :: Ivec
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: n,m
+  INTEGER :: off,loc
+  INTEGER :: i,j
+  error = 0
+  IF (n .NE. m) THEN
+    WRITE(*,*) "sort_dirty_1Dint_1Dreal8  : ERROR"
+    WRITE(*,*) "Requested length,",n,"and given length",m,"do not match"
+    error = 1
+    RETURN
+  END IF
+  Svec = 0.0D0
+  off = MINVAL(Ivec) 
+  DO i=0,n-1
+    loc = -1
+    DO j=0,m-1
+      IF (Ivec(j) .EQ. i) THEN
+        loc = j
+        EXIT
+      END IF 
+    END DO
+    IF (loc .LT. 0) THEN
+      WRITE(*,*) "sort_dirty_1Dint_1Dreal8  : ERROR"
+      WRITE(*,*) "An element in Ivec,Rvec was missing"
+      error = 1
+      RETURN
+    ELSE
+      Svec(i) = Rvec(loc)
+    END IF
+  END DO 
+END SUBROUTINE sort_dirty_1Dint_1Dreal8
 
+!------------------------------------------------------------
 END MODULE sort
 !------------------------------------------------------------

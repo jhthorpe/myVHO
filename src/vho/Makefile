@@ -66,11 +66,11 @@ gauss.o : gauss.f90 input.o fname.o key.o
 V.o : V.f90 fname.o input.o fit.o val.o key.o
 	$(FC) $(FFLAGS) -c V.f90 fname.o input.o fit.o val.o key.o
 
-ints_HO.o : ints_HO.f90 val.o gauss.o key.o quad.o cubi.o quar.o mome.o
-	$(FC) $(FFLAGS) -c ints_HO.f90 val.o gauss.o key.o quad.o cubi.o quar.o mome.o
+ints_HO.o : ints_HO.f90 val.o gauss.o key.o quad.o cubi.o quar.o mome.o cori.o
+	$(FC) $(FFLAGS) -c ints_HO.f90 val.o gauss.o key.o quad.o cubi.o quar.o mome.o cori.o
 
-H_HO.o : H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o key.o rota.o cori.o
-	$(FC) $(FFLAGS) -c H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o key.o rota.o cori.o
+H_HO.o : H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o key.o rota.o cori.o sort.o
+	$(FC) $(FFLAGS) -c H_HO.f90 V.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o key.o rota.o cori.o sort.o
 
 xvho : vho.f90 input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o sort.o key.o rota.o cori.o quad.o cubi.o quar.o mome.o
 	$(FC) $(FFLAGS) $(LINAL) -o xvho vho.f90 input.o gauss.o H_HO.o V.o fname.o fit.o val.o fcon.o basis.o ints_HO.o memory.o linal.o evec.o sort.o key.o rota.o cori.o quad.o cubi.o quar.o mome.o
