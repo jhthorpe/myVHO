@@ -710,12 +710,12 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
   Hij = 0.0D0
 
   !Allocate Space for needed integrals
-  ALLOCATE(Q1int(0:2*mbas-1,0:ndim-1))
-  ALLOCATE(Q2int(0:3*mbas-1,0:ndim-1))
-  ALLOCATE(P1int(0:2*mbas-1,0:ndim-1))
-  ALLOCATE(P2int(0:3*mbas-1,0:ndim-1))
-  ALLOCATE(QPint(0:3*mbas-1,0:ndim-1))
-  ALLOCATE(PQint(0:3*mbas-1,0:ndim-1))
+  ALLOCATE(Q1int(0:mbas-1,0:ndim-1))
+  ALLOCATE(Q2int(0:2*mbas-1,0:ndim-1))
+  ALLOCATE(P1int(0:mbas-1,0:ndim-1))
+  ALLOCATE(P2int(0:2*mbas-1,0:ndim-1))
+  ALLOCATE(QPint(0:2*mbas-1,0:ndim-1))
+  ALLOCATE(PQint(0:2*mbas-1,0:ndim-1))
   ALLOCATE(Herm(0:mabs-1,0:mbas-1,0:ndim-1))
   ALLOCATE(Norm(0:mbas-1,0:ndim-1))
   ALLOCATE(Heff(0:mabs-1,0:2*ndim-1))
@@ -723,17 +723,17 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
   Norm = 0.0D0
 
   !Evaluate the integrals
-  CALL ints_HO_Q1full(ndim,nbas,Q1int,error)
+  CALL ints_HO_Q1calc(ndim,nbas,Q1int,error)
   IF (error .NE. 0) RETURN 
-  CALL ints_HO_Q2full(ndim,nbas,Q2int,error)
+  CALL ints_HO_Q2calc(ndim,nbas,Q2int,error)
   IF (error .NE. 0) RETURN 
-  CALL ints_HO_P1full(ndim,nbas,P1int,error)
+  CALL ints_HO_P1calc(ndim,nbas,P1int,error)
   IF (error .NE. 0) RETURN 
-  CALL ints_HO_P2full(ndim,nbas,P2int,error)
+  CALL ints_HO_P2calc(ndim,nbas,P2int,error)
   IF (error .NE. 0) RETURN 
-  CALL ints_HO_QPfull(ndim,nbas,QPint,error)
+  CALL ints_HO_QPcalc(ndim,nbas,QPint,error)
   IF (error .NE. 0) RETURN 
-  CALL ints_HO_PQfull(ndim,nbas,PQint,error)
+  CALL ints_HO_PQcalc(ndim,nbas,PQint,error)
   IF (error .NE. 0) RETURN 
   CALL H_HO_Hermcalc(ndim,nbas,nabs,q,Herm,error)
   IF (error .NE. 0) RETURN

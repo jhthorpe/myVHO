@@ -305,12 +305,13 @@ SUBROUTINE ints_HO_Q4calc(ndim,nbas,Q4int,error)
   END DO
 END SUBROUTINE ints_HO_Q4calc
 
+
 !------------------------------------------------------------
 ! ints_HO_P2calc
 !       - calculates integrals of the kind <i|pi^2|i'> 
 !
 !       Integrals are stored like:
-!       P2(i,k) -> <2*i|Pk^2|i>    , P2(i,k)   -> <2*i+2|Pk^2|i>
+!       P2(2*i,k) -> <i|Pk^2|i>    , P2(2*i+1,k)   -> <i+2|Pk^2|i>
 !      
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
@@ -324,7 +325,7 @@ SUBROUTINE ints_HO_P2calc(ndim,nbas,P2int,error)
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim
-  INTEGER :: i,j,N
+  INTEGER :: i,j
   error = 0 
   WRITE(*,*) "<i|p^2|i'> type integrals"
   DO j=0,ndim-1
@@ -334,6 +335,102 @@ SUBROUTINE ints_HO_P2calc(ndim,nbas,P2int,error)
     END DO
   END DO
 END SUBROUTINE ints_HO_P2calc
+
+!------------------------------------------------------------
+! ints_HO_P1calc
+!       - calculates integrals of the kind <i|p|i'>
+!       - Note - the <i+1|p|i> and <i|p|i+1> cases
+!         MUST be treated seperately in code that uses these
+!         due to the change in sign and factor of 1/i
+!
+!       Integrals are stored like:
+!       P1(i,k) -> <i+1|Pk|i>
+!
+!------------------------------------------------------------
+! ndim          : int, number of dimensions 
+! nbas          : 1D int, number of basis functions
+! P1int         : 2D real*8, p1 integrals
+! error         : int, error code
+
+SUBROUTINE ints_HO_P1calc(ndim,nbas,P1int,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: P1int
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  INTEGER, INTENT(IN) :: ndim
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER :: i,j
+  error = 0
+  WRITE(*,*) "<i|p|i'> type integrals"
+  DO j=0,ndim-1
+    DO i=0,nbas(j)-1
+      P1int(i,j) = -0.25D0*SQRT(1.0D0*i + 1.0D0)
+    END DO
+  END DO
+END SUBROUTINE ints_HO_P1calc
+
+!------------------------------------------------------------
+! ints_HO_QP
+!       - calculates integrals of the kind <i|qp|i'>
+!       - Note - the <i+2|qp|i> and <i|qp|i+2> cases
+!         MUST be treated seperately in code that uses these
+!         due to the change in sign and factor of 1/i
+!
+!       Integrals are stored like:
+!       QP(2*i,k) -> <i|QPk|i>    , QP(2*i+1,k)   -> <i+2|QPk|i>
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nbas          : 1D int, number of basis functions
+! QPint         : 2D real*8, QP type integrals
+! error         : int, error code
+
+SUBROUTINE ints_HO_QPcalc(ndim,nbas,QPint,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: QPint
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  INTEGER :: i,j
+  error = 0
+  WRITE(*,*) "<i|qp|i'> type integrals"
+  DO j=0,ndim-1
+    DO i=0,nbas(j)-1
+      QPint(2*i,j) = -0.5D0
+      QPint(2*i+1,j) = -0.5D0*SQRT((1.0D0*i+2.0D0)*(1.0D0*i+1.0D0))
+    END DO
+  END DO
+END SUBROUTINE ints_HO_QPcalc
+!------------------------------------------------------------
+
+! ints_HO_PQ
+!       - calculates integrals of the kind <i|qp|i'>
+!       - Note - the <i+2|pq|i> and <i|pq|i+2> cases
+!         MUST be treated seperately in code that uses these
+!         due to the change in sign and factor of 1/i
+!
+!       Integrals are stored like:
+!       PQ(2*i,k) -> <i|PQk|i>    , PQ(2*i+1,k)   -> <i+2|PQk|i>
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nbas          : 1D int, number of basis functions
+! PQint         : 2D real*8, PQ type integrals
+! error         : int, error code
+
+SUBROUTINE ints_HO_PQcalc(ndim,nbas,PQint,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: PQint
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  INTEGER :: i,j
+  error = 0
+  WRITE(*,*) "<i|pq|i'> type integrals"
+  DO j=0,ndim-1
+    DO i=0,nbas(j)-1
+      PQint(2*i,j) = 0.5D0
+      PQint(2*i+1,j) = -0.5D0*SQRT((1.0D0*i+2.0D0)*(1.0D0*i+1.0D0))
+    END DO
+  END DO
+END SUBROUTINE ints_HO_PQcalc
 
 !------------------------------------------------------------
 ! ints_HO_polyput
