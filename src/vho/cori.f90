@@ -85,9 +85,9 @@ SUBROUTINE cori_get(ndim,ncori,qcori,cori,error)
     !sort and check
     CALL sort_int_ij(idx)
     IF (ANY(idx .LT. 1) .OR. ANY(idx .GT. ndim)) THEN
-      WRITE(*,*) "cori_get  : ERROR"
-      WRITE(*,*) "In coriolis, input",k,", is outside range [1:ndim]"
-      WRITE(*,*) "Are you sure 'voff.in' is correct?"
+      !WRITE(*,*) "cori_get  : ERROR"
+      !WRITE(*,*) "In coriolis, input",k,", is outside range [1:ndim]"
+      !WRITE(*,*) "Are you sure 'voff.in' is correct?"
       error = 1
     END IF
 
@@ -121,13 +121,13 @@ SUBROUTINE cori_get(ndim,ncori,qcori,cori,error)
 
   !Print coriolis constants
   IF (MAXVAL(ncori) .GT. 0) THEN
-    WRITE(*,*) "Coriolis Constants"
+    !WRITE(*,*) "Coriolis Constants"
     DO a=0,2
       DO j=0,ncori(a)-1
-        WRITE(*,'(2x,I1,2x,2(I4,2x),F24.15)') a,qcori(2*j:2*j+1,a),cori(j,a)
+        !WRITE(*,'(2x,I1,2x,2(I4,2x),F24.15)') a,qcori(2*j:2*j+1,a),cori(j,a)
       END DO
     END DO
-    WRITE(*,*) 
+    !WRITE(*,*) 
   END IF
 
   IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
@@ -186,23 +186,40 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
    
   !type 1 : i j i j 
   IF (i .NE. j .AND. k .EQ. i .AND. l .EQ. j) THEN
+    !!WRITE(*,*) "case 1"
+    !!WRITE(*,*) "type: ", i,j,k,l
+    !!WRITE(*,*) "PsiL(i),PsiR(i)",PsiL(i),PsiR(i)
+    !!WRITE(*,*) "PsiL(j),PsiR(j)",PsiL(j),PsiR(j)
     !i, i
     IF (PsiL(i) .EQ. PsiR(i)) THEN 
       !j, j
       IF (PsiL(j) .EQ. PsiR(j)) THEN
         sgni = 1.0D0*SIGN(1,PsiR(i)-PsiL(i))
-        sngj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
-        m = 2*PsiR(i)
-        n = 2*PsiR(j)
-        val = val + ZetaL*ZetaR*(omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
-              + omega(i)/omega(j)*P2(m,i)*Q2(n,j) + &
-              sgni*sngj*QP(m,i)*PQ(n,j) + sgni*sgnj*PQ(m,i)*QP(n,j))
+        sgnj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
+      !  m = 2*PsiR(i)
+      !  n = 2*PsiR(j)
+        m = 2*MIN(PsiL(i),PsiR(i))
+        n = 2*MIN(PsiL(j),PsiR(j))
+        val = val + ZetaL*ZetaR*(0.0D0 &
+              + omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
+              + omega(i)/omega(j)*P2(m,i)*Q2(n,j) &
+              + sgni*sgnj*QP(m,i)*PQ(n,j) &
+              + sgni*sgnj*PQ(m,i)*QP(n,j))
+!      !WRITE(*,*) "Contribution to val:",&
+! ZetaL*ZetaR*(omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
+!+ omega(i)/omega(j)*P2(m,i)*Q2(n,j) + &
+!sgni*sgnj*QP(m,i)*PQ(n,j) + sgni*sgnj*PQ(m,i)*QP(n,j))
+! ZetaL*ZetaR*(omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
+!+ omega(i)/omega(j)*P2(m,i)*Q2(n,j) + &
+!QP(m,i)*PQ(n,j) + PQ(m,i)*QP(n,j))
       !j+2 j and j  j+2
       ELSE IF (ABS(PsiL(j) - PsiR(j)) .EQ. 2) THEN
         sgni = 1.0D0*SIGN(1,PsiR(i)-PsiL(i))
-        sngj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
-        m = 2*PsiR(i)
-        n = 2*PsiR(j)+1
+        sgnj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
+       ! m = 2*PsiR(i)
+       ! n = 2*PsiR(j)+1
+        m = 2*MIN(PsiL(i),PsiR(i))+1
+        n = 2*MIN(PsiL(j),PsiR(j))
         val = val + ZetaL*ZetaR*(omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
               + omega(i)/omega(j)*P2(m,i)*Q2(n,j) + &
               sgni*sgnj*QP(m,i)*PQ(n,j) + sgni*sgnj*PQ(m,i)*QP(n,j))
@@ -213,18 +230,22 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
       !j, j
       IF (PsiL(j) .EQ. PsiR(j)) THEN
         sgni = 1.0D0*SIGN(1,PsiR(i)-PsiL(i))
-        sngj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
-        m = 2*PsiR(i)+1
-        n = 2*PsiR(j)
+        sgnj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
+        !m = 2*PsiR(i)+1
+        !n = 2*PsiR(j)
+        m = 2*MIN(PsiL(i),PsiR(i))+1
+        n = 2*MIN(PsiL(j),PsiR(j))
         val = val + ZetaL*ZetaR*(omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
               + omega(i)/omega(j)*P2(m,i)*Q2(n,j) + &
-              sgni*sngj*QP(m,i)*PQ(n,j) + sgni*sgnj*PQ(m,i)*QP(n,j))
+              sgni*sgnj*QP(m,i)*PQ(n,j) + sgni*sgnj*PQ(m,i)*QP(n,j))
       !j+2 j and j  j+2
       ELSE IF (ABS(PsiL(j) - PsiR(j)) .EQ. 2) THEN
         sgni = 1.0D0*SIGN(1,PsiR(i)-PsiL(i))
-        sngj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
-        m = 2*PsiR(i)+1
-        n = 2*PsiR(j)+1
+        sgnj = 1.0D0*SIGN(1,PsiR(j)-PsiL(j))
+       ! m = 2*PsiR(i)+1
+       ! n = 2*PsiR(j)+1
+        m = 2*MIN(PsiL(i),PsiR(i))+1
+        n = 2*MIN(PsiL(j),PsiR(j))+1
         val = val + ZetaL*ZetaR*(omega(j)/omega(i)*Q2(m,i)*P2(n,j) &
               + omega(i)/omega(j)*P2(m,i)*Q2(n,j) + &
               sgni*sgnj*QP(m,i)*PQ(n,j) + sgni*sgnj*PQ(m,i)*QP(n,j))
@@ -235,6 +256,11 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
   !type 2 i j i l 
   ELSE IF (i .NE. j .AND. i .EQ. k .AND. i .NE. l .AND. &
            j .NE. l) THEN
+    !!WRITE(*,*) "case 2"
+    !!WRITE(*,*) "type: ", i,j,k,l
+    !!WRITE(*,*) "PsiL(i),PsiR(i)",PsiL(i),PsiR(i)
+    !!WRITE(*,*) "PsiL(j),PsiR(j)",PsiL(j),PsiR(j)
+    !!WRITE(*,*) "PsiL(l),PsiR(l)",PsiL(l),PsiR(l)
     !i i
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       !j j+1 and l l+1 
@@ -243,10 +269,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnl = 1.0D0*SIGN(1,PsiL(l)-PsiR(l))
-        m = 2*PsiR(i)
-        n = PsiR(j)
-        p = PsiR(l)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+       ! m = 2*PsiR(i)
+       ! n = PsiR(j)
+       ! p = PsiR(l)
+        m = 2*MIN(PsiL(i),PsiR(i))
+        n = MIN(PsiL(j),PsiR(j))
+        p = MIN(PsiL(l),PsiR(l))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          - sgni*sgnj*SQRT(omega(j)/omega(l))*QP(m,i)*P1(n,j)*Q1(p,l) &
          + sgnj*sgnl*SQRT(omega(j)*omega(l))/omega(i)*Q2(m,i)*P1(n,j)*P1(p,l) &
          - omega(i)/SQRT(omega(j)*omega(l))*P2(m,i)*Q1(n,j)*Q1(p,l) &
@@ -261,10 +291,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnl = 1.0D0*SIGN(1,PsiL(l)-PsiR(l))
-        m = 2*PsiR(i)+1
-        n = PsiR(j)
-        p = PsiR(l)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+      !  m = 2*PsiR(i)+1
+      !  n = PsiR(j)
+      !  p = PsiR(l)
+        m = 2*MIN(PsiL(i),PsiR(i))+1
+        n = MIN(PsiL(j),PsiR(j))
+        p = MIN(PsiL(l),PsiR(l))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          - sgni*sgnj*SQRT(omega(j)/omega(l))*QP(m,i)*P1(n,j)*Q1(p,l) &
          + sgnj*sgnl*SQRT(omega(j)*omega(l))/omega(i)*Q2(m,i)*P1(n,j)*P1(p,l) &
          - omega(i)/SQRT(omega(j)*omega(l))*P2(m,i)*Q1(n,j)*Q1(p,l) &
@@ -276,6 +310,11 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
   !type 3 i j k i
   ELSE IF (i .NE. j .AND. i .NE. k .AND. i .EQ. l &
            .AND. j .NE. k) THEN
+    !WRITE(*,*) "case 3"
+    !WRITE(*,*) "type: ", i,j,k,l
+    !WRITE(*,*) "PsiL(i),PsiR(i)",PsiL(i),PsiR(i)
+    !WRITE(*,*) "PsiL(j),PsiR(j)",PsiL(j),PsiR(j)
+    !WRITE(*,*) "PsiL(k),PsiR(k)",PsiL(k),PsiR(k)
     !i  i
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       !j j+1 and k k+1
@@ -284,10 +323,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnk = 1.0D0*SIGN(1,PsiL(k)-PsiR(k))
-        m = 2*PsiR(i)
-        n = PsiR(j)
-        o = PsiR(k)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+       ! m = 2*PsiR(i)
+       ! n = PsiR(j)
+       ! o = PsiR(k)
+        m = 2*MIN(PsiL(i),PsiR(i))
+        n = MIN(PsiL(j),PsiR(j))
+        o = MIN(PsiL(k),PsiR(k))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          - sgni*sgnj*SQRT(omega(j)/omega(k))*QP(m,i)*P1(n,j)*Q1(o,k) &
          + sgnj*sgnk*SQRT(omega(j)*omega(k))/omega(i)*Q2(m,i)*P1(n,j)*P1(o,k) &
          - omega(i)/SQRT(omega(j)*omega(k))*P2(m,i)*Q1(n,j)*Q1(o,k) &
@@ -302,10 +345,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnk = 1.0D0*SIGN(1,PsiL(k)-PsiR(k))
-        m = 2*PsiR(i)+1
-        n = PsiR(j)
-        o = PsiR(k)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+       ! m = 2*PsiR(i)+1
+       ! n = PsiR(j)
+       ! o = PsiR(k)
+        m = 2*MIN(PsiL(i),PsiR(i))+1
+        n = MIN(PsiL(j),PsiR(j))
+        o = MIN(PsiL(k),PsiR(k))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          - sgni*sgnj*SQRT(omega(j)/omega(k))*QP(m,i)*P1(n,j)*Q1(o,k) &
          + sgnj*sgnk*SQRT(omega(j)*omega(k))/omega(i)*Q2(m,i)*P1(n,j)*P1(o,k) &
          - omega(i)/SQRT(omega(j)*omega(k))*P2(m,i)*Q1(n,j)*Q1(o,k) &
@@ -316,6 +363,11 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
 
   !type 4 i j j l 
   ELSE IF (i .NE. j .AND. i .NE. l .AND. j .EQ. k .AND. j .NE. l) THEN
+    !WRITE(*,*) "case 4"
+    !WRITE(*,*) "type: ", i,j,k,l
+    !WRITE(*,*) "PsiL(i),PsiR(i)",PsiL(i),PsiR(i)
+    !WRITE(*,*) "PsiL(j),PsiR(j)",PsiL(j),PsiR(j)
+    !WRITE(*,*) "PsiL(l),PsiR(l)",PsiL(l),PsiR(l)
     !j j
     IF (PsiL(j) .EQ. PsiR(j)) THEN
       !i i+1  l l+1
@@ -324,10 +376,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnl = 1.0D0*SIGN(1,PsiL(l)-PsiR(l))
-        m = PsiR(i)
-        n = 2*PsiR(j)
-        p = PsiR(l)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+       ! m = PsiR(i)
+       ! n = 2*PsiR(j)
+       ! p = PsiR(l)
+        m = MIN(PsiL(i),PsiR(i))
+        n = 2*MIN(PsiL(j),PsiR(j))
+        p = MIN(PsiL(l),PsiR(l))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          + omega(j)/SQRT(omega(i)*omega(l))*Q1(m,i)*P2(n,j)*Q1(p,l) &
          + sgnj*sgnl*SQRT(omega(l)/omega(i))*Q1(m,i)*PQ(n,j)*Q1(p,l) &
          + sgni*sgnj*SQRT(omega(i)/omega(l))*P1(m,i)*QP(n,j)*Q1(p,l) &
@@ -342,10 +398,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnl = 1.0D0*SIGN(1,PsiL(l)-PsiR(l))
-        m = PsiR(i)
-        n = 2*PsiR(j)+1
-        p = PsiR(l)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+       ! m = PsiR(i)
+       ! n = 2*PsiR(j)+1
+       ! p = PsiR(l)
+        m = MIN(PsiL(i),PsiR(i))
+        n = 2*MIN(PsiL(j),PsiR(j))+1
+        p = MIN(PsiL(l),PsiR(l))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          + omega(j)/SQRT(omega(i)*omega(l))*Q1(m,i)*P2(n,j)*Q1(p,l) &
          + sgnj*sgnl*SQRT(omega(l)/omega(i))*Q1(m,i)*PQ(n,j)*Q1(p,l) &
          + sgni*sgnj*SQRT(omega(i)/omega(l))*P1(m,i)*QP(n,j)*Q1(p,l) &
@@ -356,6 +416,11 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
 
   !type 5 i j k j
   ELSE IF (i .NE. j .AND. i .NE. k .AND. j .NE. k .AND. j .EQ. l) THEN
+    !WRITE(*,*) "case 5"
+    !WRITE(*,*) "type: ", i,j,k,l
+    !WRITE(*,*) "PsiL(i),PsiR(i)",PsiL(i),PsiR(i)
+    !WRITE(*,*) "PsiL(j),PsiR(j)",PsiL(j),PsiR(j)
+    !WRITE(*,*) "PsiL(k),PsiR(k)",PsiL(k),PsiR(k)
     !j j 
     IF (PsiL(j) .EQ. PsiR(j)) THEN
       !i i+1  k k+1
@@ -364,10 +429,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnk = 1.0D0*SIGN(1,PsiL(k)-PsiR(k))
-        m = PsiR(i)
-        n = 2*PsiR(j)
-        o = PsiR(k)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+       ! m = PsiR(i)
+       ! n = 2*PsiR(j)
+       ! o = PsiR(k)
+        m = MIN(PsiL(i),PsiR(i))
+        n = 2*MIN(PsiL(j),PsiR(j))
+        o = MIN(PsiL(k),PsiR(k))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          + omega(j)/SQRT(omega(i)*omega(k))*Q1(m,i)*P2(n,j)*Q1(o,k) &
          + sgnj*sgnk*SQRT(omega(k)/omega(i))*Q1(m,i)*PQ(n,j)*Q1(o,k) &
          + sgni*sgnj*SQRT(omega(i)/omega(k))*P1(m,i)*QP(n,j)*Q1(o,k) &
@@ -382,10 +451,14 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
         sgni = 1.0D0*SIGN(1,PsiL(i)-PsiR(i))
         sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
         sgnk = 1.0D0*SIGN(1,PsiL(k)-PsiR(k))
-        m = PsiR(i)
-        n = 2*PsiR(j)+1
-        o = PsiR(k)
-        val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+      !  m = PsiR(i)
+      !  n = 2*PsiR(j)+1
+      !  o = PsiR(k)
+        m = MIN(PsiL(i),PsiR(i))
+        n = 2*MIN(PsiL(j),PsiR(j))+1
+        o = MIN(PsiL(k),PsiR(k))
+       ! val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+        val = val + ZetaL*ZetaR*(0.0D0 &
          + omega(j)/SQRT(omega(i)*omega(k))*Q1(m,i)*P2(n,j)*Q1(o,k) &
          + sgnj*sgnk*SQRT(omega(k)/omega(i))*Q1(m,i)*PQ(n,j)*Q1(o,k) &
          + sgni*sgnj*SQRT(omega(i)/omega(k))*P1(m,i)*QP(n,j)*Q1(o,k) &
@@ -397,6 +470,12 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
   !type 6 i j k l
   ELSE IF (i .NE. j .AND. i .NE. k .AND. j .NE. l .AND.&
            j .NE. k .AND. j .NE. l .AND. k .NE. l) THEN
+    !WRITE(*,*) "case 6"
+    !WRITE(*,*) "type: ", i,j,k,l
+    !WRITE(*,*) "PsiL(i),PsiR(i)",PsiL(i),PsiR(i)
+    !WRITE(*,*) "PsiL(j),PsiR(j)",PsiL(j),PsiR(j)
+    !WRITE(*,*) "PsiL(k),PsiR(k)",PsiL(k),PsiR(k)
+    !WRITE(*,*) "PsiL(l),PsiR(l)",PsiL(l),PsiR(l)
     !all must be within +/- i
     IF (ABS(PsiL(i) - PsiR(i)) .EQ. 1 .AND.&
         ABS(PsiL(j) - PsiR(j)) .EQ. 1 .AND. &
@@ -406,11 +485,16 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
       sgnj = 1.0D0*SIGN(1,PsiL(j)-PsiR(j))
       sgnk = 1.0D0*SIGN(1,PsiL(k)-PsiR(k))
       sgnl = 1.0D0*SIGN(1,PsiL(l)-PsiR(l))
-      m = PsiR(i)
-      n = PsiR(j)
-      o = PsiR(k)
-      p = PsiR(l)
-      val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+      m = MIN(PsiL(i),PsiR(i))
+      n = MIN(PsiL(j),PsiR(j))
+      o = MIN(PsiL(k),PsiR(k))
+      p = MIN(PsiL(l),PsiR(l))
+      !m = PsiR(i)
+      !n = PsiR(j)
+      !o = PsiR(k)
+      !p = PsiR(l)
+      !val = val + 2.0D0*ZetaL*ZetaR*(0.0D0 &
+      val = val + ZetaL*ZetaR*(0.0D0 &
         - sgnj*sgnl*SQRT(omega(j)*omega(l)/omega(i)/omega(k))*&
                               Q1(m,i)*P1(n,j)*Q1(o,k)*P1(p,l) &
         + sgnj*sgnk*SQRT(omega(j)*omega(k)/omega(i)/omega(l))*&
@@ -432,6 +516,7 @@ SUBROUTINE cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
     error = 1
     RETURN
   END IF 
+
 
 END SUBROUTINE cori_eval
 

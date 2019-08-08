@@ -39,10 +39,15 @@ PROGRAM vho
     CALL vho_endmsg(ti,tf,error)
     STOP 1
   END IF
-
+  
   !generate abscissa if needed
   IF (job .EQ. 2 .OR. job .EQ. 3) THEN
     CALL gauss_read(job,ndim,nabs,error)
+    IF (error .NE. 0) THEN
+      CALL CPU_TIME(tf)
+      CALL vho_endmsg(ti,tf,error)
+      STOP 1
+    END IF
     CALL gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
   ELSE IF (job .LT. 0) THEN
     CALL gauss_generate(job,bas,ndim,mem,nbas,q,W,error)

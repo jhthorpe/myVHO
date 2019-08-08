@@ -189,7 +189,7 @@ SUBROUTINE fcon_read_quad(ndim,voff,nquad,qquad,quad,error)
     nquad = 0
   END IF
 
-  WRITE(*,*) "Quadratic force constants"
+  WRITE(*,*) "Quadratic Force Constants"
   DO i=0,nquad-1
     WRITE(*,'(1x,I3,4x,F24.15)') qquad(i)+1,quad(i)
   END DO
@@ -295,7 +295,7 @@ SUBROUTINE fcon_read_cubi(job,ndim,voff,ncubi,qcubi,cubi,error)
     ncubi = 0
   END IF
 
-  WRITE(*,*) "cubic terms"
+  WRITE(*,*) "Cubic Force Constants" 
   DO i=0,ncubi-1
     WRITE(*,'(1x,3(I3,2x),4x,F24.15)') qcubi(3*i:3*i+2)+1,cubi(i)
   END DO
@@ -394,7 +394,7 @@ SUBROUTINE fcon_read_quar(job,ndim,voff,nquar,qquar,quar,error)
     nquar = 0
   END IF
 
-  WRITE(*,*) "quartic terms"
+  WRITE(*,*) "Quartic Force Constants" 
   DO i=0,nquar-1
     WRITE(*,'(1x,4(I3,2x),4x,F24.15)') qquar(4*i:4*i+3)+1,quar(i)
   END DO

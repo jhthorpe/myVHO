@@ -781,12 +781,29 @@ SUBROUTINE ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
   !WRITE(*,*) "ncori is",ncori
   error = 0
   cval = 0.0D0
+
+  !WRITE(*,*) 
+  !WRITE(*,*) 
+  !WRITE(*,*) 
+  !WRITE(*,*) 
+  !WRITE(*,*) "TESTING TESTING TESTING"
+  !WRITE(*,*) "PsiL is", PsiL
+  !WRITE(*,*) "PsiR is", PsiR
+  
   DO a=0,nrota-1
+  !  WRITE(*,*) "Rotational mode:", a
+  !  WRITE(*,*) "Be^a",rota(a)
     val = 0.0D0
     DO b=0,ncori(a)-1
+  !    WRITE(*,*) "RHS Coriolis term"
+  !    WRITE(*,*) qcori(2*b,a),qcori(2*b+1,a),cori(b,a)
       k = qcori(2*b,a)
       l = qcori(2*b+1,a)
-      DO c=b,ncori(a)-1
+      !DO c=b,ncori(a)-1
+      DO c=0,ncori(a)-1
+  !      WRITE(*,*)
+  !      WRITE(*,*) "LHS Coriolis term"
+  !      WRITE(*,*) qcori(2*c,a),qcori(2*c+1,a),cori(c,a) 
         i = qcori(2*c,a)
         j = qcori(2*c+1,a)
         !check orthogonality
@@ -795,18 +812,25 @@ SUBROUTINE ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
             ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
             ANY(PsiL(k+1:l-1) .NE. PsiR(k+1:l-1)) .OR. &
             ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) THEN
+  !       WRITE(*,*) "Orthogonal, skipping"
          CYCLE
         ELSE
+ !         WRITE(*,*) "val before is",val 
           CALL cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
                          cori(c,a),cori(b,a),Q1int,Q2int,&
                          P1int,P2int,QPint,PQint,val,error) 
+ !       WRITE(*,*) "val after is",val 
           IF (error .NE. 0) RETURN
         END IF
       END DO
+ !     WRITE(*,*) "--------------------------------------------------"
     END DO
+ !   WRITE(*,*) "val added is",rota(a)*val 
     cval = cval + rota(a)*val
+ !   WRITE(*,*) "===================================================="
   END DO
 
+  !WRITE(*,*) "coriolis is  =",cval
 END SUBROUTINE
 
 !------------------------------------------------------------

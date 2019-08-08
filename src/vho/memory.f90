@@ -38,9 +38,11 @@ SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
   error = 0
   qw2mb = 8.0D0/1000000.0D0
   qmem = mem/qw2mb
-  mbas = MAXVAL(nbas)
-  mabs = MAXVAL(nabs)
-  M = PRODUCT(nabs)
+  mbas = MAXVAL(nbas(0:ndim-1))
+  IF (job .EQ. 2 .OR. job .EQ. 3) THEN
+    mabs = MAXVAL(nabs(0:ndim-1))
+    M = PRODUCT(nabs)
+  END IF
   WRITE(*,*) "Hamiltonian Memory Analysis"
   CALL val_check(qmem,error)
   IF (error .NE. 0) THEN
