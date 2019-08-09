@@ -926,12 +926,12 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
       !evalutate Coriolis terms
       IF (ANY(PsiL .LT. PsiR-5) .OR. ANY(PsiL .GT. PsiR+5)) THEN
         cval = 0.0D0
-      ELSE IF (i .EQ. j) THEN
-      !ELSE 
-      !  CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-      !                        Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
-      !  IF (error .NE. 0) RETURN
-      !  Hij(i,j) = Hij(i,j) + cval
+      !ELSE IF (i .EQ. j) THEN
+      ELSE 
+        CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
+                              Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + cval
       END IF
  
       !evaluate rotational terms
