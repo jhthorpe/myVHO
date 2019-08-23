@@ -171,10 +171,10 @@ SUBROUTINE input_write(job,bas,ndim,nbas,enum,mem,error)
   IF (bas .EQ. 1) THEN
     WRITE(*,*) "bas     : 1 -> Harmonic Oscillator basis"
   END IF
-  WRITE(*,*) "ndim    :",ndim
-  WRITE(*,*) "nbas    :",nbas
-  WRITE(*,*) "enum    :",enum
-  WRITE(*,*) "mem     :",mem 
+  WRITE(*,'(1x,A9,1x,I3)') "ndim    :",ndim
+  WRITE(*,'(1x,A9,1x,999(I3,2x))') "nbas    :",nbas
+  WRITE(*,'(1x,A9,1x,I3)') "enum    :",enum
+  WRITE(*,'(1x,A9,1x,I10)') "mem     :",mem 
 END SUBROUTINE input_write
 
 !------------------------------------------------------------
@@ -263,7 +263,6 @@ SUBROUTINE input_QUAD_natoms(natoms,error)
   DO WHILE (line .NE. "freq" .AND. line .NE. "Refe") 
     natoms = natoms + 1
     READ(fid,*) dummy, line
-    WRITE(*,*) "dummy,line", dummy,line
   END DO
   CLOSE(unit=fid)
 
