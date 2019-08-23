@@ -1,16 +1,16 @@
 !------------------------------------------------------------
-! val
+! valu
 !       - modules for checking values 
 !------------------------------------------------------------
-MODULE val
+MODULE valu
 
 CONTAINS
 
 !------------------------------------------------------------
-! val_check
+! valu_check
 !       - check for NaN or inf
 !------------------------------------------------------------
-SUBROUTINE val_check(val,error)
+SUBROUTINE valu_check(val,error)
   IMPLICIT NONE
   REAL(KIND=8), INTENT(IN) :: val
   INTEGER, INTENT(INOUT) :: error
@@ -20,15 +20,15 @@ SUBROUTINE val_check(val,error)
   IF (val .GT. infty) THEN
     WRITE(*,*) 
     WRITE(*,*) "ERROR"
-    WRITE(*,*) "val_check  : val is infinty" 
+    WRITE(*,*) "valu_check  : val is infinty" 
     error = 42 
   ELSE IF (val .NE. val) THEN
     WRITE(*,*) 
     WRITE(*,*) "ERROR"
-    WRITE(*,*) "val_check  : val is NaN" 
+    WRITE(*,*) "valu_check  : val is NaN" 
     error = 43 
   END IF
-END SUBROUTINE val_check
+END SUBROUTINE valu_check
 !------------------------------------------------------------
 
-END MODULE val
+END MODULE valu

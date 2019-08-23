@@ -14,6 +14,8 @@ MODULE H_HO
   USE rota
   USE cori
   USE sort
+  USE pseu
+  USE didq
 
 CONTAINS
 !------------------------------------------------------------
@@ -40,15 +42,19 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   INTEGER, INTENT(IN) :: job,ndim
   INTEGER, INTENT(INOUT) :: error
 
-  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij,Herm,cori
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij,Herm,cori,didq
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Vq,quad,cubi,quar,basK,rota
-  INTEGER, DIMENSION(:,:), ALLOCATABLE :: qcori
-  INTEGER, DIMENSION(:), ALLOCATABLE :: qquad,qcubi,qquar,ncori
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: qcori,qdidq
+  INTEGER, DIMENSION(:), ALLOCATABLE :: qquad,qcubi,qquar,ncori,ndidq
   REAL(KIND=8) :: qmem
   REAL(KIND=8) :: ti,tf
   INTEGER :: nQ1,nquad,ncubi,nquar,nrota
   INTEGER :: memstat
   INTEGER :: i,j,N,M
+
+  INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR
+  INTEGER, DIMENSION(0:4) :: foo
+  LOGICAL :: ex
 
   CALL CPU_TIME(ti)
   error = 0
@@ -86,13 +92,16 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
     IF (error .NE. 0) RETURN
   END IF
   
-  !get constants as needed 
+
+  !get constants
   CALL fcon_get(job,ndim,nquad,qquad,quad,ncubi,qcubi,cubi,&
                 nquar,qquar,quar,error)
   IF (error .NE. 0) RETURN
   CALL rota_get(nrota,rota,error)
   IF (error .NE. 0) RETURN
   CALL cori_get(ndim,ncori,qcori,cori,error)  
+  IF (error .NE. 0) RETURN
+  CALL didq_get(ndim,ndidq,qdidq,didq,error)
   IF (error .NE. 0) RETURN
 
   !build the hamiltonian
@@ -101,20 +110,23 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
       CALL H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
                                   ncubi,qcubi,cubi,&
                                   nquar,qquar,quar,nrota,rota,&
-                                  ncori,qcori,cori,Hij,error)
+                                  ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  Hij,error)
     END IF
   ELSE IF (job .EQ. 2) THEN
     IF (memstat .EQ. 2) THEN
       CALL H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
                                   nquad,qquad,quad,ncubi,qcubi,cubi,&
                                   nquar,qquar,quar,nrota,rota,&
-                                  ncori,qcori,cori,Vij,Hij,error)
+                                  ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  Vij,Hij,error)
     END IF
   ELSE IF (job .EQ. 3) THEN
     IF (memstat .EQ. 2) THEN
       CALL H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
                                   nquad,qquad,quad,nrota,rota,&
-                                  ncori,qcori,cori,Vq,Hij,error)
+                                  ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  Vq,Hij,error)
     END IF
   END IF
 
@@ -255,28 +267,34 @@ END SUBROUTINE H_HO_Hermite_incore
 ! ncori         : 1D int, number of coriolis zeta
 ! qcori         : 2D int, coriolis zeta quantum numbers
 ! cori          : 2D real*8, coriolis zetas
+! ndim          : int, number of dimensions
+! ndidq         : 1D int, number of didq
+! qdidq         : 2D int, quantum numbers of didq
+! Hij		: 2D real*8, Hamiltonian
 ! error         : int, exit code
 
 SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
                                   ncubi,qcubi,cubi,&
                                   nquar,qquar,quar,nrota,rota,&
-                                  ncori,qcori,cori,Hij,error)
+                                  ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: cori
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: cori,didq
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: quad,cubi,quar,rota 
-  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori,qdidq
   INTEGER, DIMENSION(0:), INTENT(IN) :: nbas
-  INTEGER, DIMENSION(0:), INTENT(IN) :: qquad,qcubi,qquar,ncori
+  INTEGER, DIMENSION(0:), INTENT(IN) :: qquad,qcubi,qquar,ncori,ndidq
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: nquad,ncubi,nquar,nrota
   INTEGER, INTENT(IN) :: ndim
 
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Q1int,Q2int,Q3int,Q4int,&
                                                P1int,P2int,QPint,PQint
+  REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: eps
   REAL(KIND=8), DIMENSION(0:ndim-1) :: omega
   INTEGER, DIMENSION(0:ndim-1) :: PsiL,PsiR,keyR,keyL,numL
-  REAL(KIND=8) :: val,rval,cval
+  REAL(KIND=8) :: val,p2val,p3val,p4val,c2val,c3val,c4val,temp
   LOGICAL :: ex
   INTEGER :: N,M,mbas,il,ir
   INTEGER :: i,j,k,l,a
@@ -296,6 +314,11 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
   ALLOCATE(P2int(0:2*mbas-1,0:ndim-1))
   ALLOCATE(QPint(0:2*mbas-1,0:ndim-1))
   ALLOCATE(PQint(0:2*mbas-1,0:ndim-1))
+
+  WRITE(*,*) "WARNING WARNING WARNING"
+  WRITE(*,*) "Orthogonality checks are wrong"
+!  STOP
+  WRITE(*,*) "WARNING WARNING WARNING"
 
   !precalculate the needed integrals
   !we could do this on the fly, but this
@@ -349,7 +372,7 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
       !we ignore the first index because lower triangular
       !this is doing way more work than we need to to, actually. We 
       !only need to calculate one of these permutations to get the 
-      !rest
+      !rest, so this is a terrible way of doing things
       CALL key_ids2idx(ndim,nbas,keyR,PsiL,i) 
       DO l=0,2**(ndim-1)-1
         il = i
@@ -367,48 +390,86 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
   END DO 
   WRITE(*,*)
 
+
 !=============================================
 ! TESTING ZONE
 INQUIRE(file='test',exist=ex)
 IF (ex) THEN
-  CALL rota_eval(nrota,rota,rval)
+  ALLOCATE(eps(0:N-1))
   DO i=0,N-1
-    Hij(i,i) = Hij(i,i) + rval
+    eps(i) = Hij(i,i)
   END DO
+  Hij = 0.0D0
+  DO i=0,N-1
+    Hij(i,i) = eps(i)
+  END DO
+ 
+  c2val = 0.0D0
+  c3val = 0.0D0
+  c4val = 0.0D0
+  p2val = 0.0D0
+  p3val = 0.0D0
+  p4val = 0.0D0
+
   WRITE(*,*) "TESTING TESTING TESTING"
   WRITE(*,*) "Enter PsiR:"
   READ(*,*) PsiR
-  !STOP
   CALL key_ids2idx(ndim,nbas,keyR,PsiR,k)
-  WRITE(*,*) "PsiR is", PsiR
-  !k = 0
-  rval = Hij(k,k)
-  WRITE(*,*) "Before", rval
   CALL key_idx2ids(ndim,k,nbas,keyR,PsiR)
-  !DO i=0,k-1
-  DO i=0,-1
+  WRITE(*,*) "PsiR is", PsiR
+  temp = Hij(k,k)
+  WRITE(*,*) "Before ", temp
+
+  !Before diagonal
+  DO i=0,k-1
     CALL key_idx2ids(ndim,i,nbas,keyR,PsiL)
-    CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                       Q2int,P1int,P2int,QPint,PQint,PsiR,PsiL,cval,error)
-    Hij(i,k) = cval
-    rval = rval + cval*cval/((Hij(i,i)) - (Hij(k,k))) 
+    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                         PsiR,PsiL,val,error)
+    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                         PsiL,PsiR,c2val,error)
+    temp = temp + c2val*val/(eps(k)-eps(i))
+    Hij(i,k) = Hij(i,k) + c2val*val/(eps(k)-eps(i))
   END DO
 
-  CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                     Q2int,P1int,P2int,QPint,PQint,PsiR,PsiR,cval,error)
-  rval = rval + cval
+  !diagonal
+  PsiL = PsiR
+  i = k
+
+  c2val = 0.0D0
+  c3val = 0.0D0
+  c4val = 0.0D0
+  p2val = 0.0D0
+  p3val = 0.0D0
+  p4val = 0.0D0
+
+  CALL pseu_HO_O2_eval(nrota,rota,p2val)
+  CALL pseu_HO_O3_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+                       PsiL,PsiR,p3val)
+  CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+                       PsiL,PsiR,p4val)
+
+  CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                       PsiL,PsiR,c2val,error)
+  CALL cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+                       ncori,qcori,cori,PsiL,PsiR,c3val,error)
+  CALL cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+                       ncori,qcori,cori,PsiL,PsiR,c4val,error)
+  temp = temp + p2val + p3val + p4val + c2val + c3val + c4val
+  Hij(i,k) = Hij(i,k) + p2val + p3val + p4val + c2val + c3val + c4val
   
-  !DO i=k+1,N-1
-  DO i=k+1,-1
+  !After diagonal
+  DO i=k+1,N-1
     CALL key_idx2ids(ndim,i,nbas,keyR,PsiL)
-    CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                       Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
-    Hij(i,k) = cval
-    rval = rval + cval*cval/(Hij(i,i) - Hij(k,k)) 
-
+    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                         PsiR,PsiL,val,error)
+    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                         PsiL,PsiR,c2val,error)
+    temp = temp + c2val*val/(eps(k)-eps(i))
+    Hij(i,k) = Hij(i,k) + c2val*val/(eps(k)-eps(i))
   END DO
 
-  WRITE(*,*) "After :", rval 
+  WRITE(*,*) "PsiR",PsiR
+  WRITE(*,*) "VPT4 value :", temp
   WRITE(*,*) 
   WRITE(*,*)
   WRITE(*,*)
@@ -421,20 +482,27 @@ IF (ex) THEN
       CALL key_idx2ids(ndim,j,nbas,keyR,PsiL)
 !      IF (ANY(PsiL .GT. PsiR+5) .OR. ANY(PsiL .LT. PsiR-5)) CYCLE
       !WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
-      WRITE(*,'(2x,F20.4,2x,A1,3(I4,1x),2x,A1,F20.4))') Hij(j,k),"|",PsiL,"|",Hij(j,j)
+      WRITE(*,'(2x,F20.4,2x,A1,3(I4,1x),2x,A1,F20.4))') Hij(j,k),"|",PsiL,"|",eps(j)
     END DO
   END IF
-  WRITE(*,*) "Enter PsiL:"
-  READ(*,*) PsiL
-    CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                       Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
+  !WRITE(*,*) "Enter PsiL:"
+  !READ(*,*) PsiL
+  !CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+  !                     PsiL,PsiR,c2val,error)
+ ! CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+ !                      PsiL,PsiR,p4val)
+    !CALL cori_HO_O2_old(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
+    !                   Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,c2val,error)
+!    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!                         PsiL,PsiR,c2val,error)
+  !  WRITE(*,*) "c2val = ",c2val
   STOP
 END IF
 !=============================================
 ! END TESTING ZONE
 
   !rotational and coriolis parts
-  CALL rota_eval(nrota,rota,rval)
+  CALL pseu_HO_O2_eval(nrota,rota,p2val)
   CALL key_generate(ndim,nbas,keyR) 
   DO j=0,N-1
     CALL key_idx2ids(ndim,j,nbas,keyR,PsiR)
@@ -442,27 +510,53 @@ END IF
     DO i=j,N-1
       CALL key_idx2ids(ndim,i,nbas,keyR,PsiL)
 
-      !evalutate Coriolis terms
-      IF (ANY(PsiL .LT. PsiR-5) .OR. ANY(PsiL .GT. PsiR+5)) THEN
-        cval = 0.0D0
-      !ELSE 
-      ELSE IF (i .EQ. j) THEN
-        CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                              Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
-        IF (error .NE. 0) RETURN
-        Hij(i,j) = Hij(i,j) + cval
-
+      !evaluate Pseduopotential terms
+      ! O(2)
+      IF (i .EQ. j) THEN
+        Hij(i,j) = Hij(i,j) + p2val
+      END IF
+    
+      ! O(3)
+      IF (ALL(PsiL .LE. PsiR+1) .AND. ALL(PsiL .GE. PsiR-1)) THEN  
+        CALL pseu_HO_O3_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+                             PsiL,PsiR,p3val) 
+        Hij(i,j) = Hij(i,j) + p3val
+      END IF
+      
+      ! O(4) 
+      IF (ALL(PsiL .LE. PsiR+2) .AND. ALL(PsiL .GE. PsiR-2)) THEN  
+        CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+                             PsiL,PsiR,p4val) 
+        Hij(i,j) = Hij(i,j) + p4val
       END IF
 
-      !evaluate rotational terms
-!TESTING TESTING TESTING
-      IF (i .EQ. j) Hij(i,j) = Hij(i,j) + rval
-!TESTING TESTING TESTING
+      !evalutate Coriolis terms
+      ! O(2)
+      IF (ALL(PsiL .GE. PsiR-4) .AND. ALL(PsiL .LE. PsiR+4)) THEN
+        CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                             PsiL,PsiR,c2val,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + c2val
+      END IF
+
+      ! O(3)
+      IF (ALL(PsiL .GE. PsiR-5) .AND. ALL(PsiL .LE. PsiR+5)) THEN
+        CALL cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+                             ncori,qcori,cori,PsiL,PsiR,c3val,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + c3val
+      END IF
+
+      ! O(4)
+      IF (ALL(PsiL .GE. PsiR-6) .AND. ALL(PsiL .LE. PsiR+6)) THEN
+        CALL cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+                             ncori,qcori,cori,PsiL,PsiR,c4val,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + c4val
+      END IF
     END DO
   END DO
 
-  WRITE(*,*) "Currently diagonal coriolis included"
-  
   INQUIRE(file='print',EXIST=ex) 
   IF (ex) THEN
     WRITE(*,*)
@@ -479,10 +573,6 @@ END IF
   DEALLOCATE(P2int)
   DEALLOCATE(QPint)
   DEALLOCATE(PQint)
-
-!TESTING TESTING TESTING
-!STOP
-!TESTING TESTING TESTING
 
 END SUBROUTINE H_HO_build_poly_incore
 
@@ -525,6 +615,9 @@ END SUBROUTINE H_HO_build_poly_incore
 ! ncori         : 1D int, number of coriolis zeta
 ! qcori         : 2D int, coriolis zeta quantum numbers
 ! cori          : 2D real*8, coriolis zetas
+! ndim          : int, number of dimensions
+! ndidq         : 1D int, number of didq
+! qdidq         : 2D int, quantum numbers of didq
 ! Vij           : 2D real*8, potential energy   [abscissa,dimension]
 ! Hij           : 2D real*8, hamiltonian
 ! error         : int, exit code
@@ -532,13 +625,14 @@ END SUBROUTINE H_HO_build_poly_incore
 SUBROUTINE H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
                                   nquad,qquad,quad,ncubi,qcubi,cubi,&
                                   nquar,qquar,quar,nrota,rota,&
-                                  ncori,qcori,cori, Vij,Hij,error)
+                                  ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  Vij,Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Vij,q,W,cori
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: Vij,q,W,cori,didq
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: basK,quad,cubi,quar,rota
-  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,qquad,qcubi,qquar,ncori
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori,qdidq
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,qquad,qcubi,qquar,ncori,ndidq
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim,nquad,ncubi,nquar,nrota
 
@@ -550,7 +644,7 @@ SUBROUTINE H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
   REAL(KIND=8), DIMENSION(0:ndim-1) :: omega
   INTEGER, DIMENSION(0:ndim-1) :: keyL,keyR,PsiL,PsiR,numL
   INTEGER, DIMENSION(0:ndim-2) :: keyX,PsiX,nelm
-  REAL(KIND=8) :: val,rval,cval
+  REAL(KIND=8) :: val,p2val,c2val
   LOGICAL :: ex
   INTEGER :: N,M,mbas,mabs
   INTEGER :: i,j,k,l,a,il,ir
@@ -562,6 +656,11 @@ SUBROUTINE H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
 
   !Sort the quadratic force constants
   CALL sort_dirty_1Dint_1Dreal8(ndim,nquad,qquad,quad,omega,error)
+
+  WRITE(*,*) "WARNING WARNING WARNING"
+  WRITE(*,*) "Orthogonality checks are wrong"
+  STOP
+  WRITE(*,*) "WARNING WARNING WARNING"
 
   !force constant integrals
   WRITE(*,*) "Calculating coupling integrals"
@@ -642,7 +741,7 @@ SUBROUTINE H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
   END DO 
 
   !Rotational and Coriolis terms
-  CALL rota_eval(nrota,rota,val)
+  CALL pseu_HO_O2_eval(nrota,rota,val)
   CALL key_generate(ndim,nbas,keyR)
   DO j=0,N-1
     CALL key_idx2ids(ndim,j,nbas,keyR,PsiR)
@@ -651,15 +750,15 @@ SUBROUTINE H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
 
       !evalutate Coriolis terms
       IF (ANY(PsiL .LT. PsiR-5) .OR. ANY(PsiL .GT. PsiR+5)) THEN
-        cval = 0.0D0
+        c2val = 0.0D0
       ELSE
-        CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                              Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
+        CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                              PsiL,PsiR,c2val,error)
         IF (error .NE. 0) RETURN
-        Hij(i,j) = Hij(i,j) + cval
+        Hij(i,j) = Hij(i,j) + c2val
       END IF
       !evaluate rotational terms
-      IF (i .EQ. j) Hij(i,j) = Hij(i,j) + rval
+      IF (i .EQ. j) Hij(i,j) = Hij(i,j) + p2val
 
     END DO
   END DO
@@ -830,19 +929,23 @@ END SUBROUTINE H_HO_build_diag_incore
 ! ncori         : 1D int, number of coriolis zeta
 ! qcori         : 2D int, coriolis zeta quantum numbers
 ! cori          : 2D real*8, coriolis zetas
+! ndim          : int, number of dimensions
+! ndidq         : 1D int, number of didq
+! qdidq         : 2D int, quantum numbers of didq
 ! Vq            : 1D real*8, potential at abscissa
 ! Hij           : 2D real*8, the Hamiltonian
 ! error         : int, exit code 
 
 SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
                                   nquad,qquad,quad,nrota,rota,&
-                                  ncori,qcori,cori,Vq,Hij,error)
+                                  ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  Vq,Hij,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W,cori
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: q,W,cori,didq
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: basK,Vq,rota,quad
-  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori
-  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,ncori,qquad
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori,qdidq
+  INTEGER, DIMENSION(0:), INTENT(IN) :: nbas,nabs,ncori,qquad,ndidq
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: ndim,nrota,nquad
   
@@ -852,7 +955,7 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Neff
   REAL(KIND=8), DIMENSION(0:ndim-1) :: omega
   INTEGER, DIMENSION(0:ndim-1) :: key,PsiR,PsiL
-  REAL(KIND=8) :: rval,cval,vval
+  REAL(KIND=8) :: c2val,c3val,c4val,vval,p2val,p3val,p4val
   LOGICAL :: ex
   INTEGER :: i,j,k,N,M,mbas,mabs
   
@@ -864,6 +967,12 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
   mbas = MAXVAL(nbas(0:ndim-1))
   mabs = MAXVAL(nabs(0:ndim-1))
   Hij = 0.0D0
+
+  WRITE(*,*) "WARNING WARNING WARNING"
+  WRITE(*,*) "Orthogonality checks are wrong"
+  WRITE(*,*) "This is probably fixed for coriolis?"
+!  STOP
+  WRITE(*,*) "WARNING WARNING WARNING"
 
   !Sort the quadratic force constants
   CALL sort_dirty_1Dint_1Dreal8(ndim,nquad,qquad,quad,omega,error)
@@ -901,7 +1010,7 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
 
   !Fill in potential, kinetic, rotational, and coriolis
   CALL key_generate(ndim,nbas,key)
-  CALL rota_eval(nrota,rota,rval)
+  CALL pseu_HO_O2_eval(nrota,rota,p2val)
 
   DO j=0,N-1
     CALL key_idx2ids(ndim,j,nbas,key,PsiR)
@@ -923,19 +1032,51 @@ SUBROUTINE H_HO_build_quad_incore(ndim,nbas,nabs,q,W,basK,&
       IF (error .NE. 0) RETURN
       Hij(i,j) = Hij(i,j) + vval
 
-      !evalutate Coriolis terms
-      IF (ANY(PsiL .LT. PsiR-5) .OR. ANY(PsiL .GT. PsiR+5)) THEN
-        cval = 0.0D0
-      !ELSE IF (i .EQ. j) THEN
-      ELSE 
-        CALL ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                              Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
-        IF (error .NE. 0) RETURN
-        Hij(i,j) = Hij(i,j) + cval
+      !evaluate Pseduopotential terms
+      ! O(2)
+      IF (i .EQ. j) THEN
+        Hij(i,j) = Hij(i,j) + p2val
       END IF
- 
-      !evaluate rotational terms
-      IF (i .EQ. j) Hij(i,j) = Hij(i,j) + rval
+    
+      ! O(3)
+      IF (ALL(PsiL .LE. PsiR+1) .AND. ALL(PsiL .GE. PsiR-1)) THEN  
+        CALL pseu_HO_O3_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+                             PsiL,PsiR,p3val) 
+        Hij(i,j) = Hij(i,j) + p3val
+      END IF
+      
+      ! O(4) 
+      IF (ALL(PsiL .LE. PsiR+2) .AND. ALL(PsiL .GE. PsiR-2)) THEN  
+        CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+                             PsiL,PsiR,p4val) 
+        Hij(i,j) = Hij(i,j) + p4val
+      END IF
+      
+
+      !evalutate Coriolis terms
+      ! O(2)
+      IF (ALL(PsiL .GE. PsiR-4) .AND. ALL(PsiL .LE. PsiR+4)) THEN
+        CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+                             PsiL,PsiR,c2val,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + c2val
+      END IF
+
+      ! O(3)
+      IF (ALL(PsiL .GE. PsiR-5) .AND. ALL(PsiL .LE. PsiR+5)) THEN
+        CALL cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+                             ncori,qcori,cori,PsiL,PsiR,c3val,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + c3val
+      END IF
+
+      ! O(4)
+      IF (ALL(PsiL .GE. PsiR-6) .AND. ALL(PsiL .LE. PsiR+6)) THEN
+        CALL cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+                             ncori,qcori,cori,PsiL,PsiR,c4val,error)
+        IF (error .NE. 0) RETURN
+        Hij(i,j) = Hij(i,j) + c4val
+      END IF
 
     END DO
   END DO

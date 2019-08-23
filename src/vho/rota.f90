@@ -19,7 +19,7 @@ SUBROUTINE rota_get(nrota,rota,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: rota
   INTEGER, INTENT(INOUT) :: nrota,error
-  CHARACTER(LEN=1024) :: fname
+  CHARACTER(LEN=1024) :: fname,line
   REAL(KIND=8) :: val
   INTEGER :: voff,i,j
   LOGICAL :: ex
@@ -31,8 +31,14 @@ SUBROUTINE rota_get(nrota,rota,error)
   IF (nrota .GT. 0) THEN
     OPEN(file=TRIM(fname),unit=400,status='old')
     DO i=0,nrota-1
-      READ(400,*) j,val
+      !READ(400,*) j,val
+      READ(400,*) j,line
       IF (j .GT. 0 .AND. j .LE. 3) THEN
+        IF (TRIM(line) .EQ. "Infinity") THEN
+          val = 0.0D0
+        ELSE
+          READ(line,'(F24.15)') val
+        END IF
         rota(j-1) = val
       ELSE
         WRITE(*,*) "rota_get  : ERROR"
@@ -53,26 +59,5 @@ SUBROUTINE rota_get(nrota,rota,error)
 END SUBROUTINE rota_get
 
 !------------------------------------------------------------
-! rota_eval
-!       - evaluates the contribution of the rotational terms
-!         to the Watson hamiltonian
-!
-!       - currently this is just at second order 
-!------------------------------------------------------------
-! nrota         : int, number of rotational constants
-! rota          : 1D real*8, rotational constants
-! val           : real*8, the value to add
-
-SUBROUTINE rota_eval(nrota,rota,val)
-  IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: rota
-  REAL(KIND=8), INTENT(INOUT) :: val
-  INTEGER, INTENT(IN) :: nrota
-  val = SUM(rota(0:nrota-1))
-  val = -0.25D0*val
-END SUBROUTINE rota_eval
-
-!------------------------------------------------------------
-
 END MODULE rota
 !------------------------------------------------------------

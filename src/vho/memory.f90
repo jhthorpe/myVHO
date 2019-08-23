@@ -3,7 +3,7 @@
 !       - module for managing and analysing memory
 !------------------------------------------------------------
 MODULE memory
-  USE val
+  USE valu
   USE linal
 
 CONTAINS
@@ -44,7 +44,7 @@ SUBROUTINE memory_HObuild(job,mem,N,ndim,nbas,nabs,memstat,error)
     M = PRODUCT(nabs)
   END IF
   WRITE(*,*) "Hamiltonian Memory Analysis"
-  CALL val_check(qmem,error)
+  CALL valu_check(qmem,error)
   IF (error .NE. 0) THEN
     WRITE(*,*) "memory_HObuild  : ERROR"
     WRITE(*,*) "qmem was too large to be analysed"
@@ -170,7 +170,7 @@ SUBROUTINE memory_Hdiag(ndim,nbas,enum,mem,memstat,lwork,error)
   qw2mb = 8.0D0/1000000.0D0
 
   qmem = mem/qw2mb
-  CALL val_check(qmem,error)
+  CALL valu_check(qmem,error)
   IF (error .NE. 0) THEN
     WRITE(*,*) "memory_Hdiag  : ERROR"
     WRITE(*,*) "qmem was too large to be analysed"

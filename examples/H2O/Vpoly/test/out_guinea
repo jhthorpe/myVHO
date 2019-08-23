@@ -1,0 +1,36 @@
+Starting guinea v3.0
+
+Number of normal modes: 3
+
+Full point group: C1  
+Computational subgroup: C1  
+
+Normal modes by irrep:
+
+Mode Irrep Harm. Freq. (cm^-1)
+   1 A             1658.196290
+   2 A             3835.791150
+   3 A             3947.681340
+
+Rot. Constants (MHz):
+
+X       283939.224042
+Y       806850.841773
+Z       438117.253784
+
+A       806850.841773
+B       438117.253784
+C       283939.224042
+
+The molecule is an asymmetric rotor, kappa = -0.410309
+
+The molecule is planar
+
+
+Vibrational levels:
+
+State      Energy (cm^1)  
+---------- ---------------
+   0  0  0 4708.6351924201
+
+

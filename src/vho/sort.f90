@@ -78,6 +78,96 @@ SUBROUTINE sort_int_ijkl(A)
     A(0:2) = B
   END IF
 END SUBROUTINE sort_int_ijkl
+
+!------------------------------------------------------------
+! sort_int_ijklm
+!	- sorts length 5 array in ascending order
+!------------------------------------------------------------
+SUBROUTINE sort_int_ijklm(A)
+  IMPLICIT NONE
+  INTEGER, DIMENSION(0:), INTENT(INOUT) :: A
+  INTEGER, DIMENSION(0:3) :: B
+  IF (A(0) .GE. A(1) .AND. A(0) .GE. A(2) .AND. &
+      A(0) .GE. A(3) .AND. A(0) .GE. A(4)) THEN
+    B = [A(1),A(2),A(3),A(4)]
+    CALL sort_int_ijkl(B)
+    A(4) = A(0) 
+    A(0:3) = B
+  ELSE IF (A(1) .GE. A(0) .AND. A(1) .GE. A(2) .AND. &
+           A(1) .GE. A(3) .AND. A(1) .GE. A(4)) THEN
+    B = [A(0),A(2),A(3),A(4)]
+    CALL sort_int_ijkl(B)
+    A(4) = A(1)
+    A(0:3) = B
+  ELSE IF (A(2) .GE. A(0) .AND. A(2) .GE. A(1) .AND. &
+           A(2) .GE. A(3) .AND. A(2) .GE. A(4)) THEN
+    B = [A(0),A(1),A(3),A(4)]
+    CALL sort_int_ijkl(B)
+    A(4) = A(2)
+    A(0:3) = B
+  ELSE IF (A(3) .GE. A(0) .AND. A(3) .GE. A(1) .AND. &
+           A(3) .GE. A(2) .AND. A(3) .GE. A(4)) THEN
+    B = [A(0),A(1),A(2),A(4)]
+    CALL sort_int_ijkl(B)
+    A(4) = A(3) 
+    A(0:3) = B
+  ELSE
+    B = [A(0),A(1),A(2),A(3)]
+    CALL sort_int_ijkl(B)
+    A(0:3) = B
+  END IF
+END SUBROUTINE sort_int_ijklm
+
+!------------------------------------------------------------
+! sort_int_ijklmn
+!	- sorts length 5 array in ascending order
+!------------------------------------------------------------
+SUBROUTINE sort_int_ijklmn(A)
+  IMPLICIT NONE
+  INTEGER, DIMENSION(0:), INTENT(INOUT) :: A
+  INTEGER, DIMENSION(0:4) :: B
+  IF (A(0) .GE. A(1) .AND. A(0) .GE. A(2) .AND. &
+      A(0) .GE. A(3) .AND. A(0) .GE. A(4) .AND. &
+      A(0) .GE. A(5)) THEN
+    B = [A(1),A(2),A(3),A(4),A(5)]
+    CALL sort_int_ijklm(B)
+    A(5) = A(0) 
+    A(0:4) = B
+  ELSE IF (A(1) .GE. A(0) .AND. A(1) .GE. A(2) .AND. &
+           A(1) .GE. A(3) .AND. A(1) .GE. A(4) .AND. &
+           A(1) .GE. A(5)) THEN
+    B = [A(0),A(2),A(3),A(4),A(5)]
+    CALL sort_int_ijklm(B)
+    A(5) = A(1)
+    A(0:4) = B
+  ELSE IF (A(2) .GE. A(0) .AND. A(2) .GE. A(1) .AND. &
+           A(2) .GE. A(3) .AND. A(2) .GE. A(4) .AND. &
+           A(2) .GE. A(5)) THEN
+    B = [A(0),A(1),A(3),A(4),A(5)]
+    CALL sort_int_ijklm(B)
+    A(5) = A(2)
+    A(0:4) = B
+  ELSE IF (A(3) .GE. A(0) .AND. A(3) .GE. A(1) .AND. &
+           A(3) .GE. A(2) .AND. A(3) .GE. A(4) .AND. &
+           A(3) .GE. A(5)) THEN
+    B = [A(0),A(1),A(2),A(4),A(5)]
+    CALL sort_int_ijklm(B)
+    A(5) = A(3) 
+    A(0:4) = B
+  ELSE IF (A(4) .GE. A(0) .AND. A(4) .GE. A(1) .AND. &
+           A(4) .GE. A(2) .AND. A(4) .GE. A(3) .AND. &
+           A(4) .GE. A(5)) THEN
+    B = [A(0),A(1),A(2),A(3),A(5)]
+    CALL sort_int_ijklm(B)
+    A(5) = A(4) 
+    A(0:4) = B
+  ELSE
+    B = [A(0),A(1),A(2),A(3),A(4)]
+    CALL sort_int_ijklm(B)
+    A(0:4) = B
+  END IF
+END SUBROUTINE sort_int_ijklmn
+
 !------------------------------------------------------------
 ! sort_dirty_1Dint_1Dreal8
 !       - sorts a 1D real8 array into order based on a

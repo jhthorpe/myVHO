@@ -263,7 +263,6 @@ SUBROUTINE input_QUAD_natoms(natoms,error)
   DO WHILE (line .NE. "freq" .AND. line .NE. "Refe") 
     natoms = natoms + 1
     READ(fid,*) dummy, line
-    WRITE(*,*) "dummy,line", dummy,line
   END DO
   CLOSE(unit=fid)
 

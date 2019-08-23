@@ -4,16 +4,484 @@
 !         HO basis
 !------------------------------------------------------------
 MODULE ints_HO
-  USE val
+  USE valu
   USE gauss
   USE key
   USE quad
   USE cubi
   USE quar
   USE mome
-  USE cori
 
 CONTAINS
+
+!------------------------------------------------------------
+! ints_HO_p
+!	-calculates the value of <i|p|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_p(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i+1) THEN
+    ints_HO_p = -1.0D0*SQRT((x+1.0D0)/2.0D0)
+  ELSE IF (ABS(j-i) .EQ. 1) THEN
+    ints_HO_p = SQRT((x+1.0D0)/2.0D0) 
+  ELSE
+    ints_HO_p = 0.0D0
+  END IF
+END FUNCTION ints_HO_p
+
+!------------------------------------------------------------
+! ints_HO_q
+!	-calculates the value of <i|q|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_q(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (ABS(j-i) .EQ. 1) THEN
+    ints_HO_q = SQRT((x+1.0D0)/2.0D0) 
+  ELSE
+    ints_HO_q = 0.0D0
+  END IF
+END FUNCTION ints_HO_q
+
+!------------------------------------------------------------
+! ints_HO_pp
+!	-calculates the value of <i|p^2|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_pp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (i .EQ. j) THEN
+    ints_HO_pp = -1.0D0*x-0.5D0 
+  ELSE IF (ABS(j-i) .EQ. 2) THEN
+    ints_HO_pp = 0.5D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE
+    ints_HO_pp = 0.0D0
+  END IF
+END FUNCTION ints_HO_pp
+
+!------------------------------------------------------------
+! ints_HO_pq
+!	-calculates the value of <i|pq|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_pq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (i .EQ. j) THEN
+    ints_HO_pq = -0.5D0 
+  ELSE IF (j .EQ. i+2) THEN
+    ints_HO_pq = -0.5D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j+2 .EQ. i) THEN
+    ints_HO_pq = 0.5D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE
+    ints_HO_pq = 0.0D0
+  END IF
+END FUNCTION ints_HO_pq
+
+!------------------------------------------------------------
+! ints_HO_qp
+!	-calculates the value of <i|qp|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (i .EQ. j) THEN
+    ints_HO_qp = 0.5D0 
+  ELSE IF (j .EQ. i+2) THEN
+    ints_HO_qp = -0.5D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j+2 .EQ. i) THEN
+    ints_HO_qp = 0.5D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE
+    ints_HO_qp = 0.0D0
+  END IF
+END FUNCTION ints_HO_qp
+
+!------------------------------------------------------------
+! ints_HO_qq
+!	-calculates the value of <i|q^2|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (i .EQ. j) THEN
+    ints_HO_qq = x+0.5D0 
+  ELSE IF (ABS(j-i) .EQ. 2) THEN
+    ints_HO_qq = 0.5D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE
+    ints_HO_qq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qq
+
+!------------------------------------------------------------
+! ints_HO_qqq
+!	-calculates the value of <i|q^3|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (ABS(j-i) .EQ. 1) THEN
+    ints_HO_qqq = 3.0D0*SQRT(0.125D0*(x+1.0D0)*(x+1.0D0)*(x+1.0D0)) 
+  ELSE IF (ABS(j-i) .EQ. 3) THEN
+    ints_HO_qqq = 0.5D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/2.0D0)
+  ELSE
+    ints_HO_qqq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqq
+
+!------------------------------------------------------------
+! ints_HO_qqqq
+!	-calculates the value of <i|q^4|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqqq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i) THEN
+    ints_HO_qqqq = 0.75D0*(2.0D0*x*x+2.0D0*x+1.0D0)
+  ELSE IF (ABS(j-i) .EQ. 2) THEN
+    ints_HO_qqqq = 0.5D0*(2.0D0*x+3.0D0)*SQRT((x+1.0D0)*(x+2.0D0)) 
+  ELSE IF (ABS(j-i) .EQ. 4) THEN
+    ints_HO_qqqq = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)&
+                   *(x+4.0D0))
+  ELSE
+    ints_HO_qqqq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqqq
+
+!------------------------------------------------------------
+! ints_HO_qpp
+!	-calculates the value of <i|qp^2|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qpp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i+1) THEN
+    ints_HO_qpp = -1.0D0*(x+3.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j+1 .EQ. i) THEN
+    ints_HO_qpp = -1.0D0*(x-1.0D0)*SQRT((x+1.0D0)/8.0D0) 
+  ELSE IF (j .EQ. i+3) THEN
+    ints_HO_qpp = SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE IF (j+3 .EQ. i) THEN
+    ints_HO_qpp = SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE
+    ints_HO_qpp = 0.0D0
+  END IF
+END FUNCTION ints_HO_qpp
+
+!------------------------------------------------------------
+! ints_HO_qqp
+!	-calculates the value of <i|q^2p|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i+1) THEN
+    ints_HO_qqp = -1.0D0*(x-1.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j+1 .EQ. i) THEN
+    ints_HO_qqp = (x+3.0D0)*SQRT((x+1.0D0)/8.0D0) 
+  ELSE IF (j .EQ. i+3) THEN
+    ints_HO_qqp = -1.0D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE IF (j+3 .EQ. i) THEN
+    ints_HO_qqp = SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE
+    ints_HO_qqp = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqp
+
+!------------------------------------------------------------
+! ints_HO_qpq
+!	-calculates the value of <i|qpq|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qpq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i+1) THEN
+    ints_HO_qpq = -1.0D0*(x+1.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j+1 .EQ. i) THEN
+    ints_HO_qpq = (x+1.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j .EQ. i+3) THEN
+    ints_HO_qpq = -1.0D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE IF (j+3 .EQ. i) THEN
+    ints_HO_qpq = SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE
+    ints_HO_qpq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qpq
+
+!------------------------------------------------------------
+! ints_HO_pqq
+!	-calculates the value of <i|pqq|j> 
+!	- James coded this one, so it should not be trusted
+!	  even half as much as Devin's :) 
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_pqq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i+1) THEN
+    ints_HO_pqq = -1.0D0*(x+3.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j+1 .EQ. i) THEN
+    ints_HO_pqq = (x-1.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j .EQ. i+3) THEN
+    ints_HO_pqq = -1.0D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE IF (j+3 .EQ. i) THEN
+    ints_HO_pqq = -1.0D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE
+    ints_HO_pqq = 0.0D0
+  END IF
+END FUNCTION ints_HO_pqq
+!------------------------------------------------------------
+! ints_HO_pqp
+!	-calculates the value of <i|pqp|j> 
+!	- James coded this one, so it should not be trusted
+!	  even half as much as Devin's :) 
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_pqp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j .EQ. i+1) THEN
+    ints_HO_pqp = -1.0D0*(x+1.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j+1 .EQ. i) THEN
+    ints_HO_pqp = -1.0D0*(x+1.0D0)*SQRT((x+1.0D0)/8.0D0)
+  ELSE IF (j .EQ. i+3) THEN
+    ints_HO_pqp = SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE IF (j+3 .EQ. i) THEN
+    ints_HO_pqp = SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)/8.0D0)
+  ELSE
+    ints_HO_pqp = 0.0D0
+  END IF
+END FUNCTION ints_HO_pqp
+
+!------------------------------------------------------------
+! ints_HO_qqqp
+!	-calculates the value of <i|q^3p|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqqp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j+4 .EQ. i) THEN
+    ints_HO_qqqp = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE IF (j+2 .EQ. i) THEN
+    ints_HO_qqqp = 0.5D0*(x+3.0D0)*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i) THEN
+    ints_HO_qqqp = 0.25D0*(6.0D0*x+3.0D0)
+  ELSE IF (j .EQ. i+2) THEN
+    ints_HO_qqqp = -0.5D0*x*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i+4) THEN
+    ints_HO_qqqp = -0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE
+    ints_HO_qqqp = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqqp
+
+!------------------------------------------------------------
+! ints_HO_pqqq
+!	-calculates the value of <i|q^3p|j> 
+!	- Coded by James, and potentially not to be 
+!	  trusted 
+!	- factors of (1/i)^2 must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_pqqq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j+4 .EQ. i) THEN
+    ints_HO_pqqq = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE IF (j+2 .EQ. i) THEN
+    ints_HO_pqqq = 0.5D0*x*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i) THEN
+    ints_HO_pqqq = -0.25D0*(6.0D0*x+3.0D0)
+  ELSE IF (j .EQ. i+2) THEN
+    ints_HO_pqqq = -0.5D0*(x+3.0D0)*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i+4) THEN
+    ints_HO_pqqq = -0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE
+    ints_HO_pqqq = 0.0D0
+  END IF
+END FUNCTION ints_HO_pqqq
+
+!------------------------------------------------------------
+! ints_HO_pqqp
+!	-calculates the value of <i|q^3p|j> 
+!	- Coded by James, and potentially not to be 
+!	  trusted 
+!	- factors of (1/i)^2 must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_pqqp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (ABS(j-i) .EQ. 0) THEN
+    ints_HO_pqqp = -0.25D0*(2.0D0*x*x+2.0D0*x+3.0D0)
+  ELSE IF (ABS(j-i) .EQ. 2) THEN
+    ints_HO_pqqp = 0.0D0 
+  ELSE IF (ABS(j-i) .EQ. 4) THEN
+    ints_HO_pqqp = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*(x+4.0D0))
+  ELSE
+    ints_HO_pqqp = 0.0D0
+  END IF
+END FUNCTION ints_HO_pqqp
+
+!------------------------------------------------------------
+! ints_HO_qqpq
+!	-calculates the value of <i|q^2pq|j> 
+!	- Kindly provided by Devin Matthews
+!	- factors of 1/i must be accounted for
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqpq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j+4 .EQ. i) THEN
+    ints_HO_qqpq = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE IF (j+2 .EQ. i) THEN
+    ints_HO_qqpq = 0.5D0*(x+2.0D0)*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i) THEN
+    ints_HO_qqpq = 0.25D0*(2.0D0*x+1.0D0)
+  ELSE IF (j .EQ. i+2) THEN
+    ints_HO_qqpq = -0.5D0*(x+1.0D0)*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i+4) THEN
+    ints_HO_qqpq = -0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE
+    ints_HO_qqpq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqpq
+
+!------------------------------------------------------------
+! ints_HO_qqpp
+!	-calculates the value of <i|q^2p^2|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqpp(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (j+4 .EQ. i) THEN
+    ints_HO_qqpp = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE IF (j+2 .EQ. i) THEN
+    ints_HO_qqpp = SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i) THEN
+    ints_HO_qqpp = -0.25D0*(2.0D0*x*x+2.0D0*x+1.0D0)
+  ELSE IF (j .EQ. i+2) THEN
+    ints_HO_qqpp = -1.0D0*SQRT((x+1.0D0)*(x+2.0D0))
+  ELSE IF (j .EQ. i+4) THEN
+    ints_HO_qqpp = 0.25D0*SQRT((x+1.0D0)*(x+2.0D0)*(x+3.0D0)*&
+                   (x+4.0D0))
+  ELSE
+    ints_HO_qqpp = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqpp
+
+!------------------------------------------------------------
+! ints_HO_qqqqq
+!	-calculates the value of <i|q^5|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqqqq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (ABS(j-i) .EQ. 1) THEN
+    ints_HO_qqqqq = 1.25D0*(2.0D0*x*x+4.0D0*x+3.0D0)*&
+                    SQRT(0.5D0*(x+1.0D0)) 
+  ELSE IF (ABS(j-i) .EQ. 3) THEN 
+    ints_HO_qqqqq = 1.25D0*(x+2.0D0)*SQRT(0.5D0*&
+                    (x+1.0D0)*(x+2.0D0)*(x+3.0D0))
+  ELSE IF (ABS(j-i) .EQ. 5) THEN 
+    ints_HO_qqqqq = 0.25D0*SQRT(0.5D0*(x+1.0D0)*&
+                    (x+2.0D0)*(x+3.0D0)*(x+4.0D0)*&
+                    (x+5.0D0))
+  ELSE
+    ints_HO_qqqqq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqqqq
+
+!------------------------------------------------------------
+! ints_HO_qqqqqq
+!	-calculates the value of <i|q^6|j> 
+!	- Kindly provided by Devin Matthews
+!------------------------------------------------------------
+REAL(KIND=8) FUNCTION ints_HO_qqqqqq(i,j)
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: i,j
+  REAL(KIND=8) :: x
+  x = 1.0D0*MIN(i,j)
+  IF (ABS(j-1) .EQ. 0) THEN
+    ints_HO_qqqqqq = 0.625D0*(4.0D0*x*x*x+6.0D0*x*x+8.0D0*x+3.0D0)
+  ELSE IF (ABS(j-i) .EQ. 2) THEN
+    ints_HO_qqqqqq = 1.875D0*(x*x+3.0D0*x+3.0D0)*&
+                    SQRT((x+1.0D0)*(x+2.0D0)) 
+  ELSE IF (ABS(j-i) .EQ. 4) THEN 
+    ints_HO_qqqqqq = 0.375D0**(2.0D0*x+5.0D0)*SQRT(&
+                    (x+1.0D0)*(x+2.0D0)*(x+3.0D0)*(x+4.0D0))
+  ELSE IF (ABS(j-i) .EQ. 6) THEN 
+    ints_HO_qqqqqq = 0.125D0*SQRT((x+1.0D0)*&
+                    (x+2.0D0)*(x+3.0D0)*(x+4.0D0)*&
+                    (x+5.0D0)*(x+6.0D0))
+  ELSE
+    ints_HO_qqqqqq = 0.0D0
+  END IF
+END FUNCTION ints_HO_qqqqqq
 
 !------------------------------------------------------------
 ! ints_HO_normcalc
@@ -73,7 +541,7 @@ SUBROUTINE ints_HO_normcalc(ndim,nbas,nabs,W,Herm,norm,error)
         val = val + Win(i)*Hin(i,j)*Hin(i,j) 
       END DO 
       norm(j,k) = SQRT(1.0D0/val)
-      CALL val_check(norm(j,k),error)
+      CALL valu_check(norm(j,k),error)
       IF (error .NE. 0) RETURN
     END DO
   END DO
@@ -146,7 +614,7 @@ SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
         IF (i .EQ. j) val = val + bask(k)*(1.0D0*i+0.5D0)
         VTint(i-j+keyI(j,k),k) = val
 
-        CALL val_check(val,error)
+        CALL valu_check(val,error)
         IF (error .NE. 0) THEN
           WRITE(*,*) "ints_HO_VTcalc  : ERROR"
           WRITE(*,*) "Bad VT integral at i,j,k",i,j,k
@@ -172,7 +640,7 @@ SUBROUTINE ints_HO_VTcalc(ndim,nbas,nabs,q,W,basK,norm,Herm,keyI,Vij,&
   !      IF (i .EQ. j) VTint(i,j,k) = VTint(i,j,k) &
   !                    + basK(k)*(1.0D0*i+0.5D0)
   !
-  !      CALL val_check(VTint(i,j,k),error)
+  !      CALL valu_check(VTint(i,j,k),error)
   !      IF (error .NE. 0) THEN
   !        WRITE(*,*) "ints_HO_VTcalc  : ERROR"
   !        WRITE(*,*) "Bad potential at i,j,k",i,j,k
@@ -666,24 +1134,6 @@ SUBROUTINE ints_HO_quadput(ndim,nabs,q,W,basK,Norm,Heff,PsiL,PsiR,Vq,Hij,error)
   M = PRODUCT(nabs)
   Hij = 0.0D0 
 
-  !IF (.FALSE.) THEN
-  !slow code for testing
-  !which I think is probably wrong...
-  !CALL key_generate(ndim,nabs,key)
-  !DO k=0,M-1
-  !  CALL key_idx2ids(ndim,k,nabs,key,ids)
-  !  temp = Vq(k) 
-  !  DO j=0,ndim-1
-  !    temp = temp - 0.5*bask(k)*q(ids(j),j)**2.0D0
-  !  END DO 
-  !  DO j=0,ndim-1
-  !    temp = temp*W(ids(j),j)*Heff(ids(j),2*j)*Heff(ids(j),2*j+1)
-  !  END DO
-  !  Hij = Hij + temp 
-  !END DO
-
-  !ELSE
-  
   CALL key_generate(ndim,nabs,key)
   val = Vq
 
@@ -716,7 +1166,6 @@ SUBROUTINE ints_HO_quadput(ndim,nabs,q,W,basK,Norm,Heff,PsiL,PsiR,Vq,Hij,error)
 
   !sum it up and normalize
   Hij = SUM(val(0:M-1))
-  !END IF
   DO j=0,ndim-1
     Hij = Hij * Norm(2*j) 
     Hij = Hij * Norm(2*j+1)
@@ -729,7 +1178,7 @@ SUBROUTINE ints_HO_quadput(ndim,nabs,q,W,basK,Norm,Heff,PsiL,PsiR,Vq,Hij,error)
     END DO
   END IF
 
-  CALL val_check(Hij,error)
+  CALL valu_check(Hij,error)
   IF (error .NE. 0) THEN
     WRITE(*,*) "ints_HO_quadput  : ERROR"
     WRITE(*,*) "There is a bad value at this Matrix Element:"
@@ -739,100 +1188,5 @@ SUBROUTINE ints_HO_quadput(ndim,nabs,q,W,basK,Norm,Heff,PsiL,PsiR,Vq,Hij,error)
 
 END SUBROUTINE ints_HO_quadput
 
-!------------------------------------------------------------
-! ints_HO_coriolis
-!       - evalutes contributions of Q1,Q2,P1,P2,QP and PQ 
-!         integrals to the coriolis term
-!------------------------------------------------------------
-! ndim          : int, number of dimensions
-! nrota         : int, number of rotational terms
-! rota          : 1D real*8, rotational terms
-! omega         : 1D real*8, harmonic frequencies stored in
-!                            order omega[0] -> omega for dim 0 
-! ncori         : 1D int, number of coriolis interactions per
-!                         rotational mode
-! qcori         : 2D int, coriolis quantum numbers for 
-!                         each rotational mode
-! cori          : 2D real*8, coriolis zetas
-! Q1int         : 2D real*8, <i|q|i'> integrals
-! Q2int         : 2D real*8, <i|q^2|i'> integrals
-! P1int         : 2D real*8, <i|p|i'> integrals
-! P2int         : 2D real*8, <i|p^2|i'> integrals
-! QPint         : 2D real*8, <i|qp|i'> integrals
-! PQint         : 2D real*8, <i|pq|i'> integrals
-! PsiL          : 1D int, LHS quantum numbers
-! PsiR          : 1D int, RHS quantum numbers
-! cval          : real*8, value to output
-! error         : int, error code
-
-SUBROUTINE ints_HO_coriolis(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-                            Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,cval,error)
-  IMPLICIT NONE
-  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: cori,Q1int,Q2int,P1int,&
-                                                P2int,QPint,PQint
-  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: rota,omega
-  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: qcori
-  INTEGER, DIMENSION(0:), INTENT(IN) :: ncori,PsiL,PsiR
-  REAL(KIND=8), INTENT(INOUT) :: cval
-  INTEGER, INTENT(INOUT) :: error
-  INTEGER, INTENT(IN) :: ndim,nrota
-  REAL(KIND=8) :: val
-  INTEGER :: b,c,a,i,j,k,l
-  !WRITE(*,*) "ncori is",ncori
-  error = 0
-  cval = 0.0D0
-
-  !WRITE(*,*) 
-  !WRITE(*,*) 
-  !WRITE(*,*) 
-  !WRITE(*,*) 
-  !WRITE(*,*) "TESTING TESTING TESTING"
-  !WRITE(*,*) "PsiL is", PsiL
-  !WRITE(*,*) "PsiR is", PsiR
-  
-  DO a=0,nrota-1
-  !  WRITE(*,*) "Rotational mode:", a
-  !  WRITE(*,*) "Be^a",rota(a)
-    val = 0.0D0
-    DO b=0,ncori(a)-1
-  !    WRITE(*,*) "RHS Coriolis term"
-  !    WRITE(*,*) qcori(2*b,a),qcori(2*b+1,a),cori(b,a)
-      k = qcori(2*b,a)
-      l = qcori(2*b+1,a)
-      !DO c=b,ncori(a)-1
-      DO c=0,ncori(a)-1
-  !      WRITE(*,*)
-  !      WRITE(*,*) "LHS Coriolis term"
-  !      WRITE(*,*) qcori(2*c,a),qcori(2*c+1,a),cori(c,a) 
-        i = qcori(2*c,a)
-        j = qcori(2*c+1,a)
-        !check orthogonality
-        IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
-            ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
-            ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
-            ANY(PsiL(k+1:l-1) .NE. PsiR(k+1:l-1)) .OR. &
-            ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) THEN
-  !       WRITE(*,*) "Orthogonal, skipping"
-         CYCLE
-        ELSE
- !         WRITE(*,*) "val before is",val 
-          CALL cori_eval(ndim,i,j,k,l,omega,PsiL,PsiR,&
-                         cori(c,a),cori(b,a),Q1int,Q2int,&
-                         P1int,P2int,QPint,PQint,val,error) 
- !       WRITE(*,*) "val after is",val 
-          IF (error .NE. 0) RETURN
-        END IF
-      END DO
- !     WRITE(*,*) "--------------------------------------------------"
-    END DO
- !   WRITE(*,*) "val added is",rota(a)*val 
-    cval = cval + rota(a)*val
- !   WRITE(*,*) "===================================================="
-  END DO
-
-  !WRITE(*,*) "coriolis is  =",cval
-END SUBROUTINE
-
-!------------------------------------------------------------
 END MODULE ints_HO
 !------------------------------------------------------------

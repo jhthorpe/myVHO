@@ -7,7 +7,7 @@ MODULE V
   USE fname
   USE input
   USE fit
-  USE val
+  USE valu
   USE key
 
 CONTAINS
@@ -296,7 +296,7 @@ SUBROUTINE V_spline(ndim,nabs,npot,q,qtemp,Vtemp,Vij,error)
           RETURN
          END IF
        END IF
-       CALL val_check(val,error)
+       CALL valu_check(val,error)
        IF (error .NE. 0) THEN
          WRITE(*,*) "V_spline  : Abscissa", i," of dimension", j," had a bad value"
          RETURN

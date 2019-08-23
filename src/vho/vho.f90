@@ -32,6 +32,7 @@ PROGRAM vho
   error = 0
   WRITE(*,*) "xvho : called"
   CALL vho_strtmsg()
+
   
   CALL input_jobinfo(job,bas,ndim,nbas,enum,mem,error)
   IF (error .NE. 0) THEN
