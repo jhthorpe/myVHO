@@ -102,12 +102,15 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IF (error .NE. 0) RETURN
   CALL cori_get(ndim,ncori,qcori,cori,error)  
   IF (error .NE. 0) RETURN
-!  CALL cori_get_debug(ndim,cori_d,error)
-!  IF (error .NE. 0) RETURN
   CALL didq_get(ndim,ndidq,qdidq,didq,error)
   IF (error .NE. 0) RETURN
-!  CALL didq_get_debug(ndim,didq_d,error)
-!  IF (error .NE. 0) RETURN
+  INQUIRE(file='test',exist=ex)
+  IF (ex) THEN
+    CALL cori_get_debug(ndim,cori_d,error)
+    IF (error .NE. 0) RETURN
+    CALL didq_get_debug(ndim,didq_d,error)
+    IF (error .NE. 0) RETURN
+  END IF
 
   !build the hamiltonian
   IF (job .EQ. 1) THEN
@@ -324,11 +327,6 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
   ALLOCATE(P2int(0:2*mbas-1,0:ndim-1))
   ALLOCATE(QPint(0:2*mbas-1,0:ndim-1))
   ALLOCATE(PQint(0:2*mbas-1,0:ndim-1))
-
-  WRITE(*,*) "WARNING WARNING WARNING"
-  WRITE(*,*) "Orthogonality checks are wrong"
-!  STOP
-  WRITE(*,*) "WARNING WARNING WARNING"
 
   !precalculate the needed integrals
   !we could do this on the fly, but this
@@ -671,11 +669,6 @@ SUBROUTINE H_HO_build_diag_incore(ndim,nbas,nabs,q,W,basK,&
 
   !Sort the quadratic force constants
   CALL sort_dirty_1Dint_1Dreal8(ndim,nquad,qquad,quad,omega,error)
-
-  WRITE(*,*) "WARNING WARNING WARNING"
-  WRITE(*,*) "Orthogonality checks are wrong"
-  STOP
-  WRITE(*,*) "WARNING WARNING WARNING"
 
   !force constant integrals
   WRITE(*,*) "Calculating coupling integrals"

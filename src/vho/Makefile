@@ -28,23 +28,23 @@ key.o : key.f90
 sort.o : sort.f90
 	$(FC) $(FFLAGS) -c sort.f90
 
-quad.o : quad.f90
-	$(FC) $(FFLAGS) -c quad.f90
-
-cubi.o : cubi.f90
-	$(FC) $(FFLAGS) -c cubi.f90
-
-quar.o : quar.f90
-	$(FC) $(FFLAGS) -c quar.f90
-
-mome.o : mome.f90
-	$(FC) $(FFLAGS) -c mome.f90
-
 linal.o : linal.f90
 	$(FC) $(FFLAGS) $(LINAL) -c linal.f90
 
 rota.o : rota.f90 input.o
 	$(FC) $(FFLAGS) -c rota.f90 input.o
+
+quad.o : quad.f90 sort.o
+	$(FC) $(FFLAGS) -c quad.f90 sort.o
+
+cubi.o : cubi.f90 sort.o
+	$(FC) $(FFLAGS) -c cubi.f90 sort.o
+
+quar.o : quar.f90 sort.o
+	$(FC) $(FFLAGS) -c quar.f90 sort.o
+
+mome.o : mome.f90 sort.o
+	$(FC) $(FFLAGS) -c mome.f90 sort.o
 
 fcon.o : fcon.f90 sort.o
 	$(FC) $(FFLAGS) -c fcon.f90 sort.o

@@ -4,6 +4,7 @@
 !         momentum terms 
 !------------------------------------------------------------
 MODULE mome
+  USE sort
 
 CONTAINS
 !------------------------------------------------------------
@@ -24,11 +25,15 @@ SUBROUTINE mome_HO_eval(ndim,PsiL,PsiR,qPhi,Phi,P2int,momeval)
   REAL(KIND=8), INTENT(INOUT) :: momeval
   REAL(KIND=8), INTENT(IN) :: Phi
   INTEGER, INTENT(IN) :: ndim,qPhi
+  INTEGER, DIMENSION(0:1) :: v
   INTEGER :: i,j          
   i = qPhi
   !delta function for noninvolved dimensions
-  IF (ALL(PsiL(0:i-1) .EQ. PsiR(0:i-1)) .AND.&
-      ALL(PsiL(i+1:ndim-1) .EQ. PsiR(i+1:ndim-1))) THEN
+  v = [i,j]
+  CALL sort_int_ij(v)
+  IF (ALL(PsiL(0:v(0)-1) .EQ. PsiR(0:v(0)-1)) .AND.&
+      ALL(PsiL(v(0)+1:v(1)-1) .EQ. PsiR(v(0)+1:v(1)-1)) .AND. &
+      ALL(PsiL(v(1)+1:ndim-1) .EQ. PsiR(v(1)+1:ndim-1)) ) THEN
     ! p^2 can be v,v and v+2,v
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       j = PsiR(i)

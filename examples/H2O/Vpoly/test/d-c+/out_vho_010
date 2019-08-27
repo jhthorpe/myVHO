@@ -60,12 +60,6 @@
   3     7     9        -0.000000000000000
   3     8     9         0.000000000000000
 
- Coriolis Constants -- DEBUG
-  1     7     9        -0.999921729400000
-  1     9     7         0.999921729400000
-  1     8     9         0.012511399600000
-  1     9     8        -0.012511399600000
-
  dI/dq Constants
   1     1     7         0.000000000000000
   1     1     8         0.000000000000000
@@ -95,10 +89,13 @@
   3     3     8         0.000000000000000
   3     3     9         0.000000000000000
 
+ Coriolis Constants -- DEBUG
+  1     7     9        -0.999921729400000
+  1     9     7         0.999921729400000
+  1     8     9         0.012511399600000
+  1     9     8        -0.012511399600000
+
  dI/dq Constants -- DEBUG
- WARNING WARNING WARNING
- Orthogonality checks are wrong
- WARNING WARNING WARNING
  Calculating Integrals...
  <i|q|i'> type integrals
  <i|q^2|i'> type integrals

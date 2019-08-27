@@ -3,6 +3,7 @@
 !       - module for dealing with quadratic force constants
 !------------------------------------------------------------
 MODULE quad
+  USE sort
 
 CONTAINS
 
@@ -32,11 +33,15 @@ SUBROUTINE quad_HO_eval(ndim,PsiL,PsiR,qPhi,Phi,&
   REAL(KIND=8), INTENT(INOUT) :: quadval
   REAL(KIND=8), INTENT(IN) :: Phi
   INTEGER, INTENT(IN) :: ndim,qPhi
+  INTEGER, DIMENSION(0:1) :: v
   INTEGER :: i,j
   i = qPhi 
   !delta function for noninvolved dimensions
-  IF (ALL(PsiL(0:i-1) .EQ. PsiR(0:i-1)) .AND.&
-      ALL(PsiL(i+1:ndim-1) .EQ. PsiR(i+1:ndim-1)) ) THEN
+  v = [i,j]
+  CALL sort_int_ij(v)
+  IF (ALL(PsiL(0:v(0)-1) .EQ. PsiR(0:v(0)-1)) .AND.&
+      ALL(PsiL(v(0)+1:v(1)-1) .EQ. PsiR(v(0)+1:v(1)-1)) .AND. &
+      ALL(PsiL(v(1)+1:ndim-1) .EQ. PsiR(v(1)+1:ndim-1)) ) THEN
     ! q^2 can be v,v and v+2,v
     IF (PsiL(i) .EQ. PsiR(i)) THEN
       j = PsiR(i)

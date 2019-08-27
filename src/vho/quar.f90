@@ -4,6 +4,7 @@
 !         quartic force constants
 !------------------------------------------------------------
 MODULE quar
+  USE sort
 
 CONTAINS
 !------------------------------------------------------------
@@ -37,17 +38,20 @@ SUBROUTINE quar_HO_eval(diag,ndim,PsiL,PsiR,qPhi,&
   REAL(KIND=8), INTENT(IN) :: Phi
   LOGICAL, INTENT(IN) :: diag
   INTEGER, INTENT(IN) :: ndim
+  INTEGER, DIMENSION(0:3) :: v
   INTEGER :: i,j,k,l,m,n,o,p
   i = qPhi(0)
   j = qPhi(1)
   k = qPhi(2)
   l = qPhi(3)
   !Check orthogonality of noninvolved terms
-  IF (ANY(PsiL(0:i-1) .NE. PsiR(0:i-1)) .OR. &
-      ANY(PsiL(i+1:j-1) .NE. PsiR(i+1:j-1)) .OR. &
-      ANY(PsiL(j+1:k-1) .NE. PsiR(j+1:k-1)) .OR. &
-      ANY(PsiL(k+1:l-1) .NE. PsiR(k+1:l-1)) .OR. &
-      ANY(PsiL(l+1:ndim-1) .NE. PsiR(l+1:ndim-1))) RETURN
+  v = [i,j,k,l]
+  CALL sort_int_ijkl(v)
+  IF (ANY(PsiL(0:v(0)-1) .NE. PsiR(0:v(0)-1)) .OR. &
+      ANY(PsiL(v(0)+1:v(1)-1) .NE. PsiR(v(0)+1:v(1)-1)) .OR. &
+      ANY(PsiL(v(1)+1:v(2)-1) .NE. PsiR(v(1)+1:v(2)-1)) .OR. &
+      ANY(PsiL(v(2)+1:v(3)-1) .NE. PsiR(v(2)+1:v(3)-1)) .OR. &
+      ANY(PsiL(v(3)+1:ndim-1) .NE. PsiR(v(3)+1:ndim-1))) RETURN
 
   !type 1 : i i i i
   IF (i .EQ. j .AND. j .EQ. k .AND. k .EQ. l) THEN
