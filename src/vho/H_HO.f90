@@ -42,6 +42,7 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   INTEGER, INTENT(IN) :: job,ndim
   INTEGER, INTENT(INOUT) :: error
 
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: cori_d,didq_d
   REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: Vij,Herm,cori,didq
   REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: Vq,quad,cubi,quar,basK,rota
   INTEGER, DIMENSION(:,:), ALLOCATABLE :: qcori,qdidq
@@ -101,8 +102,12 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
   IF (error .NE. 0) RETURN
   CALL cori_get(ndim,ncori,qcori,cori,error)  
   IF (error .NE. 0) RETURN
+!  CALL cori_get_debug(ndim,cori_d,error)
+!  IF (error .NE. 0) RETURN
   CALL didq_get(ndim,ndidq,qdidq,didq,error)
   IF (error .NE. 0) RETURN
+!  CALL didq_get_debug(ndim,didq_d,error)
+!  IF (error .NE. 0) RETURN
 
   !build the hamiltonian
   IF (job .EQ. 1) THEN
@@ -111,6 +116,7 @@ SUBROUTINE H_HO_build(job,ndim,nbas,nabs,mem,q,W,Hij,error)
                                   ncubi,qcubi,cubi,&
                                   nquar,qquar,quar,nrota,rota,&
                                   ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  cori_d,didq_d,&
                                   Hij,error)
     END IF
   ELSE IF (job .EQ. 2) THEN
@@ -270,6 +276,8 @@ END SUBROUTINE H_HO_Hermite_incore
 ! ndim          : int, number of dimensions
 ! ndidq         : 1D int, number of didq
 ! qdidq         : 2D int, quantum numbers of didq
+! cori          : 3D real*8, coriolis constants in debugging
+! didq          : 3D real*8, didq constants in debugging
 ! Hij		: 2D real*8, Hamiltonian
 ! error         : int, exit code
 
@@ -277,8 +285,10 @@ SUBROUTINE H_HO_build_poly_incore(ndim,nbas,nquad,qquad,quad,&
                                   ncubi,qcubi,cubi,&
                                   nquar,qquar,quar,nrota,rota,&
                                   ncori,qcori,cori,ndidq,qdidq,didq,&
+                                  cori_d,didq_d,&
                                   Hij,error)
   IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(INOUT) :: cori_d,didq_d
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(INOUT) :: Hij
   REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: cori,didq
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: quad,cubi,quar,rota 
@@ -403,7 +413,7 @@ IF (ex) THEN
   DO i=0,N-1
     Hij(i,i) = eps(i)
   END DO
- 
+
   c2val = 0.0D0
   c3val = 0.0D0
   c4val = 0.0D0
@@ -420,12 +430,19 @@ IF (ex) THEN
   temp = Hij(k,k)
   WRITE(*,*) "Before ", temp
 
+  WRITE(*,*) "Omega is", omega
+
   !Before diagonal
   DO i=0,k-1
     CALL key_idx2ids(ndim,i,nbas,keyR,PsiL)
-    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+    IF (ABS(eps(k) - eps(i)) .LT. 1.0D-15) CYCLE
+!    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!                         PsiR,PsiL,val,error)
+!    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!                         PsiL,PsiR,c2val,error)
+    CALL cori_HO_O2_eval_debug(ndim,nrota,rota,omega,cori_d,&
                          PsiR,PsiL,val,error)
-    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+    CALL cori_HO_O2_eval_debug(ndim,nrota,rota,omega,cori_d,&
                          PsiL,PsiR,c2val,error)
     temp = temp + c2val*val/(eps(k)-eps(i))
     Hij(i,k) = Hij(i,k) + c2val*val/(eps(k)-eps(i))
@@ -443,26 +460,37 @@ IF (ex) THEN
   p4val = 0.0D0
 
   CALL pseu_HO_O2_eval(nrota,rota,p2val)
-  CALL pseu_HO_O3_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
-                       PsiL,PsiR,p3val)
-  CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
-                       PsiL,PsiR,p4val)
+!  CALL pseu_HO_O3_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+!                       PsiL,PsiR,p3val)
+!  CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
+!                       PsiL,PsiR,p4val)
+  CALL pseu_HO_O4_eval_debug(ndim,nrota,rota,didq_d,&
+                             PsiL,PsiR,p4val,error)
 
-  CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!  CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!                       PsiL,PsiR,c2val,error)
+  CALL cori_HO_O2_eval_debug(ndim,nrota,rota,omega,cori_d,&
                        PsiL,PsiR,c2val,error)
-  CALL cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
-                       ncori,qcori,cori,PsiL,PsiR,c3val,error)
-  CALL cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
-                       ncori,qcori,cori,PsiL,PsiR,c4val,error)
+  !CALL cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+  !                     ncori,qcori,cori,PsiL,PsiR,c3val,error)
+!  CALL cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
+!                       ncori,qcori,cori,PsiL,PsiR,c4val,error)
+  CALL cori_HO_O4_eval_debug(ndim,nrota,rota,omega,didq_d,cori_d,&
+                             PsiL,PsiR,c4val,error)
   temp = temp + p2val + p3val + p4val + c2val + c3val + c4val
   Hij(i,k) = Hij(i,k) + p2val + p3val + p4val + c2val + c3val + c4val
   
   !After diagonal
   DO i=k+1,N-1
+    IF (ABS(eps(k) - eps(i)) .LT. 1.0D-15) CYCLE
     CALL key_idx2ids(ndim,i,nbas,keyR,PsiL)
-    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!                         PsiR,PsiL,val,error)
+!    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+!                         PsiL,PsiR,c2val,error)
+    CALL cori_HO_O2_eval_debug(ndim,nrota,rota,omega,cori_d,&
                          PsiR,PsiL,val,error)
-    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
+    CALL cori_HO_O2_eval_debug(ndim,nrota,rota,omega,cori_d,&
                          PsiL,PsiR,c2val,error)
     temp = temp + c2val*val/(eps(k)-eps(i))
     Hij(i,k) = Hij(i,k) + c2val*val/(eps(k)-eps(i))
@@ -480,22 +508,9 @@ IF (ex) THEN
     WRITE(*,*) "PsiR",PsiR
     DO j=0,N-1
       CALL key_idx2ids(ndim,j,nbas,keyR,PsiL)
-!      IF (ANY(PsiL .GT. PsiR+5) .OR. ANY(PsiL .LT. PsiR-5)) CYCLE
-      !WRITE(*,'(2x,999(F20.4,2x))') Hij(j,0:N-1)
       WRITE(*,'(2x,F20.4,2x,A1,3(I4,1x),2x,A1,F20.4))') Hij(j,k),"|",PsiL,"|",eps(j)
     END DO
   END IF
-  !WRITE(*,*) "Enter PsiL:"
-  !READ(*,*) PsiL
-  !CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
-  !                     PsiL,PsiR,c2val,error)
- ! CALL pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
- !                      PsiL,PsiR,p4val)
-    !CALL cori_HO_O2_old(ndim,nrota,rota,omega,ncori,qcori,cori,Q1int,&
-    !                   Q2int,P1int,P2int,QPint,PQint,PsiL,PsiR,c2val,error)
-!    CALL cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
-!                         PsiL,PsiR,c2val,error)
-  !  WRITE(*,*) "c2val = ",c2val
   STOP
 END IF
 !=============================================

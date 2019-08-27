@@ -135,16 +135,92 @@ SUBROUTINE didq_get(ndim,ndidq,qdidq,didq,error)
     WRITE(*,*)
   END IF
 
-  !convert to correct units
-  !didq = didq*4.0D0*3.1415926535897932D0*137.0D0
-  WRITE(*,*) "WARNING WARNING WARNING"
-  WRITE(*,*) "I am not sure the didq units are correct"
-
   IF (ALLOCATED(Itemp)) DEALLOCATE(Itemp)
   IF (ALLOCATED(Rtemp)) DEALLOCATE(Rtemp)
 
-
 END SUBROUTINE didq_get
+
+!------------------------------------------------------------
+! didq_get_debug
+!	- reads in the derivatives of the intertia tensor wrt 
+!	  dimensionless normal coordinates
+!
+!	- these are stored like:
+!         didq(m,a,b) -> a^{a,b}_m
+!------------------------------------------------------------
+! ndim		: int, number of dimensions
+! didq		: 3D real*8, values of didq
+! error		: int, exit code
+
+SUBROUTINE didq_get_debug(ndim,didq,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: didq
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  CHARACTER(LEN=1024) :: fname
+  REAL(KIND=8) :: val
+  LOGICAL :: ex
+  INTEGER :: fline,fid,voff
+  INTEGER :: k,m,a,b
+  
+  error = 0
+  fname = 'didq'
+  fid = 301
+
+  ALLOCATE(didq(0:ndim-1,0:2,0:2))
+  didq = 0.0D0
+
+  !If there is no didq file
+  INQUIRE(file=TRIM(fname),exist=ex)
+  IF (ndim .EQ. 1 .OR. .NOT. ex) THEN
+    RETURN
+  END IF
+
+  !Read in vibrational offset 
+  INQUIRE(file='voff.in',EXIST=ex)
+  IF (ex) THEN
+    OPEN(file='voff.in',unit=100,status='old')
+    READ(100,*) voff
+    CLOSE(unit=100)
+  ELSE
+    voff = 0
+  END IF
+
+  CALL input_nline(fline,fname)
+  OPEN(file=TRIM(fname),unit=fid,status='old')
+
+  !Read in data
+  DO k=0,fline-1
+    READ(fid,*) a,b,m,val
+
+    a = a - 1
+    b = b - 1
+    m = m - voff - 1
+
+    IF (a .LT. 0 .OR. a .GT. 2 .OR. b .LT. 0 .OR. b .GT. 2 .OR. &
+        m .LT. 0 .OR. m .GT. ndim-1) THEN
+      WRITE(*,*) "didq_get_debug  : ERROR"
+      WRITE(*,*) "In didq, line ",k,", has a bad value"
+      error = 1
+    END IF
+
+    didq(m,a,b) = val
+  END DO
+  CLOSE(unit=fid)
+
+  WRITE(*,*) "dI/dq Constants -- DEBUG"
+  DO a=0,2
+    DO b=0,2
+      DO m=0,ndim-1
+        IF (ABS(didq(m,a,b)) .GT. 1.0D-15) THEN
+          WRITE(*,'(2x,I1,2x,2(I4,2x),F24.15)') a+1,b+1,m+voff+1,didq(m,a,b)
+        END IF
+      END DO
+    END DO
+  END DO
+
+END SUBROUTINE didq_get_debug
+
 !------------------------------------------------------------
 END MODULE didq
 !------------------------------------------------------------

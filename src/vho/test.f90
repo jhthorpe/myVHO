@@ -20,6 +20,9 @@ program test
   write(*,*) "psi  :", psi
   write(*,*) "ints :", ids+1
 
-  CALL cori_HO_O4_ints(ndim,psi,psi,ids,val) 
+  WRITE(*,*) "μ.π.π"
+  CALL cori_HO_O4_upp_ints(ndim,psi,psi,ids,val) 
+  WRITE(*,*) "π.μ.π"
+  CALL cori_HO_O4_upp_ints(ndim,psi,psi,ids,val) 
 
 end program test

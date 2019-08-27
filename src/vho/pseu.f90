@@ -155,7 +155,67 @@ SUBROUTINE pseu_HO_O4_eval(ndim,nrota,rota,ndidq,qdidq,didq,&
 END SUBROUTINE pseu_HO_O4_eval
 
 !------------------------------------------------------------
+! pseu_HO_O4_eval_debug
+!       - evalutes 4th order contributions of the 
+!         pseudopotnetial to the watson hamiltonian
+!         expressed in the harmonic oscillator basis
+!
+!       - arrays are stored in debug form
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nrota         : int, number of non-inf rota consts
+! rota          : 1D real*8, non-inf rota consts
+! didq_d        : 3D real*8, didq constants
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers
+! val           : real*8, value
+! error         : int, error code
 
+SUBROUTINE pseu_HO_O4_eval_debug(ndim,nrota,rota,didq_d,&
+                                 PsiL,PsiR,val,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: didq_d
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: rota
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: val
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,nrota
+  INTEGER, DIMENSION(0:1) :: v
+  REAL(KINd=8) :: temp,foo
+  INTEGER :: i,j,a,b
+
+  error = 0
+  val = 0.0D0
+  DO a=0,nrota-1
+    DO b=0,nrota-1
+      DO i=0,ndim-1
+        IF (ABS(didq_d(i,a,b)) .LT. 1.0D-15) CYCLE
+        DO j=0,ndim-1
+          IF (ABS(didq_d(j,b,a)) .LT. 1.0D-15) CYCLE
+          v = [i,j]
+          CALL sort_int_ij(v)
+          IF (ANY(PsiL(0:v(0)-1) .NE. PsiR(0:v(0)-1)) .OR.&
+              ANY(PsiL(v(0)+1:v(1)-1) .NE. PsiR(v(0)+1:v(1)-1)) .OR.&
+              ANY(PsiL(v(1)+1:ndim-1) .NE. PsiR(v(1)+1:ndim-1))) THEN 
+            CYCLE
+          ELSE
+            IF (i .EQ. j) THEN
+              temp = ints_HO_qq(PsiL(i),PsiR(i))
+            ELSE
+              temp = ints_HO_q(PsiL(i),PsiR(i))*ints_HO_q(PsiL(j),PsiR(j))
+            END IF
+            foo = -3.0D0/16.0D0*rota(a)*rota(a)*rota(b)*&
+                   didq_d(i,a,b)*didq_d(j,b,a)*temp
+            val = val + foo
+          END IF
+        END DO
+      END DO
+    END DO
+  END DO
+
+END SUBROUTINe pseu_HO_O4_eval_debug
+
+!------------------------------------------------------------
 
 END MODULE pseu
 !------------------------------------------------------------

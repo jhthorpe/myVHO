@@ -1,0 +1,186 @@
+ xvho : called
+
+ =======================================================
+ Starting xvho
+
+ Reading input from vho.in
+
+1    		!job type
+1		!basis type
+3    		!# dimensions
+11 11 11	!# basis functions in each dimension
+5		!# eigenvalues to compute
+1000		!memory in MB
+
+ job     : 1 -> V from force constants up to 4th order
+ bas     : 1 -> Harmonic Oscillator basis
+ ndim    :   3
+ nbas    :  11   11   11
+ enum    :   5
+ mem     :       1000
+ input_jobinfo : completed with status            0
+ =======================================================
+ Beginning Construction of HO Hamiltonian
+ Dimension of Hamiltonian        1331
+
+ Hamiltonian Memory Analysis
+ Available memory        1000.00
+ Minimum memory             0.02
+ Precalc memory             0.02
+ Incore memory             14.18
+ Values are in MB
+
+ HO Hamiltonian will be built with incore memory
+
+ Reading force constants
+ Numbering offset is:           6
+
+ Quadratic Force Constants
+   7           1.000000000000000
+   8           1.000000000000000
+   9           1.000000000000000
+
+ Cubic Force Constants
+
+ Quartic Force Constants
+
+ Rotational Constants
+  1           1.000000000000000
+  2           1.000000000000000
+  3           1.000000000000000
+
+ Coriolis Constants
+  1     7     8        -0.000000000000000
+  1     7     9        -0.000000000000000
+  1     8     9        -0.000000000000000
+  2     7     8         0.000000000000000
+  2     7     9        -0.000000000000000
+  2     8     9         0.000000000000000
+  3     7     8         0.000000000000000
+  3     7     9        -0.000000000000000
+  3     8     9         0.000000000000000
+
+ Coriolis Constants -- DEBUG
+
+ dI/dq Constants
+  1     1     7         0.000000000000000
+  1     1     8         0.000000000000000
+  1     1     9         0.000000000000000
+  1     2     7         0.000000000000000
+  1     2     8         0.000000000000000
+  1     2     9         0.000000000000000
+  1     3     7         0.000000000000000
+  1     3     8         0.000000000000000
+  1     3     9         0.000000000000000
+  2     1     7         0.000000000000000
+  2     1     8         0.000000000000000
+  2     1     9         0.000000000000000
+  2     2     7         0.000000000000000
+  2     2     8         0.000000000000000
+  2     2     9         0.000000000000000
+  2     3     7         0.000000000000000
+  2     3     8         0.000000000000000
+  2     3     9         0.000000000000000
+  3     1     7         0.000000000000000
+  3     1     8         0.000000000000000
+  3     1     9         0.000000000000000
+  3     2     7         0.000000000000000
+  3     2     8         0.000000000000000
+  3     2     9         0.000000000000000
+  3     3     7         0.000000000000000
+  3     3     8         0.000000000000000
+  3     3     9         0.000000000000000
+
+ WARNING WARNING WARNING
+ I am not sure the didq units are correct
+ dI/dq Constants -- DEBUG
+ WARNING WARNING WARNING
+ Orthogonality checks are wrong
+ WARNING WARNING WARNING
+ Calculating Integrals...
+ <i|q|i'> type integrals
+ <i|q^2|i'> type integrals
+ <i|q^3|i'> type integrals
+ <i|q^4|i'> type integrals
+ <i|p|i'> type integrals
+ <i|p^2|i'> type integrals
+ <i|qp|i'> type integrals
+ <i|pq|i'> type integrals
+
+ TESTING TESTING TESTING
+ Enter PsiR:
+ PsiR is           0           1           0
+ Before    2.5000000000000000     
+ Omega is   1.0000000000000000        1.0000000000000000        1.0000000000000000     
+
+
+ testing rota
+ nrota is           3
+ a, rota(a)           0   1.0000000000000000     
+ a, rota(a)           1   1.0000000000000000     
+ a, rota(a)           2   1.0000000000000000     
+
+
+ testing cori
+ a,i,j,cori(a,i,j)           0           0           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           0           1  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           0           2   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           1           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           1           1   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           1           2   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           2           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           2           1   0.0000000000000000     
+ a,i,j,cori(a,i,j)           0           2           2   0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           0           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           0           1   0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           0           2  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           1           0  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           1           1   0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           1           2   0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           2           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           2           1  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           1           2           2   0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           0           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           0           1   0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           0           2  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           1           0  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           1           1   0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           1           2   0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           2           0   0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           2           1  -0.0000000000000000     
+ a,i,j,cori(a,i,j)           2           2           2   0.0000000000000000     
+
+
+ testing didq
+ a,b,i, didq           0           0           0   0.0000000000000000     
+ a,b,i, didq           0           0           1   0.0000000000000000     
+ a,b,i, didq           0           0           2   0.0000000000000000     
+ a,b,i, didq           0           1           0   0.0000000000000000     
+ a,b,i, didq           0           1           1   0.0000000000000000     
+ a,b,i, didq           0           1           2   0.0000000000000000     
+ a,b,i, didq           0           2           0   0.0000000000000000     
+ a,b,i, didq           0           2           1   0.0000000000000000     
+ a,b,i, didq           0           2           2   0.0000000000000000     
+ a,b,i, didq           1           0           0   0.0000000000000000     
+ a,b,i, didq           1           0           1   0.0000000000000000     
+ a,b,i, didq           1           0           2   0.0000000000000000     
+ a,b,i, didq           1           1           0   0.0000000000000000     
+ a,b,i, didq           1           1           1   0.0000000000000000     
+ a,b,i, didq           1           1           2   0.0000000000000000     
+ a,b,i, didq           1           2           0   0.0000000000000000     
+ a,b,i, didq           1           2           1   0.0000000000000000     
+ a,b,i, didq           1           2           2   0.0000000000000000     
+ a,b,i, didq           2           0           0   0.0000000000000000     
+ a,b,i, didq           2           0           1   0.0000000000000000     
+ a,b,i, didq           2           0           2   0.0000000000000000     
+ a,b,i, didq           2           1           0   0.0000000000000000     
+ a,b,i, didq           2           1           1   0.0000000000000000     
+ a,b,i, didq           2           1           2   0.0000000000000000     
+ a,b,i, didq           2           2           0   0.0000000000000000     
+ a,b,i, didq           2           2           1   0.0000000000000000     
+ a,b,i, didq           2           2           2   0.0000000000000000     
+ PsiR           0           1           0
+ VPT4 value :   1.7500000000000000     
+
+
+

@@ -138,6 +138,90 @@ SUBROUTINE cori_get(ndim,ncori,qcori,cori,error)
 END SUBROUTINE cori_get
 
 !------------------------------------------------------------
+! cori_get
+!       - reads in, sorts, and stores the coriolis coupling
+!         constants as a 3 index matrix
+!       - the qantum numbers of the constants are stored
+!         [i,j,alpha], all indexed from zero
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! cori          : 2D real*8, coriolis zetas [zeta,rotation]
+! error         : int, exit code
+
+SUBROUTINE cori_get_debug(ndim,cori,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: cori
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim
+  CHARACTER(LEN=1024) :: fname
+  REAL(KIND=8) :: val
+  LOGICAL :: ex
+  INTEGER :: fline,fid,voff
+  INTEGER :: i,j,a,k
+
+  error = 0
+  fname = 'coriolis'
+  fid = 300
+
+  ALLOCATE(cori(0:ndim-1,0:ndim-1,0:2))
+  cori = 0.0D0
+  
+  !If only one dimension
+  INQUIRE(file=TRIM(fname),exist=ex)
+  IF (ndim .EQ. 1 .OR. .NOT. ex) THEN
+    RETURN
+  END IF
+
+  !Read in vibrational offset 
+  INQUIRE(file='voff.in',EXIST=ex)
+  IF (ex) THEN
+    OPEN(file='voff.in',unit=100,status='old')
+    READ(100,*) voff
+    CLOSE(unit=100)
+  ELSE
+    voff = 0
+  END IF
+
+  !Initialize
+  CALL input_nline(fline,fname)
+
+  !read in data
+  OPEN(file=TRIM(fname),unit=fid,status='old')
+  DO k=0,fline-1 
+    READ(fid,*) a,i,j,val
+
+    i = i - voff - 1
+    j = j - voff - 1
+    a = a - 1
+
+    IF (a .LT. 0 .OR. a .GT. 2 .OR. i .LT. 0 .OR. i .GT. ndim-1 .OR. &
+      j .LT. 0 .OR. j .GT. ndim-1) THEN
+      WRITE(*,*) "cori_get_debug  : ERROR"
+      WRITE(*,*) "In coriolis, line ",k,", has a bad value"
+      error = 1
+    END IF
+
+    cori(i,j,a) = val
+  END DO
+  CLOSE(unit=fid)
+
+  WRITE(*,*) "Coriolis Constants -- DEBUG"
+  DO a=0,2
+    DO i=0,ndim-1
+      DO j=i+1,ndim-1
+        IF (ABS(cori(i,j,a)) .GT. 1.0D-15) THEN
+         WRITE(*,'(2x,I1,2x,2(I4,2x),F24.15)') a+1,i+voff+1,j+voff+1,cori(i,j,a)
+         WRITE(*,'(2x,I1,2x,2(I4,2x),F24.15)') a+1,j+voff+1,i+voff+1,cori(j,i,a)
+        END IF
+      END DO
+    END DO
+  END DO 
+  WRITE(*,*)
+
+
+END SUBROUTINE cori_get_debug
+
+!------------------------------------------------------------
 ! cori_eval
 !       - evaluates coriolis contribution to a particular
 !         PsiL and PsiR
@@ -732,6 +816,9 @@ SUBROUTINE cori_HO_O2_ints(ndim,PsiL,PsiR,ids,val)
     ELSE
       WRITE(*,*) "cori_HO_O2_ints  : ERROR"
       WRITE(*,*) "There is a bad case here"
+      WRITE(*,*) "PsiL",PsiL
+      WRITE(*,*) "PsiR",PsiR
+      WRITE(*,*) "ids",ids
       STOP
     END IF
 
@@ -744,7 +831,7 @@ SUBROUTINE cori_HO_O2_ints(ndim,PsiL,PsiR,ids,val)
 END SUBROUTINE cori_HO_O2_ints
 
 !------------------------------------------------------------
-! cori_HO_O3_ints
+! cori_HO_O3_pup_ints
 !       - evalutes integrals of the kind 
 !         <qi pj qm qk pl>
 !	- assumes that the orthogonality checks 
@@ -756,7 +843,7 @@ END SUBROUTINE cori_HO_O2_ints
 ! ids           : 1D int, [i,j,m,k,l] ids 
 ! val           : real*8, value of the integral
 
-SUBROUTINE cori_HO_O3_ints(ndim,PsiL,PsiR,ids,val)
+SUBROUTINE cori_HO_O3_pup_ints(ndim,PsiL,PsiR,ids,val)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,ids
   REAL(KIND=8), INTENT(INOUT) :: val
@@ -773,7 +860,7 @@ SUBROUTINE cori_HO_O3_ints(ndim,PsiL,PsiR,ids,val)
   positions = -1
   val = 1.0D0
 
-  WRITE(*,*) "int ids:",ids+7
+!  WRITE(*,*) "int ids:",ids+7
  
   !Gather information on positions
   DO i=0,nids-1
@@ -821,13 +908,13 @@ SUBROUTINE cori_HO_O3_ints(ndim,PsiL,PsiR,ids,val)
       !q
       IF (isq(0,i)) THEN
         temp = ints_HO_q(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "q",values(i)
+!        WRITE(*,*) "q",values(i)
       !p
       ELSE IF (isp(0,i)) THEN
         temp = ints_HO_p(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "p",values(i)
+!        WRITE(*,*) "p",values(i)
       ELSE
-        WRITE(*,*) "cori_HO_O3_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O3_pup_ints  : ERROR"
         WRITE(*,*) "There is a 1 index case that has been missed"
         STOP
       END IF
@@ -836,21 +923,21 @@ SUBROUTINE cori_HO_O3_ints(ndim,PsiL,PsiR,ids,val)
       !qq
       IF (isq(0,i) .AND. isq(1,i)) THEN
         temp = ints_HO_qq(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "qq",values(i)
+!        WRITE(*,*) "qq",values(i)
       !qp
       ELSE IF (isq(0,i) .AND. isp(1,i)) THEN
         temp = ints_HO_qp(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "qp",values(i)
+!        WRITE(*,*) "qp",values(i)
       !pq
       ELSE IF (isp(0,i) .AND. isq(1,i)) THEN
         temp = ints_HO_pq(PsiL(values(i)),PsiR(values(i))) 
-        WRITE(*,*) "pq",values(i)
+!        WRITE(*,*) "pq",values(i)
       !pp
       ELSE IF (isp(0,i) .AND. isp(1,i)) THEN
         temp = ints_HO_pp(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "pp",values(i)
+!        WRITE(*,*) "pp",values(i)
       ELSE
-        WRITE(*,*) "cori_HO_O3_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O3_pup_ints  : ERROR"
         WRITE(*,*) "There is a 2 index case that has been missed"
         STOP
       END IF
@@ -859,35 +946,35 @@ SUBROUTINE cori_HO_O3_ints(ndim,PsiL,PsiR,ids,val)
       !qqq
       IF (isq(0,i) .AND. isq(1,i) .AND. isq(2,i)) THEN
         temp = ints_HO_qqq(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "qqq",values(i)
+!        WRITE(*,*) "qqq",values(i)
       !qqp
       ELSE IF (isq(0,i) .AND. isq(1,i) .AND. isp(2,i)) THEN
         temp = ints_HO_qqp(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "qqp",values(i)
+!        WRITE(*,*) "qqp",values(i)
       !qpq
       ELSE IF (isq(0,i) .AND. isp(1,i) .AND. isq(2,i)) THEN
         temp = ints_HO_qpq(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "qpq",values(i)
+!        WRITE(*,*) "qpq",values(i)
       !qpp
       ELSE IF (isq(0,i) .AND. isp(1,i) .AND. isp(2,i)) THEN
         temp = ints_HO_qpp(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "qpp",values(i)
+!        WRITE(*,*) "qpp",values(i)
       !pqq
       ELSE IF (isp(0,i) .AND. isq(1,i) .AND. isq(2,i)) THEN
         temp = ints_HO_pqq(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "pqq",values(i)
+!        WRITE(*,*) "pqq",values(i)
       !pqp
       ELSE IF (isp(0,i) .AND. isq(1,i) .AND. isp(2,i)) THEN
         temp = ints_HO_pqp(PsiL(values(i)),PsiR(values(i)))
-        WRITE(*,*) "pqp",values(i)
+!        WRITE(*,*) "pqp",values(i)
       ELSE 
-        WRITE(*,*) "cori_HO_O3_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O3_pup_ints  : ERROR"
         WRITE(*,*) "There is a 3 index case that has been missed"
         STOP
       END IF
 
     ELSE
-      WRITE(*,*) "cori_HO_O3_ints  : ERROR"
+      WRITE(*,*) "cori_HO_O3_pup_ints  : ERROR"
       WRITE(*,*) "There is a bad case here"
       STOP
     END IF
@@ -897,14 +984,15 @@ SUBROUTINE cori_HO_O3_ints(ndim,PsiL,PsiR,ids,val)
   !accont for 1/i factor of the two p's
   val = -1.0D0*val
 
-END SUBROUTINE cori_HO_O3_ints 
+END SUBROUTINE cori_HO_O3_pup_ints 
 
 !------------------------------------------------------------
-! cori_HO_O4_ints
+! cori_HO_O3_upp_ints
 !       - evalutes integrals of the kind 
-!         <qi pj qm qn qk pl>
+!         <qi pj qm qk pl>
 !	- assumes that the orthogonality checks 
 !	  have been performed
+!       - this is the μ.π.π case of the Watson Hamiltonian
 !------------------------------------------------------------
 ! ndim          : int, number of dimensions
 ! PsiL          : 1D int, LHS quantum numbers
@@ -912,7 +1000,157 @@ END SUBROUTINE cori_HO_O3_ints
 ! ids           : 1D int, [i,j,m,k,l] ids 
 ! val           : real*8, value of the integral
 
-SUBROUTINE cori_HO_O4_ints(ndim,PsiL,PsiR,ids,val)
+SUBROUTINE cori_HO_O3_upp_ints(ndim,PsiL,PsiR,ids,val)
+  IMPLICIT NONE
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,ids
+  REAL(KIND=8), INTENT(INOUT) :: val
+  INTEGER, INTENT(IN) :: ndim
+  LOGICAL, DIMENSION(0:5-1,0:5-1) :: isq,isp
+  INTEGER, DIMENSION(0:5-1,0:5-1) :: positions
+  INTEGER, DIMENSION(0:5-1) :: values,counts
+  REAL(KIND=8) :: temp
+  INTEGER :: nids
+  INTEGER :: i,j
+  nids = 5
+  counts = 0
+  values = -1
+  positions = -1
+  val = 1.0D0
+
+!  WRITE(*,*) "int ids:",ids+7
+ 
+  !Gather information on positions
+  DO i=0,nids-1
+    DO j=0,nids-1
+      IF (counts(j) .EQ. 0) THEN !a new element
+        values(j) = ids(i)
+        positions(0,j) = i
+        IF (i .EQ. 0 .OR. i .EQ. 1 .OR. i .EQ. 3) THEN
+          isq(0,j) = .TRUE. 
+          isp(0,j) = .FALSE.
+        ELSE
+          isq(0,j) = .FALSE. 
+          isp(0,j) = .TRUE.
+        END IF
+        counts(j) = 1
+        EXIT
+      ELSE IF (ids(i) .EQ. values(j)) THEN !an old element
+        positions(counts(j),j) = i
+        IF (i .EQ. 0 .OR. i .EQ. 1 .OR. i .EQ. 3) THEN
+          isq(counts(j),j) = .TRUE. 
+          isp(counts(j),j) = .FALSE.
+        ELSE
+          isq(counts(j),j) = .FALSE. 
+          isp(counts(j),j) = .TRUE.
+        END IF
+        counts(j) = counts(j) + 1
+        EXIT
+      END IF
+    END DO
+  END DO
+
+  !Send off to the right subroutines
+  ! positions (ordered list)
+  ! 0 -> Q
+  ! 1 -> Q
+  ! 2 -> P
+  ! 3 -> Q
+  ! 4 -> P
+  DO i=0,nids-1
+    
+    IF (counts(i) .EQ. 0) THEN
+      EXIT
+    
+    ELSE IF (counts(i) .EQ. 1) THEN
+      !q
+      IF (isq(0,i)) THEN
+        temp = ints_HO_q(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "q",values(i)
+      !p
+      ELSE IF (isp(0,i)) THEN
+        temp = ints_HO_p(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "p",values(i)
+      ELSE
+        WRITE(*,*) "cori_HO_O3_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 1 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE IF (counts(i) .EQ. 2) THEN
+      !qq
+      IF (isq(0,i) .AND. isq(1,i)) THEN
+        temp = ints_HO_qq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qq",values(i)
+      !qp
+      ELSE IF (isq(0,i) .AND. isp(1,i)) THEN
+        temp = ints_HO_qp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qp",values(i)
+      !pq
+      ELSE IF (isp(0,i) .AND. isq(1,i)) THEN
+        temp = ints_HO_pq(PsiL(values(i)),PsiR(values(i))) 
+!        WRITE(*,*) "pq",values(i)
+      !pp
+      ELSE IF (isp(0,i) .AND. isp(1,i)) THEN
+        temp = ints_HO_pp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "pp",values(i)
+      ELSE
+        WRITE(*,*) "cori_HO_O3_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 2 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE IF (counts(i) .EQ. 3) THEN
+      !qqq
+      IF (isq(0,i) .AND. isq(1,i) .AND. isq(2,i)) THEN
+        temp = ints_HO_qqq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqq",values(i)
+      !qqp
+      ELSE IF (isq(0,i) .AND. isq(1,i) .AND. isp(2,i)) THEN
+        temp = ints_HO_qqp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqp",values(i)
+      !qpq
+      ELSE IF (isq(0,i) .AND. isp(1,i) .AND. isq(2,i)) THEN
+        temp = ints_HO_qpq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qpq",values(i)
+      !qpp
+      ELSE IF (isq(0,i) .AND. isp(1,i) .AND. isp(2,i)) THEN
+        temp = ints_HO_qpp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qpp",values(i)
+      ELSE 
+        WRITE(*,*) "cori_HO_O3_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 3 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE
+      WRITE(*,*) "cori_HO_O3_upp_ints  : ERROR"
+      WRITE(*,*) "There is a bad case here"
+      STOP
+    END IF
+    val = val*temp
+  END DO
+
+  !accont for 1/i factor of the two p's
+  val = -1.0D0*val
+
+END SUBROUTINE cori_HO_O3_upp_ints 
+
+!------------------------------------------------------------
+! cori_HO_O4_pup_ints
+!       - evalutes integrals of the kind 
+!         <qi pj qm qn qk pl>
+!	- assumes that the orthogonality checks 
+!	  have been performed
+!       - this code is for the case of π.μ.π in the Watson
+!         hamiltonian
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers 
+! ids           : 1D int, [i,j,m,k,l] ids 
+! val           : real*8, value of the integral
+
+SUBROUTINE cori_HO_O4_pup_ints(ndim,PsiL,PsiR,ids,val)
   IMPLICIT NONE
   INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,ids
   REAL(KIND=8), INTENT(INOUT) :: val
@@ -987,7 +1225,7 @@ SUBROUTINE cori_HO_O4_ints(ndim,PsiL,PsiR,ids,val)
         temp = ints_HO_p(PsiL(values(i)),PsiR(values(i)))
 !        WRITE(*,*) "p",values(i)+1,PsiL(values(i)),temp
       ELSE
-        WRITE(*,*) "cori_HO_O4_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O4_pup_ints  : ERROR"
         WRITE(*,*) "There is a 1 index case that has been missed"
         STOP
       END IF
@@ -1010,7 +1248,7 @@ SUBROUTINE cori_HO_O4_ints(ndim,PsiL,PsiR,ids,val)
         temp = ints_HO_pp(PsiL(values(i)),PsiR(values(i)))
 !        WRITE(*,*) "pp",values(i)+1,PsiL(values(i)),temp
       ELSE
-        WRITE(*,*) "cori_HO_O4_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O4_pup_ints  : ERROR"
         WRITE(*,*) "There is a 2 index case that has been missed"
         STOP
       END IF
@@ -1041,7 +1279,7 @@ SUBROUTINE cori_HO_O4_ints(ndim,PsiL,PsiR,ids,val)
         temp = ints_HO_pqp(PsiL(values(i)),PsiR(values(i)))
 !        WRITE(*,*) "pqp",values(i)+1,PsiL(values(i)),temp
       ELSE 
-        WRITE(*,*) "cori_HO_O4_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O4_pup_ints  : ERROR"
         WRITE(*,*) "There is a 3 index case that has been missed"
         STOP
       END IF
@@ -1064,13 +1302,13 @@ SUBROUTINE cori_HO_O4_ints(ndim,PsiL,PsiR,ids,val)
         temp = ints_HO_pqqp(PsiL(values(i)),PsiR(values(i)))
 !        WRITE(*,*) "pqqp",values(i)+1,PsiL(values(i)),temp
       ELSE
-        WRITE(*,*) "cori_HO_O4_ints  : ERROR"
+        WRITE(*,*) "cori_HO_O4_pup_ints  : ERROR"
         WRITE(*,*) "There is a 4 index case that has been missed"
         STOP
       END IF
 
     ELSE
-      WRITE(*,*) "cori_HO_O4_ints  : ERROR"
+      WRITE(*,*) "cori_HO_O4_pup_ints  : ERROR"
       WRITE(*,*) "There is a bad case here"
       STOP
     END IF
@@ -1081,8 +1319,185 @@ SUBROUTINE cori_HO_O4_ints(ndim,PsiL,PsiR,ids,val)
   val = -1.0D0*val
 !  write(*,*) "final int :", val
 
-END SUBROUTINE cori_HO_O4_ints 
+END SUBROUTINE cori_HO_O4_pup_ints 
 
+!------------------------------------------------------------
+! cori_HO_O4_upp_ints
+!       - evalutes integrals of the kind 
+!         <qi pj qm qn qk pl>
+!	- assumes that the orthogonality checks 
+!	  have been performed
+!       - this code is for the case of μ.π.π in the Watson
+!         hamiltonian
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers 
+! ids           : 1D int, [i,j,m,k,l] ids 
+! val           : real*8, value of the integral
+
+SUBROUTINE cori_HO_O4_upp_ints(ndim,PsiL,PsiR,ids,val)
+  IMPLICIT NONE
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR,ids
+  REAL(KIND=8), INTENT(INOUT) :: val
+  INTEGER, INTENT(IN) :: ndim
+  LOGICAL, DIMENSION(0:6-1,0:6-1) :: isq,isp
+  INTEGER, DIMENSION(0:6-1,0:6-1) :: positions
+  INTEGER, DIMENSION(0:6-1) :: values,counts
+  REAL(KIND=8) :: temp
+  INTEGER :: nids
+  INTEGER :: i,j
+  nids = 6
+  counts = 0
+  values = -1
+  positions = -1
+  val = 1.0D0
+
+!  WRITE(*,*) "PsiL", PsiL
+!  WRITE(*,*) "PsiR", PsiR
+!  WRITE(*,*) "int ids",ids
+ 
+  !Gather information on positions
+  DO i=0,nids-1
+    DO j=0,nids-1
+      IF (counts(j) .EQ. 0) THEN !a new element
+        values(j) = ids(i)
+        positions(0,j) = i
+        IF (i .EQ. 0 .OR. i .EQ. 1 .OR. i .EQ. 2 .OR. i .EQ. 4) THEN
+          isq(0,j) = .TRUE. 
+          isp(0,j) = .FALSE.
+        ELSE
+          isq(0,j) = .FALSE. 
+          isp(0,j) = .TRUE.
+        END IF
+        counts(j) = 1
+        EXIT
+      ELSE IF (ids(i) .EQ. values(j)) THEN !an old element
+        positions(counts(j),j) = i
+        IF (i .EQ. 0 .OR. i .EQ. 1 .OR. i .EQ. 2 .OR. i .EQ. 4) THEN
+          isq(counts(j),j) = .TRUE. 
+          isp(counts(j),j) = .FALSE.
+        ELSE
+          isq(counts(j),j) = .FALSE. 
+          isp(counts(j),j) = .TRUE.
+        END IF
+        counts(j) = counts(j) + 1
+        EXIT
+      END IF
+    END DO
+  END DO
+
+  !Send off to the right subroutines
+  ! positions (ordered list)
+  ! 0 -> Q
+  ! 1 -> Q
+  ! 2 -> Q
+  ! 3 -> P
+  ! 4 -> Q
+  ! 5 -> P
+  DO i=0,nids-1
+
+    IF (counts(i) .EQ. 0) THEN
+      temp = 1.0D0
+      !EXIT
+    
+    ELSE IF (counts(i) .EQ. 1) THEN
+      !q
+      IF (isq(0,i)) THEN
+        temp = ints_HO_q(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "q",values(i)+1,PsiL(values(i)),temp
+      !p
+      ELSE IF (isp(0,i)) THEN
+        temp = ints_HO_p(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "p",values(i)+1,PsiL(values(i)),temp
+      ELSE
+        WRITE(*,*) "cori_HO_O4_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 1 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE IF (counts(i) .EQ. 2) THEN
+      !qq
+      IF (isq(0,i) .AND. isq(1,i)) THEN
+        temp = ints_HO_qq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qq",values(i)+1,PsiL(values(i)),temp
+      !qp
+      ELSE IF (isq(0,i) .AND. isp(1,i)) THEN
+        temp = ints_HO_qp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qp",values(i)+1,PsiL(values(i)),temp
+      !pq
+      ELSE IF (isp(0,i) .AND. isq(1,i)) THEN
+        temp = ints_HO_pq(PsiL(values(i)),PsiR(values(i))) 
+!        WRITE(*,*) "pq",values(i)+1,PsiL(values(i)),temp
+      !pp
+      ELSE IF (isp(0,i) .AND. isp(1,i)) THEN
+        temp = ints_HO_pp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "pp",values(i)+1,PsiL(values(i)),temp
+      ELSE
+        WRITE(*,*) "cori_HO_O4_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 2 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE IF (counts(i) .EQ. 3) THEN
+      !qqq
+      IF (isq(0,i) .AND. isq(1,i) .AND. isq(2,i)) THEN
+        temp = ints_HO_qqq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqq",values(i)+1,PsiL(values(i)),temp
+      !qqp
+      ELSE IF (isq(0,i) .AND. isq(1,i) .AND. isp(2,i)) THEN
+        temp = ints_HO_qqp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqp",values(i)+1,PsiL(values(i)),temp
+      !qpq
+      ELSE IF (isq(0,i) .AND. isp(1,i) .AND. isq(2,i)) THEN
+        temp = ints_HO_qpq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qpq",values(i)+1,PsiL(values(i)),temp
+      !qpp
+      ELSE IF (isq(0,i) .AND. isp(1,i) .AND. isp(2,i)) THEN
+        temp = ints_HO_qpp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qpp",values(i)+1,PsiL(values(i)),temp
+      ELSE 
+        WRITE(*,*) "cori_HO_O4_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 3 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE IF (counts(i) .EQ. 4) THEN
+      !qqqq
+      IF (isq(0,i) .AND. isq(1,i) .AND. isq(2,i) .AND. isq(3,i)) THEN
+        temp = ints_HO_qqqq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqqq",values(i)+1,PsiL(values(i)),temp
+      !qqqp
+      ELSE IF (isq(0,i) .AND. isq(1,i) .AND. isq(2,i) .AND. isp(3,i)) THEN
+        temp = ints_HO_qqqp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqqp",values(i)+1,PsiL(values(i)),temp
+      !qqpq
+      ELSE IF (isq(0,i) .AND. isq(1,i) .AND. isp(2,i) .AND. isq(3,i)) THEN
+        temp = ints_HO_qqpq(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqpq",values(i)+1,PsiL(values(i)),temp
+      !qqpp
+      ELSE IF (isq(0,i) .AND. isq(1,i) .AND. isp(2,i) .AND. isp(3,i)) THEN
+        temp = ints_HO_qqpp(PsiL(values(i)),PsiR(values(i)))
+!        WRITE(*,*) "qqpp",values(i)+1,PsiL(values(i)),temp
+      ELSE
+        WRITE(*,*) "cori_HO_O4_upp_ints  : ERROR"
+        WRITE(*,*) "There is a 4 index case that has been missed"
+        STOP
+      END IF
+
+    ELSE
+      WRITE(*,*) "cori_HO_O4_upp_ints  : ERROR"
+      WRITE(*,*) "There is a bad case here"
+      STOP
+    END IF
+    val = val*temp
+  END DO
+
+  !accont for 1/i factor of the two p's
+  val = -1.0D0*val
+!  write(*,*) "final int :", val
+
+END SUBROUTINE cori_HO_O4_upp_ints 
 !------------------------------------------------------------
 ! cori_HO_O2_eval
 !       - evalute 2nd order coriolis contributions in the
@@ -1173,6 +1588,72 @@ SUBROUTINE cori_HO_O2_eval(ndim,nrota,rota,omega,ncori,qcori,cori,&
 
 END SUBROUTINE cori_HO_O2_eval
 
+
+!------------------------------------------------------------
+! cori_HO_O2_eval_debug
+!       - evalutes second order coriolis contributions to the
+!         Watson hamiltonian expressed in harmonic oscillator
+!         basis
+!       
+!       - uses debug style arrays
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nrota         : int, number of non-inf rotational axis
+! rota          : 1D int, non-inf rotational constants
+! omega         : 1D real*8, HO frequencies
+! cori_d        : 2D real*8, coriolis constants in debug form
+! PsiL          : 1D int, LHS quantum numbers
+! PsiR          : 1D int, RHS quantum numbers
+! val           : real*8, value
+! error         : int, error code
+
+SUBROUTINE cori_HO_O2_eval_debug(ndim,nrota,rota,omega,&
+                                 cori_d,PsiL,PsiR,val,error)
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: cori_d 
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: rota,omega
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: val
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,nrota
+  INTEGER, DIMENSION(0:4-1) :: v
+  REAL(KIND=8) :: temp,foo
+  INTEGER :: i,j,k,l,a
+
+  error = 0
+  val = 0.0D0
+
+  DO a=0,nrota-1
+    DO i=0,ndim-1
+      DO j=0,ndim-1
+        IF (ABS(cori_d(i,j,a)) .LT. 1.0D-15) CYCLE
+        !IF (i .EQ. j) CYCLE
+        DO k=0,ndim-1
+          DO l=0,ndim-1
+        !    IF (k .EQ. l) CYCLE
+            IF (ABS(cori_d(k,l,a)) .LT. 1.0D-15) CYCLE
+            v = [i,j,k,l]
+            CALL sort_int_ijkl(v)
+            !check orthognality
+            IF (ANY(PsiL(0:v(0)-1) .NE. PsiR(0:v(0)-1)) .OR. &
+                ANY(PsiL(v(0)+1:v(1)-1) .NE. PsiR(v(0)+1:v(1)-1)) .OR. &
+                ANY(PsiL(v(1)+1:v(2)-1) .NE. PsiR(v(1)+1:v(2)-1)) .OR. &
+                ANY(PsiL(v(2)+1:v(3)-1) .NE. PsiR(v(2)+1:v(3)-1)) .OR. &
+                ANY(PsiL(v(3)+1:ndim-1) .NE. PsiR(v(3)+1:ndim-1))) THEN
+             CYCLE
+            ELSE
+              CALL cori_HO_O2_ints(ndim,PsiL,PsiR,[i,j,k,l],temp)
+              foo = rota(a)*cori_d(i,j,a)*cori_d(k,l,a)*&
+                    SQRT(omega(j)*omega(l)/(omega(i)*omega(k)))*&
+                    temp
+              val = val + foo
+            END IF
+          END DO
+        END DO
+      END DO
+    END DO
+  END DO
+END SUBROUTINE cori_HO_O2_eval_debug
+
 !------------------------------------------------------------
 ! cori_HO_O3_eval
 !	- evalutes third order coriolis contributions to the 
@@ -1225,9 +1706,6 @@ SUBROUTINE cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
             i = qcori(2*ii,a)
             j = qcori(2*ii+1,a)
             !orthogonality checks
-            WRITE(*,*) "a,b",a,b
-            WRITE(*,*) "m",m
-            WRITE(*,*) "B^a,B^b",rota(a),rota(b)
             v = [i,j,m,k,l]
             CALL sort_int_ijklm(v)
             IF (ANY(PsiL(0:v(0)-1) .NE. PsiR(0:v(0)-1)) .OR.  &
@@ -1236,48 +1714,32 @@ SUBROUTINE cori_HO_O3_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
                 ANY(PsiL(v(2)+1:v(3)-1) .NE. PsiR(v(2)+1:v(3)-1)) .OR.  &
                 ANY(PsiL(v(3)+1:v(4)-1) .NE. PsiR(v(3)+1:v(4)-1)) .OR.  &
                 ANY(PsiL(v(4)+1:ndim-1) .NE. PsiR(v(4)+1:ndim-1))) THEN
-              WRITE(*,*) "orthogonal"
               CYCLE
             ELSE
-            !need to do permutations of zeta?
-              CALL cori_HO_O3_ints(ndim,PsiL,PsiR,[i,j,m,k,l],temp)
+              CALL cori_HO_O3_pup_ints(ndim,PsiL,PsiR,[i,j,m,k,l],temp)
+!              CALL cori_HO_O3_upp_ints(ndim,PsiL,PsiR,[m,i,j,k,l],temp)
               val = val - rota(a)*rota(b)*didq(mm,3*a+b)*&
                     SQRT(omega(j)*omega(l)/(omega(i)*omega(k)))*&
                     cori(ii,a)*cori(jj,b)*temp
-            WRITE(*,*) "i,j",i,j
-            WRITE(*,*) "k,l",k,l
-            WRITE(*,*) "ζ_ij^a,ζ_kl^b",cori(ii,a),cori(jj,b)
-            WRITE(*,*) "int",temp
-            WRITE(*,*)
-              CALL cori_HO_O3_ints(ndim,PsiL,PsiR,[j,i,m,k,l],temp)
+
+              CALL cori_HO_O3_pup_ints(ndim,PsiL,PsiR,[j,i,m,k,l],temp)
+!              CALL cori_HO_O3_upp_ints(ndim,PsiL,PsiR,[m,j,i,k,l],temp)
               val = val + rota(a)*rota(b)*didq(mm,3*a+b)*&
                     SQRT(omega(i)*omega(l)/(omega(j)*omega(k)))*&
                     cori(ii,a)*cori(jj,b)*temp
-            WRITE(*,*) "i,j",j,i
-            WRITE(*,*) "k,l",k,l
-            WRITE(*,*) "ζ_ij^a,ζ_kl^b",-cori(ii,a),cori(jj,b)
-            WRITE(*,*) "int",temp
-            WRITE(*,*)
-              CALL cori_HO_O3_ints(ndim,PsiL,PsiR,[i,j,m,l,k],temp)
+
+              CALL cori_HO_O3_pup_ints(ndim,PsiL,PsiR,[i,j,m,l,k],temp)
+!              CALL cori_HO_O3_upp_ints(ndim,PsiL,PsiR,[m,i,j,l,k],temp)
               val = val + rota(a)*rota(b)*didq(mm,3*a+b)*&
                     SQRT(omega(j)*omega(k)/(omega(i)*omega(l)))*&
                     cori(ii,a)*cori(jj,b)*temp
-            WRITE(*,*) "i,j",i,j
-            WRITE(*,*) "k,l",l,k
-            WRITE(*,*) "ζ_ij^a,ζ_kl^b",cori(ii,a),-cori(jj,b)
-            WRITE(*,*) "int",temp
-            WRITE(*,*)
-              CALL cori_HO_O3_ints(ndim,PsiL,PsiR,[j,i,m,l,k],temp)
+
+              CALL cori_HO_O3_pup_ints(ndim,PsiL,PsiR,[j,i,m,l,k],temp)
+!              CALL cori_HO_O3_upp_ints(ndim,PsiL,PsiR,[m,j,i,l,k],temp)
               val = val - rota(a)*rota(b)*didq(mm,3*a+b)*&
                     SQRT(omega(i)*omega(k)/(omega(j)*omega(l)))*&
                     cori(ii,a)*cori(jj,b)*temp
-            WRITE(*,*) "i,j",j,i
-            WRITE(*,*) "k,l",l,k
-            WRITE(*,*) "ζ_ij^a,ζ_kl^b",-cori(ii,a),-cori(jj,b)
-            WRITE(*,*) "int",temp
-            WRITE(*,*)
             END IF
-            WRITE(*,*) "-----------------"
           END DO
         END DO 
       END DO
@@ -1328,59 +1790,6 @@ SUBROUTINE cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
   cval = 0.0D0
   val = 0.0D0
 
-  write(*,*) 
-  write(*,*) 
-  write(*,*) "printing rota"
-  a = 0
-  b = 0
-  g = 0
-  DO i=0,nrota-1
-    WRITE(*,*) "i,rota", i,rota(i)
-  END DO 
-  WRITE(*,*)
-  WRITE(*,*) 
-  WRITE(*,*) "TESTING DIDQ"
-  DO a=0,nrota-1
-    DO b=0,nrota-1
-      DO m=0,ndidq(3*a+b)-1
-        WRITE(*,*) "a,b,m",a,b,m
-        WRITE(*,*) "ndidq^{a,b}",ndidq(3*a+b)
-        WRITE(*,*) "qdidq_m^{a,b}",qdidq(m,3*a+b)
-        WRITE(*,*) "didq_m^{a,b}",didq(m,3*a+b)
-        WRITE(*,*)
-      END DO
-    END DO
-  END DO
-  WRITE(*,*) 
-  WRITE(*,*) 
-  WRITE(*,*) 
-  WRITE(*,*)
-  WRITE(*,*) "TESTING CORIOLIS"
-  DO a=0,nrota-1
-    DO m=0,ncori(a)-1
-      WRITE(*,*) "a,m",a,m
-      WRITE(*,*) "ncori(a)", ncori(a)
-      WRITE(*,*) "i,j",qcori(2*m,a),qcori(2*m+1,a)
-      WRITE(*,*) "ζ_i,j^a",cori(m,a)
-    END DO
-  END DO
-!  write(*,*) "printing didq" 
-!  write(*,*) "ndidq^a,g", ndidq(3*a+g)
-!  DO mm=0,ndidq(3*a+g)-1
-!    write(*,*) "q_m^{a,g}",qdidq(mm,3*a+g)
-!    write(*,*) "a_m^{a,g}",didq(mm,3*a+g)
-!  end do
-!  write(*,*) 
-!  write(*,*) "ndidq^g,b", ndidq(3*g+b)
-!  DO mm=0,ndidq(3*g+b)-1
-!    write(*,*) "q_m^{g,b}",qdidq(mm,3*g+b)
-!    write(*,*) "a_m^{g,b}",didq(mm,3*g+b)
-!  end do
-!  write(*,*)
-!
-!  write(*,*)
-!  write(*,*)
-
   DO a=0,nrota-1
     DO b=0,nrota-1
       DO g=0,nrota-1
@@ -1395,10 +1804,6 @@ SUBROUTINE cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
                 i = qcori(2*ii,a)
                 j = qcori(2*ii+1,a)
                 !orthogonality checks
-            !    WRITE(*,*) "a,b,g",a,b,g
-            !    WRITE(*,*) "B^a,B^b,B^g",rota(a),rota(b),rota(g)
-            !    WRITE(*,*) "m,n",m,n
-            !    WRITE(*,*) "a_m^ag,a_n^gb",didq(mm,3*a+g),didq(nn,3*g+b)
                 v = [i,j,m,n,k,l]
                 CALL sort_int_ijklmn(v)
                 IF (ANY(PsiL(0:v(0)-1) .NE. PsiR(0:v(0)-1)) .OR.  &
@@ -1408,119 +1813,49 @@ SUBROUTINE cori_HO_O4_eval(ndim,nrota,rota,omega,ndidq,qdidq,didq,&
                     ANY(PsiL(v(3)+1:v(4)-1) .NE. PsiR(v(3)+1:v(4)-1)) .OR.  &
                     ANY(PsiL(v(4)+1:v(5)-1) .NE. PsiR(v(4)+1:v(5)-1)) .OR.  &
                     ANY(PsiL(v(5)+1:ndim-1) .NE. PsiR(v(5)+1:ndim-1))) THEN
-                WRITE(*,*) "orthogonal"
                   CYCLE
                 ELSE
-                !need to do permutations of zeta?
-                  CALL cori_HO_O4_ints(ndim,PsiL,PsiR,[i,j,m,n,k,l],temp)
-                  foo = rota(a)*rota(b)*rota(g)*&
-                        didq(mm,3*a+g)*didq(nn,3*g+b)*&
-                        SQRT(omega(j)*omega(l)/(omega(i)*omega(k)))*&
-                        cori(ii,a)*cori(jj,b)*temp
+                  CALL cori_HO_O4_pup_ints(ndim,PsiL,PsiR,[i,j,m,n,k,l],temp)
+!                  CALL cori_HO_O4_upp_ints(ndim,PsiL,PsiR,[m,n,i,j,k,l],temp)
 
                   val = val + rota(a)*rota(b)*rota(g)*&
                         didq(mm,3*a+g)*didq(nn,3*g+b)*&
                         SQRT(omega(j)*omega(l)/(omega(i)*omega(k)))*&
                         cori(ii,a)*cori(jj,b)*temp
-             IF (ABS(temp) .GT. 1.0D-15) THEN
-WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,i+1,j+1,m+1,n+1,k+1,l+1,temp,foo,0.75D0*val
-!               WRITE(*,*) "Psi",PsiL(0:ndim-1)
-!               WRITE(*,*) "i,j,m,n,k,l",i+1,j+1,m+1,n+1,k+1,l+1
-!               WRITE(*,*) "integral",temp
-!               WRITE(*,*) "+value", rota(a)*rota(b)*rota(g)*&
-!                                   didq(mm,3*a+g)*didq(nn,3*g+b)*&
-!                                   SQRT(omega(j)*omega(l)/(omega(i)*omega(k)))*&
-!                                   cori(ii,a)*cori(jj,b)*temp
-!               WRITE(*,*)
-             END IF
-           ! WRITE(*,*) "i,j",i,j
-           ! WRITE(*,*) "k,l",k,l
-           ! WRITE(*,*) "ζ_ij^a,ζ_kl^b",cori(ii,a),cori(jj,b)
-           ! WRITE(*,*) "int",temp
-           ! WRITE(*,*) "val is",val
-!            WRITE(*,*) 
-                  CALL cori_HO_O4_ints(ndim,PsiL,PsiR,[j,i,m,n,k,l],temp)
-                  foo = -1.0D0* rota(a)*rota(b)*rota(g)*&
-                        didq(mm,3*a+g)*didq(nn,3*g+b)*&
-                        SQRT(omega(i)*omega(l)/(omega(j)*omega(k)))*&
-                        cori(ii,a)*cori(jj,b)*temp
+!             IF (ABS(temp) .GT. 1.0D-15) THEN
+!WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,i+1,j+1,m+1,n+1,k+1,l+1,temp,foo,0.75D0*val
+!             END IF
+
+                  CALL cori_HO_O4_pup_ints(ndim,PsiL,PsiR,[j,i,m,n,k,l],temp)
+!                  CALL cori_HO_O4_upp_ints(ndim,PsiL,PsiR,[m,n,j,i,k,l],temp)
                   val = val - rota(a)*rota(b)*rota(g)*&
                         didq(mm,3*a+g)*didq(nn,3*g+b)*&
                         SQRT(omega(i)*omega(l)/(omega(j)*omega(k)))*&
                         cori(ii,a)*cori(jj,b)*temp
-             IF (ABS(temp) .GT. 1.0D-15) THEN
-WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,j+1,i+1,m+1,n+1,k+1,l+1,temp,foo,0.75D0*val
-!               WRITE(*,*) "Psi",PsiL(0:ndim-1)
-!               WRITE(*,*) "i,j,m,n,k,l",j+1,i+1,m+1,n+1,k+1,l+1
-!               WRITE(*,*) "integral",temp
-!               WRITE(*,*) "+value", -1.0d0*rota(a)*rota(b)*rota(g)*&
-!                                   didq(mm,3*a+g)*didq(nn,3*g+b)*&
-!                                   SQRT(omega(i)*omega(l)/(omega(j)*omega(k)))*&
-!                                   cori(ii,a)*cori(jj,b)*temp
-!               WRITE(*,*)
-             END IF
-           ! WRITE(*,*) "i,j",j,i
-           ! WRITE(*,*) "k,l",k,l
-           ! WRITE(*,*) "ζ_ij^a,ζ_kl^b",-cori(ii,a),cori(jj,b)
-           ! WRITE(*,*) "int",temp
-           ! WRITE(*,*) 
-                  CALL cori_HO_O4_ints(ndim,PsiL,PsiR,[i,j,m,n,l,k],temp)
-                  foo = -1.0D0*rota(a)*rota(b)*rota(g)*&
-                        didq(mm,3*a+g)*didq(nn,3*g+b)*&
-                        SQRT(omega(j)*omega(k)/(omega(i)*omega(l)))*&
-                        cori(ii,a)*cori(jj,b)*temp
+!             IF (ABS(temp) .GT. 1.0D-15) THEN
+!WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,j+1,i+1,m+1,n+1,k+1,l+1,temp,foo,0.75D0*val
+!             END IF
+
+                  CALL cori_HO_O4_pup_ints(ndim,PsiL,PsiR,[i,j,m,n,l,k],temp)
+!                  CALL cori_HO_O4_upp_ints(ndim,PsiL,PsiR,[m,n,i,j,l,k],temp)
                   val = val - rota(a)*rota(b)*rota(g)*&
                         didq(mm,3*a+g)*didq(nn,3*g+b)*&
                         SQRT(omega(j)*omega(k)/(omega(i)*omega(l)))*&
                         cori(ii,a)*cori(jj,b)*temp
-             IF (ABS(temp) .GT. 1.0D-15) THEN
-WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,i+1,j+1,m+1,n+1,l+1,k+1,temp,foo,0.75D0*val
-               !WRITE(*,'(1x,3(I1,1x),4x,6(I1,1x),4x,F15.10)') PsiL(0:ndim-1),i+1,j+1,m+1,n+1,l+1,k+1,temp
-               !WRITE(*,*) "Psi",PsiL(0:ndim-1)
-               !WRITE(*,*) "i,j,m,n,k,l",i+1,j+1,m+1,n+1,l+1,k+1
-               !WRITE(*,*) "integral",temp
-               !WRITE(*,*) "+value", -1.0d0*rota(a)*rota(b)*rota(g)*&
-               !                    didq(mm,3*a+g)*didq(nn,3*g+b)*&
-               !                    SQRT(omega(j)*omega(k)/(omega(i)*omega(l)))*&
-               !                    cori(ii,a)*cori(jj,b)*temp
-!               WRITE(*,*)
-             END IF
-           ! WRITE(*,*) "i,j",j,i
-           ! WRITE(*,*) "i,j",i,j
-           ! WRITE(*,*) "k,l",l,k
-           ! WRITE(*,*) "ζ_ij^a,ζ_kl^b",cori(ii,a),-cori(jj,b)
-           ! WRITE(*,*) "int",temp
-!            WRITE(*,*) 
-                  CALL cori_HO_O4_ints(ndim,PsiL,PsiR,[j,i,m,n,l,k],temp)
-                  foo = rota(a)*rota(b)*rota(g)*&
-                        didq(mm,3*a+g)*didq(nn,3*g+b)*&
-                        SQRT(omega(i)*omega(k)/(omega(j)*omega(l)))*&
-                        cori(ii,a)*cori(jj,b)*temp
+!             IF (ABS(temp) .GT. 1.0D-15) THEN
+!WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,i+1,j+1,m+1,n+1,l+1,k+1,temp,foo,0.75D0*val
+!             END IF
+
+                  CALL cori_HO_O4_pup_ints(ndim,PsiL,PsiR,[j,i,m,n,l,k],temp)
+!                  CALL cori_HO_O4_upp_ints(ndim,PsiL,PsiR,[m,n,j,i,l,k],temp)
                   val = val + rota(a)*rota(b)*rota(g)*&
                         didq(mm,3*a+g)*didq(nn,3*g+b)*&
                         SQRT(omega(i)*omega(k)/(omega(j)*omega(l)))*&
                         cori(ii,a)*cori(jj,b)*temp
-             IF (ABS(temp) .GT. 1.0D-15) THEN
-WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,j+1,i+1,m+1,n+1,l+1,k+1,temp,foo,0.75D0*val
-               !WRITE(*,'(1x,3(I1,1x),4x,6(I1,1x),4x,F15.10)') PsiL(0:ndim-1),j+1,i+1,m+1,n+1,l+1,k+1,temp
-!               WRITE(*,*) "Psi",PsiL(0:ndim-1)
-!               WRITE(*,*) "i,j,m,n,k,l",j+1,i+1,m+1,n+1,l+1,k+1
-!               WRITE(*,*) "integral",temp
-!               WRITE(*,*) "+value", 1.0d0*rota(a)*rota(b)*rota(g)*&
-!                                   didq(mm,3*a+g)*didq(nn,3*g+b)*&
-!                                   SQRT(omega(i)*omega(k)/(omega(j)*omega(l)))*&
-!                                   cori(ii,a)*cori(jj,b)*temp
-!               WRITE(*,*)
-WRITE(*,*) "----------------------------------------------------------------------------------------------"
-             END IF
-           ! WRITE(*,*) "i,j",j,i
-           ! WRITE(*,*) "i,j",j,i
-           ! WRITE(*,*) "k,l",l,k
-           ! WRITE(*,*) "ζ_ij^a,ζ_kl^b",-cori(ii,a),-cori(jj,b)
-           ! WRITE(*,*) "int",temp
-!            WRITE(*,*) 
+!             IF (ABS(temp) .GT. 1.0D-15) THEN
+!WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,j+1,i+1,m+1,n+1,l+1,k+1,temp,foo,0.75D0*val
+!             END IF
                 END IF
-!            WRITE(*,*) "-----------------"
               END DO
             END DO 
           END DO
@@ -1532,6 +1867,87 @@ WRITE(*,*) "--------------------------------------------------------------------
 END SUBROUTINE cori_HO_O4_eval
 
 !------------------------------------------------------------
+! cori_HO_O4_eval_debug
+!       - calculates 4th order coriolis contributions
+!         to the hamiltonian in the harmonic oscillator 
+!         basis using debugging arrays
+!------------------------------------------------------------
+! ndim          : int, number of dimensions
+! nrota         : int, number of non-inf rotational constants
+! rota          : 1D real*8, non-info rotaitonal constants
+! omega         : 1D real*8, frequencies
+! didq_d        : 3D real*8, debugging didq
+! cori_d        : 3D real*8, debugging cori
+! PsiL          : 1D int, LHS vib quantum numbers
+! PsiR          : 1D int, RHS vib quantum numbers
+! val           : real*8, value to return
+! error         : int, exit code
+
+SUBROUTINE cori_HO_O4_eval_debug(ndim,nrota,rota,omega,didq_d,cori_d,&
+                                 PsiL,PsiR,val,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: didq_d,cori_d 
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: rota,omega
+  INTEGER, DIMENSION(0:), INTENT(IN) :: PsiL,PsiR
+  REAL(KIND=8), INTENT(INOUT) :: val
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: ndim,nrota
+  INTEGER, DIMENSION(0:6-1) :: v
+  REAL(KIND=8) :: temp,foo
+  INTEGER :: i,j,k,l,m,n,a,b,g
+  
+  error = 0
+  val = 0.0D0
+
+  DO a=0,nrota-1
+    DO b=0,nrota-1
+      DO g=0,nrota-1
+        DO i=0,ndim-1
+          DO j=0,ndim-1
+            IF (ABS(cori_d(i,j,a)) .LT. 1.0D-15) CYCLE 
+            DO k=0,ndim-1
+              DO l=0,ndim-1
+                IF (ABS(cori_d(k,l,b)) .LT. 1.0D-15) CYCLE 
+                DO m=0,ndim-1
+                  IF (ABS(didq_d(m,a,g)) .LT. 1.0D-15) CYCLE
+                  DO n=0,ndim-1
+                    IF (ABS(didq_d(n,g,b)) .LT. 1.0D-15) CYCLE
+                    v = [i,j,m,n,k,l]
+                    CALL sort_int_ijklmn(v)
+                    IF (ANY(PsiL(0:v(0)-1) .NE. PsiR(0:v(0)-1)) .OR.  &
+                        ANY(PsiL(v(0)+1:v(1)-1) .NE. PsiR(v(0)+1:v(1)-1)) .OR.  &
+                        ANY(PsiL(v(1)+1:v(2)-1) .NE. PsiR(v(1)+1:v(2)-1)) .OR.  &
+                        ANY(PsiL(v(2)+1:v(3)-1) .NE. PsiR(v(2)+1:v(3)-1)) .OR.  &
+                        ANY(PsiL(v(3)+1:v(4)-1) .NE. PsiR(v(3)+1:v(4)-1)) .OR.  &
+                        ANY(PsiL(v(4)+1:v(5)-1) .NE. PsiR(v(4)+1:v(5)-1)) .OR.  &
+                        ANY(PsiL(v(5)+1:ndim-1) .NE. PsiR(v(5)+1:ndim-1))) THEN
+                      CYCLE
+                    ELSE
+                      !\pi \mu \pi order
+                      CALL cori_HO_O4_pup_ints(ndim,PsiL,PsiR,[i,j,m,n,k,l],temp)
+                      ! \mu \pi \pi order
+!                      CALL cori_HO_O4_upp_ints(ndim,PsiL,PsiR,[m,n,i,j,k,l],temp)
+                      foo = 0.75D0*rota(a)*rota(b)*rota(g)*&
+                            didq_d(m,a,g)*didq_d(n,g,b)*&
+                            cori_d(i,j,a)*cori_d(k,l,b)*&
+                            SQRT(omega(j)*omega(l)/(omega(i)*omega(k)))*&
+                            temp
+                      val = val + foo
+!                      IF (ABS(temp) .GT. 1.0D-15) THEN
+WRITE(*,'(1x,3(I1,1x),4x,3(I1,1x),4x,6(I1,1x),4x,F15.10,4x,F15.10,4x,F15.10)') PsiL(0:ndim-1),a+1,b+1,g+1,i+1,j+1,m+1,n+1,k+1,l+1,temp,foo,val
+!                      END IF
+
+                    END IF
+                  END DO
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
+      END DO
+    END DO
+  END DO
+END SUBROUTINE cori_HO_O4_eval_debug
 
 END MODULE cori
 !------------------------------------------------------------
