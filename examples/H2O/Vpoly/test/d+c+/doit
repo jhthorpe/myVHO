@@ -1,0 +1,6 @@
+#/bin/bash
+cp ../vho.in .
+cp ../ydidq didq
+cp ../ycoriolis coriolis
+cp ../rota .
+cp ../*ic .

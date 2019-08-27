@@ -1,0 +1,14 @@
+states
+4
+0 0 0
+1 0 0
+0 1 0
+0 0 1
+vibration
+vpt4
+!relative
+freqformat
+18.13
+calc
+
+

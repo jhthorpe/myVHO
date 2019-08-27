@@ -41,8 +41,8 @@ SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
     WRITE(*,*) "The following number of abscissa will be used:"
     WRITE(*,'(1x,999(I4,2x))')  nabs
     WRITE(*,*)
-    ALLOCATE(q(0:MAXVAL(nabs)-1,0:ndim-1))
-    ALLOCATE(W(0:MAXVAL(nabs)-1,0:ndim-1))
+    ALLOCATE(q(0:MAXVAL(nabs(0:ndim-1))-1,0:ndim-1))
+    ALLOCATE(W(0:MAXVAL(nabs(0:ndim-1))-1,0:ndim-1))
     q = 0.0D0
     W = 0.0D0
 
@@ -62,8 +62,8 @@ SUBROUTINE gauss_generate(job,bas,ndim,mem,nabs,q,W,error)
     RETURN
   END IF
 
-  WRITE(*,*) "----------------------------------------------"
   WRITE(*,*)
+  WRITE(*,*) "-----------------------------------------------------"
 
 END SUBROUTINE gauss_generate
 

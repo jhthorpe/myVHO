@@ -1,0 +1,5 @@
+#/bin/bash
+cp ../xdidq didq
+cp ../ycoriolis coriolis
+cp ../rota .
+cp ../*ic .
