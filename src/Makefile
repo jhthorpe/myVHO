@@ -1,7 +1,7 @@
 include make.config
 export bindir = $(shell pwd)/bin
 
-progdirs:= vho
+progdirs:= vho corires
 
 .PHONY: all clean
 
