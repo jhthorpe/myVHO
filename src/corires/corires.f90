@@ -66,7 +66,8 @@ PROGRAM corires
 !    IF (TRIM(line) .EQ. "levels")
     ELSE IF (TRIM(line) .EQ. "diag") THEN 
       res = .TRUE.
-    ELSE IF (TRIM(line) .EQ. "quit") THEN
+    ELSE IF (TRIM(line) .EQ. "quit" .OR. &
+             TRIM(line) .EQ. "quit()") THEN
       EXIT
     ELSE IF (TRIM(line) .EQ. "calc") THEN
 !      IF (res) CALL calc_diag()

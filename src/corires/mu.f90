@@ -88,7 +88,7 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,error)
   DO a=0,2
     DO b=0,2
       DO i=0,nvib-1
-        mu1(i,a,b) = -0.25D0*didq(i,a,b)*Be(a)*Be(b)
+        mu1(i,a,b) = -4.0D0*didq(i,a,b)*Be(a)*Be(b)
       END DO
     END DO
   END DO
@@ -99,7 +99,7 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,error)
       DO i=0,nvib-1
         DO j=0,nvib-1
           DO g=0,2
-            mu2(i,j,a,b) = mu2(i,j,a,b) + 0.125D0*Be(a)*Be(b)*Be(g)*&
+            mu2(i,j,a,b) = mu2(i,j,a,b) + 8.0D0*Be(a)*Be(b)*Be(g)*&
                            (didq(i,a,g)*didq(j,g,b) + didq(j,a,g)*didq(i,g,b))
           END DO
         END DO

@@ -6,6 +6,7 @@
 MODULE calc
   USE conv
   USE ints
+  USE term
 
 CONTAINS
 
@@ -50,12 +51,19 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff_0(2))
 
   !B0
-  !linear term
+  !term1
   DO a=0,2
-    DO i=0,nvib-1
-      Beff_0(a) = Beff_0(a) + 0.25D0*mu2(i,i,a,a)*ints_qq(bra(i),ket(i)) 
-    END DO
+    Beff_0(a) = Beff_0(a) + term_1(nvib,a,ket,mu2)
   END DO
+
+  !H(1)H(1) term
+  DO a=0,2
+    Beff_0(a) = Beff_0(a) + term_2(nvib,a,ket,Be,phi2,zeta)
+  END DO
+
+  !H(1)H(3) term
+
+
   WRITE(*,'(2x,A2)',ADVANCE='no') "B0"
   WRITE(*,'(8x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(0))
   WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(1))
@@ -85,15 +93,16 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
     !order 0 term
     Beff(0:2,n) = Be
 
-    !linear term
+    !term1
     bra = ket
     DO a=0,2
-      DO i=0,nvib-1
-        Beff(a,n) = Beff(a,n) + 0.25D0*mu2(i,i,a,a)*ints_qq(bra(i),ket(i)) 
-      END DO
+      Beff(a,n) = Beff(a,n) + term_1(nvib,a,ket,mu2)
     END DO
 
-    !coriolis term
+    !term 2
+    DO a=0,2
+      Beff(a,n) = Beff(a,n) + term_2(nvib,a,ket,Be,phi2,zeta)
+    END DO
 
     !last term 
     
@@ -129,7 +138,7 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   WRITE(*,*)
   WRITE(*,*)
 
-END SUBROUTINE
+END SUBROUTINE calc_states
 !------------------------------------------------------------
 
 END MODULE calc

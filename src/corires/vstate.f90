@@ -32,8 +32,7 @@ SUBROUTINE vstate_set(nvib,h2l,nstates,states)
 
   READ(*,*) nread
   DO WHILE(nread .LE. 0) 
-    WRITE(*,*) "nread must be positive"
-    WRITE(*,'(A2)',ADVANCE='no') "> " 
+    WRITE(*,*) "nstates must be positive"
     READ(*,*) nread
   END DO
   nstates = nread
