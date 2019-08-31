@@ -72,6 +72,43 @@ SUBROUTINE vstate_set(nvib,h2l,nstates,states)
   END DO
   DEALLOCATE(temp)
 END SUBROUTINE vstate_set
+
+!------------------------------------------------------------
+! vstate_level
+!       - sets up calcluations of all states of a certain
+!         level
+!------------------------------------------------------------
+SUBROUTINE vstates_level(nvib,h2l,nstates,states)
+  IMPLICIT NONE
+  INTEGER, DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: states
+  INTEGER, DIMENSION(0:), INTENT(IN) :: h2l
+  INTEGER, INTENT(INOUT) :: nstates
+  INTEGER, INTENT(IN) :: nvib
+  INTEGER, DIMENSION(:,:), ALLOCATABLE :: temp
+  INTEGER :: i,j,level
+
+  IF (ALLOCATED(states)) DEALLOCATE(states)
+  IF (ALLOCATED(temp)) DEALLOCATE(temp)
+
+  READ(*,*) level
+  DO WHILE(level .LE. 0) 
+    WRITE(*,*) "level must be positive"
+    READ(*,*) level
+  END DO
+  nstates = nvib
+
+  ALLOCATE(states(0:nvib-1,0:nstates-1))
+  DO j=0,nstates-1
+    states(0:nvib-1,j) = 0
+    states(j,j) = level 
+  END DO
+
+  WRITE(*,*) "Using States..."
+  DO i=0,nstates-1
+    WRITE(*,'(1x,999(I2x,1x))') states(0:nvib-1,i)
+  END DO
+
+END SUBROUTINE vstates_level
 !------------------------------------------------------------
 
 END MODULE vstate

@@ -26,10 +26,10 @@ CONTAINS
 ! mu1           : 3D real*8, order 1 mu terms (vib,rot,rot)
 ! mu2           : 4D real*8, order 2 mu terms (vib,vib,rot,rot)
 SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
-                                    phi3,Be,zeta,mu1,mu2)
+                                    phi3,Be,zeta,mu1,mu2,didq)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(0:,0:,0:,0:), INTENT(IN) :: mu2
-  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: phi3,zeta,mu1
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: phi3,zeta,mu1,didq
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: phi2,Be
   INTEGER, DIMENSION(0:,0:), INTENT(IN) :: states
   INTEGER, DIMENSION(0:), INTENT(IN) :: l2h
@@ -37,7 +37,8 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   REAL(KIND=8), DIMENSION(0:2,0:nstates-1) :: Beff
   INTEGER, DIMENSION(0:nvib-1) :: bra,ket
   REAL(KIND=8), DIMENSION(0:2) :: Beff_0
-  INTEGER :: i,j,a,n
+  REAL(KIND=8) :: val
+  INTEGER :: i,j,a,b,n
 
   !Be
   bra = 0
@@ -50,18 +51,68 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(1))
   WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff_0(2))
 
+  !TESTING TESTING
+  WRITE(*,*) "TESTING TESTING TESTING TESTING"
+  !term 1 test
+  DO a=0,2
+    DO b=0,2
+      DO i=0,nvib-1
+        Beff_0(a) = Beff_0(a) + Be(a)*Be(a)*0.75D0*didq(i,a,b)**2.0D0*2.0D0*Be(b)
+        Beff_0(a) = Beff_0(a) + Be(a)*Be(a)*0.75D0*didq(i,a,b)**2.0D0*Be(b)
+      END DO
+    END DO 
+  END DO
+
+  DO a=0,2
+    DO i=0,nvib-1
+      DO j=0,nvib-1
+        Beff_0(a) = Beff_0(a) - Be(a)*Be(a)*0.5D0*zeta(i,j,a)*zeta(i,j,a)*&
+                    (phi2(i) - phi2(j))**2.0D0/(phi2(i)*phi2(j)*(phi2(i) + phi2(j)))
+      END DO
+    END DO
+  END DO
+
+  DO a=0,2
+    DO i=0,nvib-1
+      DO j=0,nvib-1
+        Beff_0(a) = Beff_0(a) + Be(a)*Be(a)*0.5D0*phi3(i,i,j)*didq(j,a,a)/phi2(j)**1.5D0
+      END DO
+    END DO
+  END DO
+
+  WRITE(*,'(2x,A2)',ADVANCE='no') "B0"
+  WRITE(*,'(8x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(0))
+  WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(1))
+  WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff_0(2))
+
+  !Be - B0
+  WRITE(*,'(2x,A7)',ADVANCE='no') "Be - B0"
+  WRITE(*,'(3x,F18.7)',ADVANCE='no') conv_cm2MHz(Be(0) - Beff_0(0))
+  WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Be(1) - Beff_0(1))
+  WRITE(*,'(2x,F18.7)') conv_cm2MHz(Be(2) - Beff_0(2))
+
+  STOP
+  !END TESTING TESTING
+
   !B0
   !term1
   DO a=0,2
-    Beff_0(a) = Beff_0(a) + term_1(nvib,a,ket,mu2)
+    DO b=0,2
+      Beff_0(a) = Beff_0(a) + term_1(nvib,a,b,ket,mu2)*Be(a)*Be(a)
+    END DO
   END DO
 
   !H(1)H(1) term
   DO a=0,2
-    Beff_0(a) = Beff_0(a) + term_2(nvib,a,ket,Be,phi2,zeta)
+    Beff_0(a) = Beff_0(a) + term_2(nvib,a,ket,Be,phi2,zeta)*Be(a)*Be(a)
   END DO
 
   !H(1)H(3) term
+  DO a=0,2
+    DO b=0,2
+    Beff_0(a) = Beff_0(a) + term_3(nvib,a,b,ket,phi2,phi3,mu1)*Be(a)*Be(a)
+    END DO
+  END DO
 
 
   WRITE(*,'(2x,A2)',ADVANCE='no') "B0"
@@ -96,15 +147,22 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
     !term1
     bra = ket
     DO a=0,2
-      Beff(a,n) = Beff(a,n) + term_1(nvib,a,ket,mu2)
+      DO b=0,2
+        Beff(a,n) = Beff(a,n) + term_1(nvib,a,b,ket,mu2)*Be(a)*Be(a)
+      END DO
     END DO
 
     !term 2
     DO a=0,2
-      Beff(a,n) = Beff(a,n) + term_2(nvib,a,ket,Be,phi2,zeta)
+      Beff(a,n) = Beff(a,n) + term_2(nvib,a,ket,Be,phi2,zeta)*Be(a)*Be(a)
     END DO
 
-    !last term 
+    !term 3
+    DO a=0,2
+      DO b=0,2
+        Beff(a,n) = Beff(a,n) + term_3(nvib,a,b,ket,phi2,phi3,mu1)*Be(a)*Be(a)
+      END DO
+    END DO
     
     !print
     WRITE(*,'(1x,999(I2,1x))',ADVANCE='no') states(0:nvib-1,n)

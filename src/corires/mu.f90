@@ -21,14 +21,14 @@ CONTAINS
 ! mu2           : 4D real*8, μ_{α,β}^{r,s} (vib,vib,rot,rot)
 ! error         : int, exit code
 
-SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,error)
+SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:,:,:), ALLOCATABLE, INTENT(INOUT) :: mu2
-  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: mu1
+  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: mu1,didq
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Be
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: nvib,voff
-  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: didq
+!  REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE :: didq
   CHARACTER(LEN=1024) :: fname
   REAL(KIND=8) :: val,cc,pi
   INTEGER :: i,j,a,b,g,fid,fline 
@@ -108,7 +108,7 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,error)
   END DO
   mu2 = 0.75D0*mu2
 
-  DEALLOCATE(didq)
+!  DEALLOCATE(didq)
 
 END SUBROUTINE mu_get
 !------------------------------------------------------------
