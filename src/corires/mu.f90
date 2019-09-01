@@ -75,8 +75,9 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
   CLOSE(UNIT=fid)
   IF (error .NE. 0) RETURN
 
-  !Account for factor of hbar^2/(2*h*c) in cfour's didq
-  didq = didq/(4.0D0*pi*cc)
+  !Account for factor of (2*h*c)/hbar^2 in cfour's didq
+  !didq = didq/(4.0D0*pi*cc)
+  didq = didq/2.0D0
 
   !Generate orders of mu
   ALLOCATE(mu1(0:nvib-1,0:nvib-1,0:2))
@@ -89,6 +90,7 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
     DO b=0,2
       DO i=0,nvib-1
         mu1(i,a,b) = -4.0D0*didq(i,a,b)*Be(a)*Be(b)
+        !mu1(i,a,b) = -1.0D0*didq(i,a,b)*Be(a)*Be(b)
       END DO
     END DO
   END DO
@@ -101,6 +103,8 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
           DO g=0,2
             mu2(i,j,a,b) = mu2(i,j,a,b) + 8.0D0*Be(a)*Be(b)*Be(g)*&
                            (didq(i,a,g)*didq(j,g,b) + didq(j,a,g)*didq(i,g,b))
+            !mu2(i,j,a,b) = mu2(i,j,a,b) + Be(a)*Be(b)*Be(g)*&
+            !               (didq(i,a,g)*didq(j,g,b) + didq(j,a,g)*didq(i,g,b))
           END DO
         END DO
       END DO

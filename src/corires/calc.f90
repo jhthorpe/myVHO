@@ -35,7 +35,7 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   INTEGER, DIMENSION(0:), INTENT(IN) :: l2h
   INTEGER, INTENT(IN) :: nvib,voff,nstates
   REAL(KIND=8), DIMENSION(0:2,0:nstates-1) :: Beff
-  INTEGER, DIMENSION(0:nvib-1) :: bra,ket
+  INTEGER, DIMENSION(0:nvib-1) :: bra,ket,zero
   REAL(KIND=8), DIMENSION(0:2) :: Beff_0
   REAL(KIND=8) :: val
   INTEGER :: i,j,a,b,n
@@ -43,6 +43,7 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   !Be
   bra = 0
   ket = 0
+  zero = 0
   Beff_0 = Be
   WRITE(*,*) "                                                 X        Y        Z"
   WRITE(*,*) "---------------------------------------------------------------------"
@@ -51,67 +52,56 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(1))
   WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff_0(2))
 
-  !TESTING TESTING
-  WRITE(*,*) "TESTING TESTING TESTING TESTING"
-  !term 1 test
-  DO a=0,2
-    DO b=0,2
-      DO i=0,nvib-1
-        Beff_0(a) = Beff_0(a) + Be(a)*Be(a)*0.75D0*didq(i,a,b)**2.0D0*2.0D0*Be(b)
-        Beff_0(a) = Beff_0(a) + Be(a)*Be(a)*0.75D0*didq(i,a,b)**2.0D0*Be(b)
-      END DO
-    END DO 
-  END DO
-
-  DO a=0,2
-    DO i=0,nvib-1
-      DO j=0,nvib-1
-        Beff_0(a) = Beff_0(a) - Be(a)*Be(a)*0.5D0*zeta(i,j,a)*zeta(i,j,a)*&
-                    (phi2(i) - phi2(j))**2.0D0/(phi2(i)*phi2(j)*(phi2(i) + phi2(j)))
-      END DO
-    END DO
-  END DO
-
-  DO a=0,2
-    DO i=0,nvib-1
-      DO j=0,nvib-1
-        Beff_0(a) = Beff_0(a) + Be(a)*Be(a)*0.5D0*phi3(i,i,j)*didq(j,a,a)/phi2(j)**1.5D0
-      END DO
-    END DO
-  END DO
-
-  WRITE(*,'(2x,A2)',ADVANCE='no') "B0"
-  WRITE(*,'(8x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(0))
-  WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(1))
-  WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff_0(2))
-
-  !Be - B0
-  WRITE(*,'(2x,A7)',ADVANCE='no') "Be - B0"
-  WRITE(*,'(3x,F18.7)',ADVANCE='no') conv_cm2MHz(Be(0) - Beff_0(0))
-  WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Be(1) - Beff_0(1))
-  WRITE(*,'(2x,F18.7)') conv_cm2MHz(Be(2) - Beff_0(2))
-
-  STOP
-  !END TESTING TESTING
+!  TESTING TESTING TESTING
+!  WRITE(*,*) "axis    mode   quadratic"
+!  DO a=0,2
+!    DO i=0,nvib-1
+!      ket = 0
+!      ket(i) = 1
+!      WRITE(*,'(1x,2(I1,1x),2x,F12.7)') a+1,i+voff,term_1(nvib,a,ket,mu2)-term_1(nvib,a,zero,mu2)
+!    END DO
+!  END DO
+!
+!  WRITE(*,*) 
+!  WRITE(*,*)
+!  WRITE(*,*) "axis     mode        coriolis"
+!  DO a=0,2
+!    DO i=0,nvib-1
+!      ket = 0
+!      ket(i) = 1
+!      WRITE(*,'(1x,2(I1,1x),2x,F12.7)') a+1,i+voff,term_2(nvib,a,ket,Be,phi2,zeta)&
+!                            -term_2(nvib,a,zero,Be,phi2,zeta)
+!    END DO
+!  END DO
+!
+!  WRITE(*,*)
+!  WRITE(*,*)
+!  WRITE(*,*) "axis    mode      anharmonic"
+!  DO a=0,2
+!    DO i=0,nvib-1
+!      ket = 0
+!      ket(i) = 1
+!      WRITE(*,'(1x,2(I1,1x),2x,F12.7)') a+1,i+voff,term_3(nvib,a,ket,phi2,phi3,mu1)-&
+!                                        term_3(nvib,a,zero,phi2,phi3,mu1)
+!    END DO
+!  END DO
+!  STOP
 
   !B0
   !term1
+  ket = 0
   DO a=0,2
-    DO b=0,2
-      Beff_0(a) = Beff_0(a) + term_1(nvib,a,b,ket,mu2)*Be(a)*Be(a)
-    END DO
+    Beff_0(a) = Beff_0(a) + term_1(nvib,a,ket,mu2)
   END DO
 
   !H(1)H(1) term
   DO a=0,2
-    Beff_0(a) = Beff_0(a) + term_2(nvib,a,ket,Be,phi2,zeta)*Be(a)*Be(a)
+    Beff_0(a) = Beff_0(a) + term_2(nvib,a,ket,Be,phi2,zeta)
   END DO
 
   !H(1)H(3) term
   DO a=0,2
-    DO b=0,2
-    Beff_0(a) = Beff_0(a) + term_3(nvib,a,b,ket,phi2,phi3,mu1)*Be(a)*Be(a)
-    END DO
+    Beff_0(a) = Beff_0(a) + term_3(nvib,a,ket,phi2,phi3,mu1)
   END DO
 
 
@@ -145,23 +135,18 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
     Beff(0:2,n) = Be
 
     !term1
-    bra = ket
     DO a=0,2
-      DO b=0,2
-        Beff(a,n) = Beff(a,n) + term_1(nvib,a,b,ket,mu2)*Be(a)*Be(a)
-      END DO
+      Beff(a,n) = Beff(a,n) + term_1(nvib,a,ket,mu2)
     END DO
 
     !term 2
     DO a=0,2
-      Beff(a,n) = Beff(a,n) + term_2(nvib,a,ket,Be,phi2,zeta)*Be(a)*Be(a)
+      Beff(a,n) = Beff(a,n) + term_2(nvib,a,ket,Be,phi2,zeta)
     END DO
 
     !term 3
     DO a=0,2
-      DO b=0,2
-        Beff(a,n) = Beff(a,n) + term_3(nvib,a,b,ket,phi2,phi3,mu1)*Be(a)*Be(a)
-      END DO
+      Beff(a,n) = Beff(a,n) + term_3(nvib,a,ket,phi2,phi3,mu1)
     END DO
     
     !print
