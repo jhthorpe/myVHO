@@ -7,6 +7,7 @@ MODULE calc
   USE conv
   USE ints
   USE term
+  USE linal
 
 CONTAINS
 
@@ -182,6 +183,168 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
   WRITE(*,*)
 
 END SUBROUTINE calc_states
+
+!------------------------------------------------------------
+! calc_diag
+!       - diagonalizes effective hamiltonian for the 
+!         specified states 
+!------------------------------------------------------------
+! nvib          : int, number of vibrational modes
+! voff          : int, vibrational mode numbering offset
+! nstates       : int, number of states
+! l2h           : 1D int, labeling -> harmonic numbering
+! states        : 2D int, states to calculated (vQns, state)
+! phi2          : 1D real*8, quadratic force constants
+! phi3          : 3D real*8, cubic force constants
+! Be            : 1D real*8, rotational constants
+! zeta          : 3D real*8, coriolis zetas
+! mu1           : 3D real*8, order 1 mu terms (vib,rot,rot)
+! mu2           : 4D real*8, order 2 mu terms (vib,vib,rot,rot)
+! error         : int, error status
+SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
+                     phi3,Be,zeta,mu1,mu2,didq,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:,0:), INTENT(IN) :: mu2
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: phi3,zeta,mu1,didq
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: phi2,Be
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: states
+  INTEGER, DIMENSION(0:), INTENT(IN) :: l2h
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: nvib,voff,nstates
+  INTEGER, DIMENSION(0:nvib-1,0:nstates-1) :: bra,ket
+  REAL(KIND=8), DIMENSION(0:nstates-1,0:nstates-1,0:2) :: Beff
+  REAL(KIND=8), DIMENSION(0:nstates-1,0:2) :: Eval
+  REAL(KIND=8), DIMENSION(0:nstates-1) :: Ei
+  REAL(KIND=8), DIMENSION(0:2) :: Beff_0
+  REAL(KIND=8) :: val
+  CHARACTER(LEN=1), DIMENSION(0:2) :: xyz
+  CHARACTER(LEN=100) :: label
+  INTEGER :: lwork
+  INTEGER :: i,j,k,a,b,n,m
+
+  Beff = 0.0D0
+  xyz = ["X","Y","Z"]
+
+  !Get kets
+  DO n=0,nstates-1
+    DO j=0,nvib-1
+      ket(l2h(j)-1,n) = states(j,n)
+      bra(l2h(j)-1,n) = states(j,n)
+    END DO
+  END DO
+
+  !Get E0 energies
+  DO j=0,nstates-1
+    Ei(j) = 0.0D0
+    DO i=0,nvib-1
+      Ei(j) = Ei(j) + phi2(i)*(1.0D0*ket(i,j)+0.5D0)
+    END DO
+  END DO
+
+  !Get initial Beffs
+  DO n=0,nstates-1
+    DO a=0,2
+      Beff(n,n,a) = Be(a) 
+      Beff(n,n,a) = Beff(n,n,a) + term_1(nvib,a,ket(0:nvib-1,n),mu2)  
+      Beff(n,n,a) = Beff(n,n,a) + term_2(nvib,a,ket(0:nvib-1,n),Be,phi2,zeta)
+      Beff(n,n,a) = Beff(n,n,a) + term_3(nvib,a,ket(0:nvib-1,n),phi2,phi3,mu1) 
+    END DO 
+  END DO
+
+  !Go through states
+  DO a=0,2
+    DO m=0,nstates-1
+      DO n=m+1,nstates-1
+        !find where they differ
+        i = -1
+        j = -1
+        DO k=0,nvib-1
+          IF (bra(k,n) - ket(k,m) .NE. 0) THEN
+            IF (i .EQ. -1) THEN
+              i = k
+            ELSE IF (i .NE. -1 .AND. j .EQ. -1) THEN
+              j = k
+            ELSE
+              i = -2
+            END IF
+          END IF
+        END DO
+        !if they do not differ by two indicies
+        IF (i .EQ. -1 .OR. i .EQ. -2 .OR. j .EQ. -1) THEN
+          val = 0.0D0
+        ELSE
+          val = term_2_aux(i,j,a,bra(0:nvib-1,n),ket(0:nvib-1,m),phi2,zeta)/&
+                (Ei(n) - Ei(m))
+        END IF
+
+        !Put differences on off diagonal
+        Beff(n,n,a) = Beff(n,n,a) - val
+        Beff(n,m,a) = val
+      END DO
+    END DO
+  END DO
+
+  !Convert units
+  DO a=0,2
+    DO n=0,nstates-1
+      DO m=0,nstates-1
+        Beff(n,m,a) = conv_cm2MHz(Beff(n,m,a))
+      END DO
+    END DO
+  END DO
+
+  WRITE(*,*) "Effective Rotational Constant Matrix" 
+  WRITE(*,*)
+  DO a=0,2
+    WRITE(*,'(2x,A1,2x,A5)') xyz(a),"(MHz)"
+    WRITE(*,*) "---------------------------------------------------------------------"
+    DO n=0,nstates-1
+      IF (n .LT. 10) THEN
+        WRITE(label,'(A1,I1)') "s",n+1
+      ELSE
+        WRITE(label,'(A1,I2)') "s",n+1
+      END IF
+      WRITE(*,'(1x,A3)',ADVANCE='no') TRIM(label)
+      WRITE(*,'(1x,999(F11.2,2x))') Beff(n,0:nstates-1,a)
+    END DO
+    WRITE(*,*) 
+    WRITE(*,*)
+  END DO
+
+
+  !Diagonalize
+  DO a=0,2
+    CALL linal_dsyev(nstates,Beff(0:nstates-1,0:nstates-1,a),&
+                     3*nstates-1,Eval(0:nstates-1,a),error)   
+    IF (error .NE. 0) RETURN
+  END DO
+
+  WRITE(*,*) 
+  WRITE(*,*) "Diagonalized Rotational Constant Matrix"
+  WRITE(*,*)
+  DO a=0,2
+    WRITE(*,'(2x,A1,1x,A5)',ADVANCE="no") xyz(a),"(MHz)"
+    DO n=0,nstates-2
+      WRITE(*,'(2x,F11.2)',ADVANCE="no") Eval(n,a)
+    END DO
+    WRITE(*,'(2x,F11.2)') Eval(nstates-1,a)
+    WRITE(*,*) "---------------------------------------------------------------------"
+    DO n=0,nstates-1
+      IF (n .LT. 10) THEN
+        WRITE(label,'(A1,I1)') "s",n+1
+      ELSE
+        WRITE(label,'(A1,I2)') "s",n+1
+      END IF
+      WRITE(*,'(4x,A3,2x)',ADVANCE='no') TRIM(label)
+      WRITE(*,'(1x,999(F11.2,2x))') Beff(n,0:nstates-1,a)
+    END DO
+    WRITE(*,*)
+    WRITE(*,*)
+  END DO
+
+
+END SUBROUTINE calc_diag
+
 !------------------------------------------------------------
 
 END MODULE calc

@@ -66,10 +66,12 @@ SUBROUTINE vstate_set(nvib,h2l,nstates,states)
     j = j + 1 
   END DO
 
+  WRITE(*,*)
   WRITE(*,*) "Using States..."
   DO i=0,nstates-1
     WRITE(*,'(1x,999(I2x,1x))') states(0:nvib-1,i)
   END DO
+  WRITE(*,*)
   DEALLOCATE(temp)
 END SUBROUTINE vstate_set
 

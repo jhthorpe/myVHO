@@ -63,19 +63,13 @@ REAL(KIND=8) FUNCTION term_2(nvib,a,ket,Be,phi2,zeta)
     Ei = Ei + phi2(i)*(1.0D0*ket(i)+0.5D0) 
   END DO
 
-!  WRITE(*,*) "TESTING"
-!  WRITE(*,*) "|",ket(0:nvib-1),">",Ei, temp
-
   !Each vibrational qn can differ by only +/- 1, and two 
   ! different indicies must differ
   !(B/C no diagonal coriolis zetas to give 0,+/-2)
-  !DO j=0,nvib-2
-  !  DO i=j+1,nvib-1
   DO i=0,nvib-2
     DO j=i+1,nvib-1
       IF (ABS(zeta(i,j,a)) .LT. tol) CYCLE
       bra = ket      
-!      WRITE(*,*) "i,j,ζ_ij^a", i,j,zeta(i,j,a)
  
       !--
       bra(i) = ket(i) - 1
@@ -83,7 +77,6 @@ REAL(KIND=8) FUNCTION term_2(nvib,a,ket,Be,phi2,zeta)
       IF (bra(i) .GE. 0 .AND. bra(j) .GE. 0) THEN
         Ek = Ei - phi2(i) - phi2(j)
         temp = temp + term_2_aux(i,j,a,bra,ket,phi2,zeta)/(Ei - Ek)
-!       WRITE(*,*) "<",bra(0:nvib-1),"|",Ek,temp
       END IF
 
       !+-
@@ -92,7 +85,6 @@ REAL(KIND=8) FUNCTION term_2(nvib,a,ket,Be,phi2,zeta)
       IF (bra(j) .GE. 0) THEN
         Ek = Ei + phi2(i) - phi2(j)
         temp = temp + term_2_aux(i,j,a,bra,ket,phi2,zeta)/(Ei - Ek)
-!        WRITE(*,*) "<",bra(0:nvib-1),"|",Ek,temp
       END IF
 
       !-+
@@ -101,7 +93,6 @@ REAL(KIND=8) FUNCTION term_2(nvib,a,ket,Be,phi2,zeta)
       IF (bra(i) .GE. 0) THEN
         Ek = Ei - phi2(i) + phi2(j)
         temp = temp + term_2_aux(i,j,a,bra,ket,phi2,zeta)/(Ei - Ek)
-!        WRITE(*,*) "<",bra(0:nvib-1),"|",Ek,temp
       END IF
 
       !--
@@ -109,7 +100,6 @@ REAL(KIND=8) FUNCTION term_2(nvib,a,ket,Be,phi2,zeta)
       bra(j) = ket(j) + 1
       Ek = Ei + phi2(i) + phi2(j)
       temp = temp + term_2_aux(i,j,a,bra,ket,phi2,zeta)/(Ei - Ek)
-!      WRITE(*,*) "<",bra(0:nvib-1),"|",Ek,temp
     END DO
   END DO
 

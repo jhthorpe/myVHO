@@ -70,7 +70,8 @@ PROGRAM corires
              TRIM(line) .EQ. "quit()") THEN
       EXIT
     ELSE IF (TRIM(line) .EQ. "calc") THEN
-!      IF (res) CALL calc_diag()
+      IF (res) CALL calc_diag(nvib,voff,nstates,l2h,states,phi2,&
+                              phi3,Be,zeta,mu1,mu2,didq,error)
       IF (.NOT. res) CALL calc_states(nvib,voff,nstates,l2h,states,phi2,&
                                       phi3,Be,zeta,mu1,mu2,didq) 
     ELSE IF (TRIM(line) .EQ. "print") THEN
