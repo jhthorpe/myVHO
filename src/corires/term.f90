@@ -110,7 +110,9 @@ END FUNCTION term_2
 !------------------------------------------------------------
 ! term_2_aux
 !       - auxilary function that evalutes 
+!
 !       <ket| π |bra><bra| π |ket>
+!
 !         for a given bra and ket that differ in the 
 !         i'th and j'th indices
 !------------------------------------------------------------

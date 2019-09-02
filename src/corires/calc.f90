@@ -105,7 +105,6 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
     Beff_0(a) = Beff_0(a) + term_3(nvib,a,ket,phi2,phi3,mu1)
   END DO
 
-
   WRITE(*,'(2x,A2)',ADVANCE='no') "B0"
   WRITE(*,'(8x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(0))
   WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff_0(1))
@@ -151,7 +150,7 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
     END DO
     
     !print
-    WRITE(*,'(1x,999(I2,1x))',ADVANCE='no') states(0:nvib-1,n)
+    WRITE(*,'(1x,999(5(I2,1x),2x))',ADVANCE='no') states(0:nvib-1,n)
     WRITE(*,'(4x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff(0,n))
     WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff(1,n))
     WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff(2,n))
@@ -172,7 +171,7 @@ SUBROUTINE calc_states(nvib,voff,nstates,l2h,states,phi2,&
     END DO
 
     !Print
-    WRITE(*,'(1x,999(I2,1x))',ADVANCE='no') states(0:nvib-1,n)
+    WRITE(*,'(1x,999(5(I2,1x),2x))',ADVANCE='no') states(0:nvib-1,n)
     WRITE(*,'(4x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff(0,n) - Beff_0(0))
     WRITE(*,'(2x,F18.7)',ADVANCE='no') conv_cm2MHz(Beff(1,n) - Beff_0(1))
     WRITE(*,'(2x,F18.7)') conv_cm2MHz(Beff(2,n) - Beff_0(2))
@@ -215,15 +214,47 @@ SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
   REAL(KIND=8), DIMENSION(0:nstates-1,0:nstates-1,0:2) :: Beff
   REAL(KIND=8), DIMENSION(0:nstates-1,0:2) :: Eval
   REAL(KIND=8), DIMENSION(0:nstates-1) :: Ei
-  REAL(KIND=8), DIMENSION(0:2) :: Beff_0
-  REAL(KIND=8) :: val
+  REAL(KIND=8), DIMENSION(0:2) :: Beff_0,mval
+  REAL(KIND=8) :: val1,val2
   CHARACTER(LEN=1), DIMENSION(0:2) :: xyz
   CHARACTER(LEN=100) :: label
-  INTEGER :: lwork
+  INTEGER, DIMENSION(0:2) :: mloc
   INTEGER :: i,j,k,a,b,n,m
 
   Beff = 0.0D0
+  Beff_0 = Be
   xyz = ["X","Y","Z"]
+
+  !B0
+  WRITE(*,*) "                                                 X        Y        Z"
+  WRITE(*,*) "---------------------------------------------------------------------"
+  !term1
+  ket = 0
+  DO a=0,2
+    Beff_0(a) = Beff_0(a) + term_1(nvib,a,ket(0:nvib-1,0),mu2)
+  END DO
+
+  !H(1)H(1) term
+  DO a=0,2
+    Beff_0(a) = Beff_0(a) + term_2(nvib,a,ket(0:nvib-1,0),Be,phi2,zeta)
+  END DO
+
+  !H(1)H(3) term
+  DO a=0,2
+    Beff_0(a) = Beff_0(a) + term_3(nvib,a,ket(0:nvib-1,0),phi2,phi3,mu1)
+  END DO
+
+  !Convert units
+  DO a=0,2
+    Beff_0(a) = conv_cm2MHz(Beff_0(a))
+  END DO  
+
+  WRITE(*,'(2x,A2)',ADVANCE='no') "B0"
+  WRITE(*,'(8x,F18.7)',ADVANCE='no') Beff_0(0)
+  WRITE(*,'(2x,F18.7)',ADVANCE='no') Beff_0(1)
+  WRITE(*,'(2x,F18.7)') Beff_0(2)
+  WRITE(*,*)
+  WRITE(*,*)
 
   !Get kets
   DO n=0,nstates-1
@@ -251,9 +282,37 @@ SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
     END DO 
   END DO
 
+  !Convert units
+  DO a=0,2
+    DO n=0,nstates-1
+      DO m=0,nstates-1
+        Beff(n,m,a) = conv_cm2MHz(Beff(n,m,a))
+      END DO
+    END DO
+  END DO
+
+  WRITE(*,*) "Initial Beff Matrix"
+  DO a=0,2
+    WRITE(*,'(2x,A1,2x,A5)') xyz(a),"(MHz)"
+    WRITE(*,*) "---------------------------------------------------------------------"
+    DO n=0,nstates-1
+      IF (n .LT. 10) THEN
+        WRITE(label,'(A1,I1)') "s",n+1
+      ELSE
+        WRITE(label,'(A1,I2)') "s",n+1
+      END IF
+      WRITE(*,'(1x,A3)',ADVANCE='no') TRIM(label)
+      WRITE(*,'(1x,999(F11.2,2x))') Beff(n,0:nstates-1,a)
+    END DO
+    WRITE(*,*) 
+    WRITE(*,*)
+  END DO
+
+  WRITE(*,*)
+
   !Go through states
   DO a=0,2
-    DO m=0,nstates-1
+    DO m=0,nstates-2
       DO n=m+1,nstates-1
         !find where they differ
         i = -1
@@ -269,26 +328,36 @@ SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
             END IF
           END IF
         END DO
+!        WRITE(*,*) "<",bra(0:nvib-1,n),"|",ket(0:nvib-1,m),">"
         !if they do not differ by two indicies
         IF (i .EQ. -1 .OR. i .EQ. -2 .OR. j .EQ. -1) THEN
-          val = 0.0D0
+          val1 = 0.0D0
+          val2 = 0.0D0
+!          WRITE(*,*) "case 1"
         ELSE
-          val = term_2_aux(i,j,a,bra(0:nvib-1,n),ket(0:nvib-1,m),phi2,zeta)/&
-                (Ei(n) - Ei(m))
+!          WRITE(*,*) "case 2"
+          val1 = 4.0D0*Be(a)*Be(a)*&
+                 term_2_aux(i,j,a,bra(0:nvib-1,n),ket(0:nvib-1,m),phi2,zeta)/&
+                (Ei(m) - Ei(n))
+          val2 = 4.0D0*Be(a)*Be(a)*&
+                 term_2_aux(i,j,a,bra(0:nvib-1,m),ket(0:nvib-1,n),phi2,zeta)/&
+                 (Ei(n) - Ei(m))
+          
         END IF
+!        WRITE(*,*) i,j,&
+!        term_2_aux(i,j,a,bra(0:nvib-1,n),ket(0:nvib-1,m),phi2,zeta),&
+!        term_2_aux(i,j,a,bra(0:nvib-1,m),ket(0:nvib-1,n),phi2,zeta),&
+!        (Ei(m)-Ei(n))
 
         !Put differences on off diagonal
-        Beff(n,n,a) = Beff(n,n,a) - val
-        Beff(n,m,a) = val
-      END DO
-    END DO
-  END DO
-
-  !Convert units
-  DO a=0,2
-    DO n=0,nstates-1
-      DO m=0,nstates-1
+        Beff(m,m,a) = Beff(m,m,a) - conv_cm2MHz(val1)
+        Beff(n,n,a) = Beff(n,n,a) - conv_cm2MHz(val2)
+        Beff(n,m,a) = 0.25D0*(mu2(i,j,a,a)*ints_q(bra(i,n),ket(i,m))*&
+                                           ints_q(bra(j,n),ket(j,m))&
+                            + mu2(j,i,a,a)*ints_q(bra(j,n),ket(j,m))*&
+                                           ints_q(bra(i,n),ket(i,m)))
         Beff(n,m,a) = conv_cm2MHz(Beff(n,m,a))
+        Beff(m,n,a) = Beff(n,m,a)
       END DO
     END DO
   END DO
@@ -310,7 +379,6 @@ SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
     WRITE(*,*) 
     WRITE(*,*)
   END DO
-
 
   !Diagonalize
   DO a=0,2
@@ -341,6 +409,39 @@ SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
     WRITE(*,*)
     WRITE(*,*)
   END DO
+
+  WRITE(*,*) "Dominant State Transitions"
+  
+  !calculate Beff transitions
+  WRITE(*,*) " B_eff(v0) --> B_eff(vi)                         X        Y        Z"
+  WRITE(*,*) "---------------------------------------------------------------------"
+  DO n=0,nstates-1
+
+    !Find the states we're looking for
+    mloc = -1 
+    mval = 0.0
+    DO a=0,2
+      DO m=0,nstates-1
+        IF (ABS(Beff(m,n,a)) .GT. mval(a)) THEN
+          mloc(a) = m
+          mval(a) = ABS(Beff(m,n,a))
+        END IF
+      END DO
+    END DO
+    !WRITE(*,*) "mval:",mval
+    !WRITE(*,*) "mloc:",mloc
+
+    !Print
+    WRITE(*,'(1x,999(5(I2,1x),2x))',ADVANCE='no') states(0:nvib-1,n)
+    WRITE(*,'(4x,F18.7)',ADVANCE='no') Eval(mloc(0),0) - Beff_0(0)
+    WRITE(*,'(2x,F18.7)',ADVANCE='no') Eval(mloc(1),1) - Beff_0(1)
+    WRITE(*,'(2x,F18.7)') Eval(mloc(2),2) - Beff_0(2)
+
+  END DO
+
+  WRITE(*,*)
+  WRITE(*,*)
+
 
 
 END SUBROUTINE calc_diag

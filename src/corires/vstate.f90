@@ -69,7 +69,7 @@ SUBROUTINE vstate_set(nvib,h2l,nstates,states)
   WRITE(*,*)
   WRITE(*,*) "Using States..."
   DO i=0,nstates-1
-    WRITE(*,'(1x,999(I2x,1x))') states(0:nvib-1,i)
+    WRITE(*,'(1x,999(5(I2x,1x),2x))') states(0:nvib-1,i)
   END DO
   WRITE(*,*)
   DEALLOCATE(temp)
@@ -107,7 +107,7 @@ SUBROUTINE vstates_level(nvib,h2l,nstates,states)
 
   WRITE(*,*) "Using States..."
   DO i=0,nstates-1
-    WRITE(*,'(1x,999(I2x,1x))') states(0:nvib-1,i)
+    WRITE(*,'(1x,999(5(I2,1x),2x))') states(0:nvib-1,i)
   END DO
 
 END SUBROUTINE vstates_level
