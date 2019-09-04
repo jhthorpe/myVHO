@@ -14,7 +14,7 @@ CONTAINS
 !------------------------------------------------------------
 ! nvib          : int, number of vibrational modes
 ! voff          : int, vibrational numbering offset
-! phi3          : 1D real*8, 2nd order force constants
+! phi3          : 3D real*8, third order force constants
 ! error         : int, exit code
 
 SUBROUTINE cubi_get(nvib,voff,phi3,error)

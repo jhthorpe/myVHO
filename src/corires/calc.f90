@@ -447,6 +447,153 @@ SUBROUTINE calc_diag(nvib,voff,nstates,l2h,states,phi2,&
 END SUBROUTINE calc_diag
 
 !------------------------------------------------------------
+! calc_Heff
+!       - calculates Heff between states
+!------------------------------------------------------------
+! nvib          : int, number of vibrational modes
+! voff          : int, vibrational mode numbering offset
+! nstates       : int, number of states
+! l2h           : 1D int, labeling -> harmonic numbering
+! states        : 2D int, states to calculated (vQns, state)
+! phi2          : 1D real*8, quadratic force constants
+! phi3          : 3D real*8, cubic force constants
+! phi4          : 3D real*8, quartic force constants
+! Be            : 1D real*8, rotational constants
+! zeta          : 3D real*8, coriolis zetas
+! mu0           : 2D real*8, order 0 mu terms (rot,rot)
+! mu1           : 3D real*8, order 1 mu terms (vib,rot,rot)
+! mu2           : 4D real*8, order 2 mu terms (vib,vib,rot,rot)
+! error         : int, error status
+ 
+SUBROUTINE calc_Heff(nvib,voff,nstates,l2h,states,phi2,&
+                     phi3,phi4,Be,zeta,mu0,mu1,mu2,didq,error)
+  IMPLICIT NONE
+  REAL(KIND=8), DIMENSION(0:,0:,0:,0:), INTENT(IN) :: mu2,phi4
+  REAL(KIND=8), DIMENSION(0:,0:,0:), INTENT(IN) :: phi3,zeta,mu1,didq
+  REAL(KIND=8), DIMENSION(0:,0:), INTENT(IN) :: mu0
+  REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: phi2,Be
+  INTEGER, DIMENSION(0:,0:), INTENT(IN) :: states
+  INTEGER, DIMENSION(0:), INTENT(IN) :: l2h
+  INTEGER, INTENT(INOUT) :: error
+  INTEGER, INTENT(IN) :: nvib,voff,nstates
+  INTEGER, DIMENSION(0:nvib-1,0:nstates-1) :: bra,ket
+  REAL(KIND=8), DIMENSION(0:nstates-1,0:nstates-1,0:2) :: Heff,H0,H1,H2
+  REAL(KIND=8), DIMENSION(0:nstates-1,0:2) :: Eval
+  REAL(KIND=8), DIMENSION(0:nstates-1) :: Ei
+  REAL(KIND=8), DIMENSION(0:2) :: mval
+  REAL(KIND=8) :: val1,val2,Ja,Jb
+  CHARACTER(LEN=1), DIMENSION(0:2) :: xyz
+  CHARACTER(LEN=100) :: label
+  INTEGER, DIMENSION(0:2) :: mloc,Rstates
+  INTEGER :: i,j,k,a,b,n,m
+
+  error = 0
+  xyz = ["X","Y","Z"]
+  Heff = 0.0D0
+  H0 = 0.0D0
+  H1 = 0.0D0
+  H2 = 0.0D0
+
+  !Get kets
+  DO n=0,nstates-1
+    DO j=0,nvib-1
+      ket(l2h(j)-1,n) = states(j,n)
+      bra(l2h(j)-1,n) = states(j,n)
+    END DO
+  END DO
+
+  !Read in Rotational Quantum Numbers
+  WRITE(*,*) "Enter Rotational Quantum numbers (x,y,z)"
+  READ(*,*) Rstates(0:2)
+
+  !Construct Effective Hamiltonian between states
+  DO a=0,2
+    Ja = 1.0D0*Rstates(a)
+    DO b=0,2
+      Jb = 1.0D0*Rstates(b)
+      DO m=0,nstates-1
+        DO n=m,nstates-1
+          !Order 0
+          ! mu0
+          H0(n,m,a) = H0(n,m,a) + 0.5D0*Ja*&
+                      ints_mu0(nvib,a,b,mu0,bra(0:nvib-1,n),ket(0:nvib-1,m))&
+                      *Jb 
+
+          ! qr^2 + pr^2 
+          H0(n,m,a) = H0(n,m,a) + &
+                      (ints_V0(nvib,phi2,bra(0:nvib-1,n),ket(0:nvib-1,m)) +&
+                       ints_T0(nvib,phi2,bra(0:nvib-1,n),ket(0:nvib-1,m)))
+
+          !Order 1
+          ! J u1 J
+          H1(n,m,a) = H1(n,m,a) + 0.5D0*Ja*&
+                      ints_mu1(nvib,a,b,mu1,bra(0:nvib-1,n),ket(0:nvib-1,m))*&
+                      Jb
+
+          ! J mu0 pi
+          H1(n,m,a) = H1(n,m,a) - 0.5D0*Ja*&
+                      ints_mu0pi(nvib,a,b,mu0,phi2,zeta,&
+                                 bra(0:nvib-1,n),ket(0:nvib-1,m)) 
+
+          ! J pi mu0
+          H1(n,m,a) = H1(n,m,a) - 0.5D0*Jb*&
+                      ints_mu0pi(nvib,b,a,mu0,phi2,zeta,&
+                                 bra(0:nvib-1,n),ket(0:nvib-1,m)) 
+          ! phi3
+          H1(n,m,a) = H1(n,m,a) + ints_V1(nvib,phi3,&
+                      bra(0:nvib-1,n),ket(0:nvib-1,m))
+
+          !Order 2
+          ! Ja mu2 Jb
+          H2(n,m,a) = H2(n,m,a) + 0.5D0*Ja*&
+                      ints_mu2(nvib,a,b,mu2,bra(0:nvib-1,n),ket(0:nvib-1,m))*&
+                      Jb
+
+          ! Ja mu1 pi
+          H2(n,m,a) = H2(n,m,a) - 0.5D0*Ja*ints_mu1pi(nvib,a,b,mu1,phi2,zeta,&
+                                  bra(0:nvib-1,n),ket(0:nvib-1,m))
+
+          ! pi mu1 Jb
+          H2(n,m,a) = H2(n,m,a) - 0.5D0*Jb*ints_pimu1(nvib,a,b,mu1,phi2,zeta,&
+                                  bra(0:nvib-1,n),ket(0:nvib-1,m))
+
+          ! pi mu0 pi
+          H2(n,m,a) = H2(n,m,a) + 0.5D0*ints_pimu0pi(nvib,a,b,mu0,phi2,zeta,&
+                                        bra(0:nvib-1,n),ket(0:nvib-1,m))
+
+          ! phi4
+          H2(n,m,a) = H2(n,m,a) + ints_V2(nvib,phi4,&
+                                  bra(0:nvib-1,n),ket(0:nvib-1,m))
+
+        END DO
+      END DO
+    END DO
+  END DO
+
+  Heff = H0 + H1 + H2
+
+  !Write out Matrix
+  WRITE(*,*) "Effective Hamiltonian (cm-1)"
+  WRITE(*,*)
+  DO a=0,2
+    WRITE(*,'(2x,A1,2x,A5)') xyz(a),"(cm-1)"
+    WRITE(*,*) "---------------------------------------------------------------------"
+    DO n=0,nstates-1
+      IF (n .LT. 10) THEN
+        WRITE(label,'(A1,I1)') "s",n+1
+      ELSE
+        WRITE(label,'(A1,I2)') "s",n+1
+      END IF
+      WRITE(*,'(1x,A3)',ADVANCE='no') TRIM(label)
+      WRITE(*,'(1x,999(F11.2,2x))') Heff(n,0:nstates-1,a)
+    END DO
+    WRITE(*,*) 
+    WRITE(*,*)
+  END DO
+  
+  
+END SUBROUTINE calc_Heff
+!------------------------------------------------------------
 
 END MODULE calc
 !------------------------------------------------------------

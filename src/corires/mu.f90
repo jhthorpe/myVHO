@@ -11,20 +11,23 @@ CONTAINS
 !------------------------------------------------------------
 ! mu_get
 !       - generates mu0,mu1, and mu2
+!       mu0 -> μ_{α,β}^e
 !       mu1 -> μ_{α,β}^r
 !       mu2 -> μ_{α,β}^{r,s}
 !------------------------------------------------------------
 ! nvib          : int, number of vibrational modes
 ! voff          : int, vibrational offset
 ! Be            : real*8, rotational constants in cm-1
+! mu0           : 3D real*8, μ_{α,β}^r (vib,rot,rot)
 ! mu1           : 3D real*8, μ_{α,β}^r (vib,rot,rot)
 ! mu2           : 4D real*8, μ_{α,β}^{r,s} (vib,vib,rot,rot)
 ! error         : int, exit code
 
-SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
+SUBROUTINE mu_get(nvib,voff,Be,mu0,mu1,mu2,didq,error)
   IMPLICIT NONE
   REAL(KIND=8), DIMENSION(:,:,:,:), ALLOCATABLE, INTENT(INOUT) :: mu2
   REAL(KIND=8), DIMENSION(:,:,:), ALLOCATABLE, INTENT(INOUT) :: mu1,didq
+  REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE, INTENT(INOUT) :: mu0
   REAL(KIND=8), DIMENSION(0:), INTENT(IN) :: Be
   INTEGER, INTENT(INOUT) :: error
   INTEGER, INTENT(IN) :: nvib,voff
@@ -80,17 +83,23 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
   didq = didq/2.0D0
 
   !Generate orders of mu
-  ALLOCATE(mu1(0:nvib-1,0:nvib-1,0:2))
+  ALLOCATE(mu0(0:2,0:2))
+  ALLOCATE(mu1(0:nvib-1,0:2,0:2))
   ALLOCATE(mu2(0:nvib-1,0:nvib-1,0:2,0:2))
+  mu0 = 0.0D0
   mu1 = 0.0D0
   mu2 = 0.0D0
+
+  !Order 0
+  DO a=0,2
+    mu0(a,a) = 2.0D0*Be(a)
+  END DO
 
   !Order 1
   DO a=0,2
     DO b=0,2
       DO i=0,nvib-1
         mu1(i,a,b) = -4.0D0*didq(i,a,b)*Be(a)*Be(b)
-        !mu1(i,a,b) = -1.0D0*didq(i,a,b)*Be(a)*Be(b)
       END DO
     END DO
   END DO
@@ -103,8 +112,6 @@ SUBROUTINE mu_get(nvib,voff,Be,mu1,mu2,didq,error)
           DO g=0,2
             mu2(i,j,a,b) = mu2(i,j,a,b) + 8.0D0*Be(a)*Be(b)*Be(g)*&
                            (didq(i,a,g)*didq(j,g,b) + didq(j,a,g)*didq(i,g,b))
-            !mu2(i,j,a,b) = mu2(i,j,a,b) + Be(a)*Be(b)*Be(g)*&
-            !               (didq(i,a,g)*didq(j,g,b) + didq(j,a,g)*didq(i,g,b))
           END DO
         END DO
       END DO
